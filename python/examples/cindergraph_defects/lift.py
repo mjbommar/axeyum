@@ -1,34 +1,53 @@
-"""Lift a scalar, loop-free C function from cindergraph's AST into QF_BV queries.
+"""Lift a scalar C function from cindergraph's AST into QF_BV queries.
 
 Cindergraph parses the C and hands back a typed AST (``binary_expr``,
-``cast_expr``, ``cond_expr``, ``if_stmt`` …) with source spans, the declared
-type of every binding, and a CFG whose back edges name the loops. This module
-walks that AST with C's own integer semantics — integer promotion, the usual
-arithmetic conversions, wraparound on unsigned types, ``bvsdiv``/``bvudiv``
-by signedness — and emits, per reachable sink, one SMT-LIB query whose ``sat``
-is a concrete input that reaches the sink with its safety obligation violated.
+``cast_expr``, ``cond_expr``, ``if_stmt``, ``for_stmt`` …) with source spans,
+the declared type of every binding, and a CFG whose back edges name the loops.
+This module walks that AST with C's own integer semantics — integer promotion,
+the usual arithmetic conversions, wraparound on unsigned types,
+``bvsdiv``/``bvudiv`` by signedness — and emits, per reachable sink, one
+SMT-LIB query whose ``sat`` is a concrete input that reaches the sink with its
+safety obligation violated.
+
+Loops are unrolled to a stated bound ``K`` (``unroll=``): each iteration count
+``0..K`` at which the loop exits normally is its own path with the loop
+condition asserted false at the exit, ``break`` and ``return`` end a path, and
+the state that would need a ``K+1``-th iteration is parked behind a
+``loop-bound`` obligation whose ``sat`` means "some input runs this loop past
+the bound" — the driver reports that as *bounded*, never as clean. ``continue``
+and ``goto`` are refused by name.
 
 What it deliberately does NOT do: pointers are opaque (only their annotated
-capacity is modelled), there are no loops (a function with a back edge is
-refused by name), and every C construct outside the subset raises
-:class:`Refused` with the line and the reason. A refusal is a result; a silent
-approximation would make "no witness" a measurement of the accepted subset.
+capacity, their annotated string length, or their ``malloc`` size is modelled),
+memory contents are unconstrained, and every C construct outside the subset
+raises :class:`Refused` with the line and the reason. A refusal is a result; a
+silent approximation would make "no witness" a measurement of the accepted
+subset.
 
 Sinks, and the obligation each one must satisfy on every path that reaches it:
 
 =====================  ==========================================================
 ``memcpy``/``memmove``/``memset``/``strncpy``  ``offset >= 0`` and ``offset + n <= capacity(dst)``, in 128-bit
-``buf[i]``             ``i >= 0`` (signed index) and ``i < capacity(buf)``
+``strcpy(dst, s)``     ``offset + strlen(s) + 1 <= capacity(dst)``; ``strcat`` adds ``strlen(dst)``
+``buf[i]``             ``i >= 0`` (signed index) and ``i < capacity(buf) / sizeof(*buf)``
 ``a / b``, ``a % b``   ``b != 0``; signed: not (``a == MIN`` and ``b == -1``)
 ``a << b``, ``a >> b`` ``0 <= b < width(a)``; signed ``<<``: ``a >= 0``
 signed ``+ - *``       the mathematical result is representable (no UB overflow)
+``malloc(a * b)``      the unsigned size arithmetic does not wrap (``bvumulo``/``bvuaddo``)
 implicit narrowing     the stored value equals the source value (informational)
+read of a local        an assignment dominates it on this path (``uninitialized``)
+use after ``free``     never (``use-after-free``; a second ``free`` is the same kind)
 ``if`` condition       both edges feasible; an infeasible edge is a dead branch
+loop condition         false within ``K`` iterations on every input (``loop-bound``)
 =====================  ==========================================================
 
-Capacities are declared with a structured comment on the line before the
-function: ``// axeyum: capacity(dst) = dst_len``. A local array
-``T buf[N]`` declares its own.
+Annotations are structured comments on the lines above the function:
+``// axeyum: capacity(dst) = dst_len`` (a scalar parameter or a literal, in
+bytes) and ``// axeyum: strlen(s) = n`` (the length of the NUL-terminated string
+``s`` points at; ``capacity(s)`` defaults to ``n + 1``). A local array
+``T buf[N]`` declares its own capacity, and ``T *p = malloc(size)`` gives ``p``
+the capacity ``size``. A file-level ``// axeyum: unroll = N`` overrides the
+driver's unrolling bound for every function in that file.
 """
 
 from __future__ import annotations
@@ -208,11 +227,12 @@ def extend_to(term: Term, width: int) -> str:
 
 @dataclass(frozen=True)
 class Obligation:
-    kind: str  # buffer / index / divide / shift / signed-overflow / narrowing / dead-branch
+    kind: str  # see the module docstring's table
     line: int
     text: str  # the C source of the construct
     holds: str  # a Bool SMT-LIB term that must be true for the construct to be safe
     path_len: int  # how many path conditions precede the construct
+    defs_len: int  # how many definitions precede it (later ones are not its business)
     note: str = ""
 
 
@@ -224,6 +244,9 @@ class PathState:
     obligations: list[Obligation] = field(default_factory=list)
     returned: bool = False
     counter: dict[str, int] = field(default_factory=dict)
+    broke: bool = False  # a `break` ended this path's trip through the innermost loop
+    uninit: set[str] = field(default_factory=set)  # locals no assignment has reached yet
+    freed: set[str] = field(default_factory=set)  # pointers `free`d on this path
 
     def fork(self) -> PathState:
         return PathState(
@@ -233,6 +256,9 @@ class PathState:
             list(self.obligations),
             self.returned,
             dict(self.counter),
+            self.broke,
+            set(self.uninit),
+            set(self.freed),
         )
 
 
@@ -255,17 +281,27 @@ class Lifted:
     capacities: dict[str, str]
     paths: int
     queries: list[Query]
+    strlens: dict[str, str] = field(default_factory=dict)  # pointer parameter -> length term
+    unrolled: int | None = None  # the bound every loop in this function was unrolled to
 
 
 # --------------------------------------------------------------------------
 # The AST walk
 # --------------------------------------------------------------------------
 
-_SINK_CALLS = {"memcpy", "memmove", "memset", "strncpy"}
-STOPPING = {"buffer", "buffer-read", "index-negative", "index-high", "divide"}
+_SINK_CALLS = {"memcpy", "memmove", "memset", "strncpy", "strcpy", "strcat"}
+_OTHER_CALLS = {"strlen", "free"}
+_ALLOC_CALLS = {"malloc", "calloc"}
+STOPPING = {"buffer", "buffer-read", "index-negative", "index-high", "divide", "use-after-free"}
 _CAP_RE = re.compile(r"//\s*axeyum:\s*capacity\((\w+)\)\s*=\s*(\w+)")
+_STRLEN_RE = re.compile(r"//\s*axeyum:\s*strlen\((\w+)\)\s*=\s*(\w+)")
+_UNROLL_RE = re.compile(r"//\s*axeyum:\s*unroll\s*=\s*(\d+)")
 _ARRAY_RE = re.compile(r"^\s*(\w+)\s*\[\s*(\d+)\s*\]\s*$")
 _INT_LIT_RE = re.compile(r"^(0[xX][0-9a-fA-F]+|0[0-7]*|[1-9][0-9]*)([uUlL]*)$")
+DEFAULT_UNROLL = 8
+MAX_PATHS = 4096  # beyond this the unrolling is refused rather than left to run
+MAX_CAPACITY = 65536  # bytes; every witness must be allocatable to be replayed
+_LOOP_TAGS = {"for_stmt", "while_stmt", "do_while_stmt"}
 
 
 class _Ast:
@@ -305,18 +341,55 @@ class _Ast:
         """The source text between two sibling nodes: where the operator lives."""
         return self.slice(self.span(a)[1], self.span(b)[0]).strip()
 
+    def ops(self, i: int) -> list[str] | None:
+        """The operator tokens cindergraph attached to node ``i``, if its export carries them.
+
+        Newer cindergraph exports put ``op`` (and ``ops`` on a flat chain) on
+        the node; older ones do not, and the operator is then recovered from the
+        bytes between two sibling spans (:meth:`gap`). The attribute wins when
+        present because it is the parser's own token rather than a re-read.
+        """
+        node = self.nodes[i]
+        if isinstance(node.get("ops"), list) and node["ops"]:
+            return [str(o) for o in node["ops"]]
+        if isinstance(node.get("op"), str) and node["op"]:
+            return [node["op"]]
+        return None
+
+    def binary_ops(self, i: int, kids: list[int]) -> list[str]:
+        ops = self.ops(i)
+        if ops is not None and len(ops) == len(kids) - 1:
+            return ops
+        if ops is not None and len(ops) == 1 and len(kids) > 2:
+            return ops * (len(kids) - 1)
+        return [self.gap(a, b) for a, b in zip(kids, kids[1:])]
+
+    def prefix_op(self, i: int, child: int) -> str:
+        ops = self.ops(i)
+        if ops is not None:
+            return ops[0]
+        return self.slice(self.span(i)[0], self.span(child)[0]).strip()
+
 
 class Lifter:
-    def __init__(self, src: str, ast: _Ast, root: int) -> None:
+    def __init__(self, src: str, ast: _Ast, root: int, unroll: int = DEFAULT_UNROLL) -> None:
         self.src = src
         self.ast = ast
         self.root = root
+        self.unroll = unroll
         self.types: dict[str, CType] = {}
         self.pointers: set[str] = set()
         self.capacities: dict[str, str] = {}
+        self.strlens: dict[str, str] = {}
+        self.addrs: dict[str, str] = {}  # pointer -> its address symbol, once used as a value
         self.consts: list[tuple[str, CType]] = []
+        self.base_asserts: list[str] = []  # facts every query of this function carries
         self.name = ""
         self.params: list[str] = []
+        self.loop_depth = 0
+        self.loops: list[int] = []  # lines of the loops that were unrolled
+        self.parked: list[PathState] = []  # states that ran a loop past the bound
+        self.alloc_depth = 0  # >0 while lifting a malloc/calloc size argument
 
     # -- declarations ------------------------------------------------------
 
@@ -338,32 +411,51 @@ class Lifter:
             self.params.append(pname)
             if stars or "*" in tname:
                 self.pointers.add(pname)
+                base = tname.replace("*", " ").strip()
+                try:
+                    self.types[f"{pname}[]"] = parse_ctype(base, a.line(p))
+                except Refused:
+                    pass  # `void *`, a struct pointer: bytes for sinks, refused for indexing
             else:
                 t = parse_ctype(tname, a.line(p))
                 self.types[pname] = t
                 self.consts.append((pname, t))
 
-    def read_capacity_annotations(self) -> None:
+    def read_annotations(self) -> None:
         start = self.ast.span(self.root)[0]
         head = self.ast.slice(0, start)
         # Annotations sit on the lines immediately above the function.
-        tail = "\n".join(head.rstrip().splitlines()[-4:])
+        tail = "\n".join(head.rstrip().splitlines()[-6:])
+        line = self.ast.line(self.root)
         for m in _CAP_RE.finditer(tail):
             ptr, cap = m.group(1), m.group(2)
             if ptr not in self.pointers:
-                raise Refused(
-                    self.ast.line(self.root),
-                    f"capacity annotation names {ptr!r}, not a pointer parameter",
-                )
-            if cap.isdigit():
-                self.capacities[ptr] = bv_literal(int(cap), SIZE_T)
-            elif cap in self.types:
-                self.capacities[ptr] = cap
+                raise Refused(line, f"capacity annotation names {ptr!r}, not a pointer parameter")
+            self.capacities[ptr] = self.annotation_term(cap, ptr, "capacity", line)
+        for m in _STRLEN_RE.finditer(tail):
+            ptr, n = m.group(1), m.group(2)
+            if ptr not in self.pointers:
+                raise Refused(line, f"strlen annotation names {ptr!r}, not a pointer parameter")
+            length = self.annotation_term(n, ptr, "strlen", line)
+            self.strlens[ptr] = length
+            if ptr in self.capacities:
+                # The NUL fits: strlen(s) < capacity(s).
+                self.base_asserts.append(f"(bvult {length} {self.capacities[ptr]})")
             else:
-                raise Refused(
-                    self.ast.line(self.root),
-                    f"capacity {cap!r} for {ptr!r} is not a scalar parameter",
-                )
+                cap = f"{ptr}_cap"
+                self.consts.append((cap, SIZE_T))
+                self.base_asserts.append(f"(= {cap} (bvadd {length} {bv_literal(1, SIZE_T)}))")
+                self.capacities[ptr] = cap
+
+    def annotation_term(self, value: str, ptr: str, what: str, line: int) -> str:
+        if value.isdigit():
+            return bv_literal(int(value), SIZE_T)
+        if value in self.types:
+            t = self.types[value]
+            if t != SIZE_T:
+                raise Refused(line, f"{what} {value!r} for {ptr!r} must be a size_t parameter")
+            return value
+        raise Refused(line, f"{what} {value!r} for {ptr!r} is not a scalar parameter or literal")
 
     # -- expressions -------------------------------------------------------
 
@@ -404,12 +496,32 @@ class Lifter:
             t = ULONG
         return Term(bv_literal(value, t), t)
 
+    def read(self, name: str, node: int, state: PathState) -> Term:
+        """A read of local or parameter ``name``; an uninitialised local is a finding."""
+        if name in state.uninit:
+            self.obligation(
+                state,
+                "uninitialized",
+                node,
+                "false",
+                note=f"{name} is read before any assignment on this path",
+            )
+        return state.env[name]
+
     def name_ref(self, i: int, state: PathState) -> Term:
         name = self.ast.label(i).strip()
         if name in state.env:
-            return state.env[name]
+            return self.read(name, i, state)
+        if name == "NULL":
+            return Term(bv_literal(0, ULONG), ULONG)
         if name in self.pointers:
-            raise Refused(self.ast.line(i), f"pointer {name!r} used as a value")
+            # A pointer used as a value (`if (!p)`, `p == NULL`): its address is
+            # an unconstrained 64-bit symbol, so both outcomes of a null test are
+            # feasible and neither branch is reported dead.
+            if name not in self.addrs:
+                self.addrs[name] = f"{name}_addr"
+                self.consts.append((self.addrs[name], ULONG))
+            return Term(self.addrs[name], ULONG)
         raise Refused(self.ast.line(i), f"unknown name {name!r}")
 
     def sizeof(self, i: int, state: PathState) -> Term:
@@ -423,18 +535,22 @@ class Lifter:
             t = state.env[text].ctype
             assert t is not None
             return Term(bv_literal(t.width // 8, SIZE_T), SIZE_T)
+        if a.tag(inner) == "name_ref" and self.capacities.get(text, "").startswith("(_ bv"):
+            return Term(self.capacities[text], SIZE_T)  # sizeof a local array: its bytes
         return Term(bv_literal(parse_ctype(text, a.line(i)).width // 8, SIZE_T), SIZE_T)
 
     def unary(self, i: int, state: PathState) -> Term:
         a = self.ast
         child = a.children(i)[0]
-        op = a.slice(a.span(i)[0], a.span(child)[0]).strip()
+        op = a.prefix_op(i, child)
         if op == "sizeof":
             return self.sizeof(i, state)
         if op in ("&", "*"):
             raise Refused(
                 a.line(i), f"unary {op!r} on {a.text(i).strip()!r}: pointers are opaque here"
             )
+        if op in ("++", "--"):
+            return self.inc_dec(child, op, i, state, prefix=True)
         x = self.expr(child, state)
         if op == "!":
             return Term(f"(not {as_bool(x).smt})", None)
@@ -444,7 +560,8 @@ class Lifter:
         t = promote(x.ctype)
         x = convert(x, t)
         if op == "-":
-            if t.signed:
+            if t.signed and not x.smt.startswith("(_ bv"):
+                # A literal never overflows on negation (2147483648 is already `long`).
                 # `bvnego` (SMT-LIB 2.6) is exactly "a is the signed minimum",
                 # the one value whose negation does not fit back in `t.width`
                 # bits -- no double-width arithmetic needed.
@@ -456,12 +573,25 @@ class Lifter:
             return x
         raise Refused(a.line(i), f"unary operator {op!r}")
 
+    def inc_dec(self, target: int, op: str, node: int, state: PathState, prefix: bool) -> Term:
+        """``++x`` / ``x++`` / ``--x`` / ``x--``: the store, and the value C gives the expression."""
+        a = self.ast
+        if a.tag(target) != "name_ref":
+            raise Refused(a.line(node), f"{op} on {a.text(target).strip()!r}: only a scalar local")
+        name = a.label(target).strip()
+        if name not in state.env:
+            raise Refused(a.line(node), f"{op} on unknown {name!r}")
+        old = self.read(name, target, state)
+        assert old.ctype is not None
+        one = Term(bv_literal(1, INT), INT)
+        new = self.store(name, old.ctype, self.apply(op[0], old, one, node, state), node, state)
+        return new if prefix else old
+
     def binary(self, i: int, state: PathState) -> Term:
         a = self.ast
         kids = a.children(i)
         acc = self.expr(kids[0], state)
-        for left, right in zip(kids, kids[1:]):
-            op = a.gap(left, right)
+        for op, right in zip(a.binary_ops(i, kids), kids[1:]):
             acc = self.apply(op, acc, self.expr(right, state), i, state)
         return acc
 
@@ -519,6 +649,17 @@ class Lifter:
                     f"(not ({overflow_op} {xv.smt} {yv.smt}))",
                     note=f"{t} arithmetic",
                 )
+            elif self.alloc_depth > 0 and op in ("+", "*"):
+                # Unsigned wrap is defined, but inside an allocation size it is
+                # the bug: the block is smaller than the count says.
+                overflow_op = {"+": "bvuaddo", "*": "bvumulo"}[op]
+                self.obligation(
+                    state,
+                    "alloc-size-wrap",
+                    node,
+                    f"(not ({overflow_op} {xv.smt} {yv.smt}))",
+                    note=f"{t} allocation size wraps",
+                )
             return Term(f"({bvop} {xv.smt} {yv.smt})", t)
         if op in ("/", "%"):
             holds = f"(not (= {yv.smt} {bv_literal(0, t)}))"
@@ -529,12 +670,8 @@ class Lifter:
                 return Term(f"({'bvsdiv' if t.signed else 'bvudiv'} {xv.smt} {yv.smt})", t)
             return Term(f"({'bvsrem' if t.signed else 'bvurem'} {xv.smt} {yv.smt})", t)
         if op in ("&", "|", "^"):
-            return Term(
-                f"({ {'&': 'bvand', '|': 'bvor', '^': 'bvxor'}[op] } {xv.smt} {yv.smt})".replace(
-                    "( ", "("
-                ).replace(" )", ")"),
-                t,
-            )
+            bvop = {"&": "bvand", "|": "bvor", "^": "bvxor"}[op]
+            return Term(f"({bvop} {xv.smt} {yv.smt})", t)
         raise Refused(line, f"binary operator {op!r}")
 
     def expr(self, i: int, state: PathState) -> Term:
@@ -576,13 +713,17 @@ class Lifter:
             name = a.label(base).strip()
             if name not in self.capacities:
                 raise Refused(a.line(i), f"subscript on {name!r} without a known capacity")
+            if name in state.freed:
+                self.obligation(state, "use-after-free", i, "false", note=f"{name} was freed")
             idx = self.expr(a.children(suffix)[0], state)
             if idx.is_bool:
                 idx = convert(idx, INT)
             assert idx.ctype is not None
             it = promote(idx.ctype)
             iv = convert(idx, it)
-            elem = self.types.get(f"{name}[]", CType(8, False))
+            elem = self.types.get(f"{name}[]")
+            if elem is None:
+                raise Refused(a.line(i), f"subscript on {name!r}: its element type is not scalar")
             # Capacities are in bytes; the index is in elements.
             cap_elems = f"(bvudiv {self.capacities[name]} {bv_literal(elem.width // 8, SIZE_T)})"
             high = f"(bvult {extend_to(iv, 128)} ((_ zero_extend 64) {cap_elems}))"
@@ -595,17 +736,13 @@ class Lifter:
                     f"(or (not {nonneg}) {high})"  # the too-large half, given a non-negative index
                 )
             self.obligation(
-                state,
-                "index-high",
-                i,
-                high,
-                note=f"index into {name} is past its {cap_elems if False else 'capacity'}",
+                state, "index-high", i, high, note=f"index into {name} is past its capacity"
             )
             return self.element_symbol(name, elem, state)
         if stag == "call_args":
             return self.call(i, base, suffix, state)
         if stag == "inc_dec_suffix":
-            raise Refused(a.line(i), f"{a.text(i).strip()!r}: ++/-- only as a statement")
+            return self.inc_dec(base, a.text(suffix).strip(), i, state, prefix=False)
         raise Refused(a.line(i), f"postfix form {stag!r}")
 
     def element_symbol(self, name: str, elem: CType, state: PathState) -> Term:
@@ -619,28 +756,75 @@ class Lifter:
         a = self.ast
         fname = a.label(base).strip()
         args = a.children(args_node)
+        if fname == "strlen":
+            (s,) = args
+            name = a.label(s).strip() if a.tag(s) == "name_ref" else ""
+            if name not in self.strlens:
+                raise Refused(
+                    a.line(i),
+                    f"strlen on {a.text(s).strip()!r} without a `// axeyum: strlen(...)` annotation",
+                )
+            if name in state.freed:
+                self.obligation(state, "use-after-free", i, "false", note=f"{name} was freed")
+            return Term(self.strlens[name], SIZE_T)
+        if fname == "free":
+            (p,) = args
+            name = a.label(p).strip() if a.tag(p) == "name_ref" else ""
+            if name not in self.pointers:
+                raise Refused(a.line(i), f"free of {a.text(p).strip()!r}: not a pointer")
+            if name in state.freed:
+                self.obligation(state, "use-after-free", i, "false", note=f"{name} freed twice")
+            state.freed.add(name)
+            return Term(bv_literal(0, INT), INT)
         if fname not in _SINK_CALLS:
             raise Refused(
-                a.line(i), f"call to {fname!r} is not modelled (only {sorted(_SINK_CALLS)})"
+                a.line(i),
+                f"call to {fname!r} is not modelled (only {sorted(_SINK_CALLS | _OTHER_CALLS)})",
             )
         if fname == "memset":
             dst, _value, n = args
             srcp = None
+            length = self.expr(n, state)
+        elif fname in ("strcpy", "strcat"):
+            dst, srcp = args
+            n = None
+            src_name = a.label(srcp).strip() if a.tag(srcp) == "name_ref" else ""
+            if src_name not in self.strlens:
+                raise Refused(
+                    a.line(i),
+                    f"{fname} from {a.text(srcp).strip()!r} without a `// axeyum: strlen(...)` annotation",
+                )
+            # strcpy writes strlen(s) + 1 bytes (the NUL); strcat writes them after dst's own string.
+            length = Term(f"(bvadd {self.strlens[src_name]} {bv_literal(1, SIZE_T)})", SIZE_T)
         else:
             dst, srcp, n = args
-        length = self.expr(n, state)
+            length = self.expr(n, state)
         if length.is_bool:
             length = convert(length, INT)
         assert length.ctype is not None
         n64 = convert(length, SIZE_T)  # the argument is converted to size_t
+        n_text = a.text(n).strip() if n is not None else f"strlen({a.text(srcp).strip()}) + 1"
         for ptr_node, kind, verb in ((dst, "buffer", "writes"), (srcp, "buffer-read", "reads")):
             if ptr_node is None:
                 continue
-            base_name, offset = self.pointer_arith(ptr_node, state)
+            base_name, offset, scale = self.pointer_arith(ptr_node, state)
             cap = self.capacities.get(base_name)
             if cap is None:
                 raise Refused(a.line(i), f"{fname} on {base_name!r} without a capacity annotation")
+            if base_name in state.freed:
+                self.obligation(state, "use-after-free", i, "false", note=f"{base_name} was freed")
             off128 = extend_to(offset, 128)
+            if scale != 1:
+                # Pointer arithmetic counts elements; capacities are bytes. The
+                # scaling happens in the 128-bit obligation, so it cannot wrap.
+                off128 = f"(bvmul {off128} {bv_literal(scale, CType(128, False))})"
+            if fname == "strcat" and kind == "buffer":
+                if base_name not in self.strlens:
+                    raise Refused(
+                        a.line(i),
+                        f"strcat onto {base_name!r} without a `// axeyum: strlen(...)` annotation",
+                    )
+                off128 = f"(bvadd {off128} ((_ zero_extend 64) {self.strlens[base_name]}))"
             holds = f"(bvule (bvadd {off128} ((_ zero_extend 64) {n64.smt})) ((_ zero_extend 64) {cap}))"
             if offset.ctype is not None and offset.ctype.signed:
                 holds = f"(and (bvsge {offset.smt} {bv_literal(0, offset.ctype)}) {holds})"
@@ -649,28 +833,33 @@ class Lifter:
                 kind,
                 i,
                 holds,
-                note=f"{fname} {verb} {a.text(n).strip()} bytes at {a.text(ptr_node).strip()}",
+                note=f"{fname} {verb} {n_text} bytes at {a.text(ptr_node).strip()}",
             )
         return Term(bv_literal(0, INT), INT)
 
-    def pointer_arith(self, node: int, state: PathState) -> tuple[str, Term]:
-        """``p`` or ``p + off`` → (pointer name, byte offset term)."""
+    def pointer_arith(self, node: int, state: PathState) -> tuple[str, Term, int]:
+        """``p`` or ``p + off`` → (pointer name, element offset term, bytes per element)."""
         a = self.ast
         if a.tag(node) == "name_ref":
             name = a.label(node).strip()
             if name not in self.pointers:
                 raise Refused(a.line(node), f"{name!r} is not a pointer parameter")
-            return name, Term(bv_literal(0, SIZE_T), SIZE_T)
+            return name, Term(bv_literal(0, SIZE_T), SIZE_T), 1
         if a.tag(node) == "binary_expr":
             kids = a.children(node)
-            if len(kids) == 2 and a.gap(kids[0], kids[1]) == "+" and a.tag(kids[0]) == "name_ref":
+            if (
+                len(kids) == 2
+                and a.binary_ops(node, kids) == ["+"]
+                and a.tag(kids[0]) == "name_ref"
+            ):
                 name = a.label(kids[0]).strip()
                 if name in self.pointers:
                     off = self.expr(kids[1], state)
                     if off.is_bool:
                         off = convert(off, INT)
                     assert off.ctype is not None
-                    return name, convert(off, promote(off.ctype))
+                    elem = self.types.get(f"{name}[]", CType(8, False))
+                    return name, convert(off, promote(off.ctype)), elem.width // 8
         raise Refused(
             a.line(node),
             f"destination {a.text(node).strip()!r} is not `p` or `p + offset` on a pointer parameter",
@@ -679,7 +868,7 @@ class Lifter:
     def assign(self, i: int, state: PathState) -> Term:
         a = self.ast
         lhs, rhs = a.children(i)
-        op = a.gap(lhs, rhs)
+        op = a.binary_ops(i, [lhs, rhs])[0]
         if a.tag(lhs) == "postfix_expr":
             # buf[i] = v : the index obligation is the finding; the store itself is not modelled.
             self.postfix(lhs, state)
@@ -694,7 +883,7 @@ class Lifter:
         assert target is not None
         value = self.expr(rhs, state)
         if op != "=":
-            value = self.apply(op[:-1], state.env[name], value, i, state)
+            value = self.apply(op[:-1], self.read(name, lhs, state), value, i, state)
         return self.store(name, target, value, i, state)
 
     def store(self, name: str, target: CType, value: Term, node: int, state: PathState) -> Term:
@@ -716,6 +905,7 @@ class Lifter:
         sym = f"{name}_{self.fresh(state, name)}"
         state.defs.append((sym, target, stored.smt))
         state.env[name] = Term(sym, target)
+        state.uninit.discard(name)
         return state.env[name]
 
     def fresh(self, state: PathState, name: str) -> int:
@@ -732,6 +922,7 @@ class Lifter:
                 self.ast.text(node).strip(),
                 holds,
                 len(state.conds),
+                len(state.defs),
                 note,
             )
         )
@@ -741,33 +932,30 @@ class Lifter:
     def stmt(self, i: int, state: PathState) -> list[PathState]:
         a = self.ast
         tag = a.tag(i)
-        if state.returned:
+        if state.returned or state.broke:
             return [state]
         if tag == "compound_stmt":
             return self.block(a.children(i), state)
         if tag == "decl":
             return [self.decl(i, state)]
         if tag == "expr_stmt":
-            e = a.children(i)[0]
-            if a.tag(e) == "postfix_expr" and a.tag(a.children(e)[1]) == "inc_dec_suffix":
-                name = a.label(a.children(e)[0]).strip()
-                one = Term(bv_literal(1, INT), INT)
-                op = "+" if a.text(a.children(e)[1]).strip() == "++" else "-"
-                self.store(
-                    name,
-                    state.env[name].ctype,
-                    self.apply(op, state.env[name], one, e, state),
-                    e,
-                    state,
-                )  # type: ignore[arg-type]
-            else:
-                self.expr(e, state)
+            if a.children(i):
+                self.expr(a.children(i)[0], state)
             return [state]
         if tag == "return_stmt":
             for c in a.children(i):
                 self.expr(c, state)
             state.returned = True
             return [state]
+        if tag == "break_stmt":
+            if self.loop_depth == 0:
+                raise Refused(a.line(i), "break outside a loop (switch is not modelled)")
+            state.broke = True
+            return [state]
+        if tag == "continue_stmt":
+            raise Refused(a.line(i), "continue: not supported by the unroller")
+        if tag in ("goto_stmt", "labeled_stmt", "label_stmt"):
+            raise Refused(a.line(i), f"{tag}: goto is refused")
         if tag == "if_stmt":
             kids = a.children(i)
             cond = as_bool(self.expr(kids[0], state))
@@ -783,14 +971,15 @@ class Lifter:
                         a.text(kids[0]).strip(),
                         "false",
                         len(st.conds),
+                        len(st.defs),
                         note=f"{edge} edge",
                     )
                 )
             out = self.stmt(kids[1], then_state)
             out += self.stmt(kids[2], else_state) if len(kids) > 2 else [else_state]
             return out
-        if tag in ("for_stmt", "while_stmt", "do_stmt"):
-            raise Refused(a.line(i), f"{tag}: loops are refused (no unrolling in this lifter)")
+        if tag in _LOOP_TAGS:
+            return self.loop(i, state)
         raise Refused(a.line(i), f"statement form {tag!r}")
 
     def block(self, stmts: list[int], state: PathState) -> list[PathState]:
@@ -798,6 +987,98 @@ class Lifter:
         for s in stmts:
             states = [t for st in states for t in self.stmt(s, st)]
         return states
+
+    def loop(self, i: int, state: PathState) -> list[PathState]:
+        """Unroll ``for``/``while``/``do`` to ``self.unroll`` iterations.
+
+        Every exit is its own path: after ``k`` iterations with the condition
+        asserted false (a normal exit), or through ``break``/``return`` inside
+        the body. A state that would need iteration ``K + 1`` is parked with a
+        ``loop-bound`` obligation: the query "path conditions and the condition
+        is still true" is ``sat`` exactly when some input runs the loop past the
+        bound, which the driver reports rather than calling the function clean.
+        """
+        a = self.ast
+        tag = a.tag(i)
+        kids = a.children(i)
+        init = cond = step = body = None
+        if tag == "for_stmt":
+            for k in kids:
+                kt = a.tag(k)
+                if kt == "for_init":
+                    init = a.children(k)[0] if a.children(k) else None
+                elif kt == "for_cond":
+                    cond = a.children(k)[0] if a.children(k) else None
+                elif kt == "for_step":
+                    step = a.children(k)[0] if a.children(k) else None
+                else:
+                    body = k
+        elif tag == "while_stmt":
+            cond, body = kids
+        else:  # do_while_stmt: the body runs before the first test
+            body, cond = kids
+        assert body is not None
+        if init is not None and a.tag(init) == "decl":
+            state = self.decl(init, state)
+        elif init is not None:
+            self.expr(init, state)
+        self.loops.append(a.line(i))
+        self.loop_depth += 1
+        bound = self.unroll
+        out: list[PathState] = []
+        live = [state]
+
+        def test(st: PathState) -> PathState | None:
+            """Fork ``st`` on the loop condition; the exit goes to ``out``, the entry is returned."""
+            if cond is None:
+                return st  # `for (;;)`: only break/return leave
+            c = as_bool(self.expr(cond, st))
+            exit_st, enter_st = st.fork(), st.fork()
+            exit_st.conds.append(f"(not {c.smt})")
+            enter_st.conds.append(c.smt)
+            out.append(exit_st)
+            return enter_st
+
+        for _ in range(bound):
+            nxt: list[PathState] = []
+            for st in live:
+                entering = st if tag == "do_while_stmt" else test(st)
+                if entering is None:
+                    continue
+                for bst in self.stmt(body, entering):
+                    if bst.returned:
+                        out.append(bst)
+                    elif bst.broke:
+                        bst.broke = False
+                        out.append(bst)
+                    else:
+                        if step is not None:
+                            self.expr(step, bst)
+                        again = test(bst) if tag == "do_while_stmt" else bst
+                        if again is not None:
+                            nxt.append(again)
+            live = nxt
+            if len(live) + len(out) > MAX_PATHS:
+                raise Refused(a.line(i), f"more than {MAX_PATHS} paths after unrolling to {bound}")
+        # Whoever is still looping after `bound` iterations: would it iterate again?
+        for st in live:
+            entering = st if tag == "do_while_stmt" else test(st)
+            if entering is None:
+                continue
+            entering.obligations.append(
+                Obligation(
+                    "loop-bound",
+                    a.line(i),
+                    a.text(cond).strip() if cond is not None else a.text(i).strip()[:40],
+                    "false",
+                    len(entering.conds),
+                    len(entering.defs),
+                    note=f"still true after {bound} iterations",
+                )
+            )
+            self.parked.append(entering)
+        self.loop_depth -= 1
+        return out
 
     def decl(self, i: int, state: PathState) -> PathState:
         a = self.ast
@@ -816,33 +1097,89 @@ class Lifter:
             if init is not None:
                 raise Refused(a.line(i), f"array initializer for {name!r}")
             return state
-        if "*" in dtext or "*" in a.label(spec):
-            raise Refused(a.line(i), f"local pointer {dtext!r}")
         name = a.label(next(k for k in a.children(declarator) if a.tag(k) == "decl_name")).strip()
+        if "*" in dtext or "*" in a.label(spec):
+            return self.pointer_decl(i, name, spec, dtext, init, state)
         t = parse_ctype(a.label(spec), a.line(i))
         if init is None:
             sym = f"{name}_uninit"
             self.consts.append((sym, t))
             state.env[name] = Term(sym, t)
+            state.uninit.add(name)
             return state
         value = self.expr(a.children(init)[0], state)
         self.store(name, t, value, i, state)
+        return state
+
+    def pointer_decl(
+        self, i: int, name: str, spec: int, dtext: str, init: int | None, state: PathState
+    ) -> PathState:
+        """``T *p = malloc(size)`` / ``calloc(n, size)``: ``p`` gets the capacity ``size``."""
+        a = self.ast
+        line = a.line(i)
+        if dtext.count("*") != 1:
+            raise Refused(line, f"local pointer {dtext!r}: only one level of indirection")
+        call = a.children(init)[0] if init is not None else None
+        if (
+            call is None
+            or a.tag(call) != "postfix_expr"
+            or a.tag(a.children(call)[1]) != "call_args"
+            or a.label(a.children(call)[0]).strip() not in _ALLOC_CALLS
+        ):
+            raise Refused(line, f"local pointer {dtext!r}: only `T *p = malloc(...)` is modelled")
+        fname = a.label(a.children(call)[0]).strip()
+        args = a.children(a.children(call)[1])
+        self.alloc_depth += 1
+        try:
+            sizes = [self.expr(arg, state) for arg in args]
+        finally:
+            self.alloc_depth -= 1
+        sizes = [convert(convert(s, INT) if s.is_bool else s, SIZE_T) for s in sizes]
+        if fname == "calloc":
+            n, each = sizes
+            self.obligation(
+                state,
+                "alloc-size-wrap",
+                call,
+                f"(not (bvumulo {n.smt} {each.smt}))",
+                note="calloc count * size wraps in size_t",
+            )
+            size = Term(f"(bvmul {n.smt} {each.smt})", SIZE_T)
+        else:
+            (size,) = sizes
+        elem_text = a.label(spec)
+        try:
+            self.types[f"{name}[]"] = parse_ctype(elem_text, line)
+        except Refused:
+            pass  # `void *p`: bytes for sinks, refused for indexing
+        cap = f"{name}_cap_{self.fresh(state, name + '_cap')}"
+        state.defs.append((cap, SIZE_T, size.smt))
+        self.pointers.add(name)
+        self.capacities[name] = cap
+        self.addrs[name] = f"{name}_addr"
+        if (self.addrs[name], ULONG) not in self.consts:
+            self.consts.append((self.addrs[name], ULONG))
+        state.freed.discard(name)
         return state
 
     # -- queries -------------------------------------------------------------
 
     def run(self) -> Lifted:
         self.declare_params()
-        self.read_capacity_annotations()
-        state = PathState(env={p: Term(p, t) for p, t in self.consts})
+        self.read_annotations()
+        state = PathState(env={p: Term(p, t) for p, t in self.consts if p in self.types})
         body = next(c for c in self.ast.children(self.root) if self.ast.tag(c) == "compound_stmt")
         finals = self.stmt(body, state)
         queries: list[Query] = []
-        for st in finals:
+        seen: set[str] = set()
+        for st in finals + self.parked:
             for ob in st.obligations:
-                queries.append(self.query(st, ob))
-        # Obligations are per path; the same construct reached on two paths
-        # produces two queries, and the driver dedupes by (line, kind, verdict).
+                q = self.query(st, ob)
+                # The same construct reached on two paths that fork AFTER it
+                # yields the same query; ask it once.
+                if q.smtlib not in seen:
+                    seen.add(q.smtlib)
+                    queries.append(q)
         scalar = [(p, self.types[p]) for p in self.params if p in self.types]
         return Lifted(
             self.name,
@@ -853,21 +1190,32 @@ class Lifter:
             dict(self.capacities),
             len(finals),
             queries,
+            dict(self.strlens),
+            self.unroll if self.loops else None,
         )
 
     def query(self, st: PathState, ob: Obligation) -> Query:
         lines = ["(set-logic QF_BV)", "(set-option :produce-models true)"]
         seen: set[str] = set()
+        defined: set[str] = set()
         for name, t in self.consts:
             if name not in seen:
                 seen.add(name)
+                defined.add(name)
                 lines.append(f"(declare-const {name} {t.smt})")
-        for sym, t, term in st.defs:
+        for sym, t, term in st.defs[: ob.defs_len]:
+            defined.add(sym)
             lines.append(f"(define-fun {sym} () {t.smt} {term})")
         for cap in self.capacities.values():
-            if not cap.startswith("(_ bv"):
-                # Keep every capacity allocatable so the witness can be replayed.
-                lines.append(f"(assert (bvule {cap} {bv_literal(65536, SIZE_T)}))")
+            if not cap.startswith("(_ bv") and cap in defined:
+                # Keep every capacity allocatable AND observable so the witness
+                # can be replayed: AddressSanitizer does not see a write into a
+                # zero-byte region (measured: malloc(0) then p[0] = 1 reports
+                # only the leak).
+                lines.append(
+                    f"(assert (and (bvuge {cap} {bv_literal(1, SIZE_T)}) (bvule {cap} {bv_literal(MAX_CAPACITY, SIZE_T)})))"
+                )
+        lines.extend(f"(assert {fact})" for fact in self.base_asserts)
         for c in st.conds[: ob.path_len]:
             lines.append(f"(assert {c})")
         # Execution must REACH this sink: every earlier obligation whose
@@ -899,8 +1247,18 @@ class Lifter:
 # --------------------------------------------------------------------------
 
 
-def lift_source(src: str) -> list[Lifted | tuple[str, Refused]]:
-    """Every function in ``src``: a :class:`Lifted`, or ``(name, Refused)``."""
+def file_unroll(src: str) -> int | None:
+    """The file-level ``// axeyum: unroll = N`` override, if the source carries one."""
+    m = _UNROLL_RE.search(src)
+    return int(m.group(1)) if m else None
+
+
+def lift_source(src: str, unroll: int = DEFAULT_UNROLL) -> list[Lifted | tuple[str, Refused]]:
+    """Every function in ``src``: a :class:`Lifted`, or ``(name, Refused)``.
+
+    Loops are unrolled to ``unroll`` iterations, unless the file says
+    ``// axeyum: unroll = N``, in which case ``N`` wins for that file.
+    """
     if _cg is None:
         raise RuntimeError(
             "cindergraph is not installed: uv pip install 'cindergraph @ git+https://github.com/mjbommar/cindergraph.git@main'"
@@ -908,6 +1266,9 @@ def lift_source(src: str) -> list[Lifted | tuple[str, Refused]]:
     report = _cg.analyze(src)
     if report.diagnostics:
         raise RuntimeError(f"cindergraph diagnostics: {[str(d) for d in report.diagnostics]}")
+    bound = file_unroll(src)
+    if bound is None:
+        bound = unroll
     out: list[Lifted | tuple[str, Refused]] = []
     cfgs = {
         name: json.loads(doc) for name, doc in _cg.export_graphs(src, repr="cfg", format="json")
@@ -917,12 +1278,15 @@ def lift_source(src: str) -> list[Lifted | tuple[str, Refused]]:
         root = next(i for i in ast.nodes if ast.tag(i) == "func_def")
         try:
             back = [e for e in cfgs[name]["edges"] if e.get("back") not in (None, "false", False)]
-            if back:
+            lifter = Lifter(src, ast, root, unroll=bound)
+            lifted = lifter.run()
+            if back and not lifter.loops:
                 raise Refused(
                     ast.line(root),
-                    f"{len(back)} loop back edge(s) in cindergraph's CFG; loops are refused",
+                    f"{len(back)} loop back edge(s) in cindergraph's CFG but no for/while/do "
+                    "statement: a goto-formed loop is refused",
                 )
-            out.append(Lifter(src, ast, root).run())
+            out.append(lifted)
         except Refused as r:
             out.append((name, r))
     return out

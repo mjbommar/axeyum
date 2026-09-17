@@ -3,19 +3,23 @@
 
 For every function cindergraph can parse in every ``*.c`` under ``--samples``:
 
-1. :mod:`lift` turns the AST into one QF_BV query per (path, sink).
+1. :mod:`lift` turns the AST into one QF_BV query per (path, sink), unrolling
+   loops to ``--unroll`` iterations (a file's ``// axeyum: unroll = N`` wins).
 2. ``axeyum.smt.solve`` (the native Python bindings) answers each query; a
    ``sat`` carries a model. ``--cli`` switches to shelling out to the
    ``axeyum_cli`` example binary instead, for a checkout that has not built
    the extension.
 3. The model becomes a C ``main`` that calls the function with exactly those
-   arguments; it is compiled with AddressSanitizer and UBSan and run. The
-   sanitizer's first report line is the evidence — a witness that does not
-   reproduce is reported as such, never as a finding.
+   arguments; it is compiled with the one sanitizer that observes the finding's
+   kind and run. The sanitizer's first report line is the evidence — a witness
+   that does not reproduce is reported as such, never as a finding.
 
 ``unsat`` on every obligation of a function is "no witness within the model",
-and the README says what the model is. A refused function is listed with its
-reason. Exit status is 1 if any witness fails to replay, or any sample's
+and the README says what the model is. A function with a loop whose bound is
+not met within the unrolling is ``bounded``, never ``clean``. A refused
+function is listed with its reason, and the refusal reasons are histogrammed at
+the end: on inputs nobody wrote to be lifted, that histogram is what says what
+to build next. Exit status is 1 if any witness fails to replay, or any sample's
 expected verdict (from the ``// expect:`` lines) is not met; that is what makes
 the run a check rather than a demo.
 
@@ -29,10 +33,12 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
+from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from lift import CType, Lifted, Query, lift_source  # noqa: E402
+from lift import DEFAULT_UNROLL, CType, Lifted, Query, lift_source  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
@@ -41,20 +47,30 @@ CLI_BUILD_LINE = "cargo build --release -p axeyum-bench --example axeyum_cli --f
 COMMON = ["-fno-sanitize-recover=all", "-fno-omit-frame-pointer", "-O0", "-g", "-w"]
 # The sanitizer that can observe each finding kind — and only that one, so the
 # replay's report is evidence for THIS finding rather than for whichever
-# undefined behaviour happens first on the path.
+# undefined behaviour happens first on the path. `uninitialized` is resolved at
+# run time (MemorySanitizer, else valgrind, else no oracle: see `uninit_oracle`).
 SANITIZER_FOR = {
     "buffer": "-fsanitize=address",
     "buffer-read": "-fsanitize=address",
     "index-negative": "-fsanitize=address",
     "index-high": "-fsanitize=address",
+    "use-after-free": "-fsanitize=address",
     "divide": "-fsanitize=undefined",
     "shift": "-fsanitize=undefined",
     "signed-overflow": "-fsanitize=undefined",
     "narrowing": "-fsanitize=implicit-conversion",  # clang only
+    "alloc-size-wrap": "-fsanitize=unsigned-integer-overflow",  # clang only
+    "uninitialized": "-fsanitize=memory",  # clang only, and not on every target
 }
+CLANG_ONLY = {
+    "-fsanitize=implicit-conversion",
+    "-fsanitize=unsigned-integer-overflow",
+    "-fsanitize=memory",
+}
+NO_ORACLE = "no runtime oracle available"
 _VALUE_RE = re.compile(r"\((\w+)\s+(#b[01]+|#x[0-9a-fA-F]+|\(_ bv(\d+) \d+\))\)")
 _LINE_RE = re.compile(r":(\d+):\d+: runtime error")
-_FRAME_RE = re.compile(r"#\d+ .*?/samples/[^:\s]+:(\d+)")
+_REPORT_MARKS = ("ERROR: AddressSanitizer", "WARNING: MemorySanitizer", "runtime error")
 BOUNDS = (1, 16, 256, 4096)  # smallest witness first: it is the one a reader can check by hand
 
 
@@ -156,19 +172,25 @@ def c_literal(value: int, t: CType) -> str:
     return f"{value}{suffix}"
 
 
+def resolve(term: str, values: dict[str, int]) -> int:
+    """A capacity or length term's value: a ``(_ bvN 64)`` literal or a model name."""
+    if term.startswith("(_ bv"):
+        return int(term[len("(_ bv") :].split()[0])
+    return values.get(term, 0)
+
+
 def harness(sample: Path, lifted: Lifted, values: dict[str, int]) -> str:
     args = []
     setup = []
     for p in lifted.params:
         if p in lifted.pointer_params:
-            cap = lifted.capacities[p]
-            n = (
-                int(cap[len("(_ bv") :].split()[0])
-                if cap.startswith("(_ bv")
-                else values.get(cap, 0)
-            )
+            n = resolve(lifted.capacities[p], values)
             size = max(n, 1)
             setup.append(f"    unsigned char *{p} = malloc({size}); memset({p}, 0, {size});")
+            if p in lifted.strlens:
+                # The annotated string: `strlen` bytes of 'a', then the NUL.
+                length = resolve(lifted.strlens[p], values)
+                setup.append(f"    memset({p}, 'a', {length}); {p}[{length}] = 0;")
             args.append(f"(void *){p}")
         else:
             t = dict(lifted.scalar_params)[p]
@@ -181,29 +203,53 @@ def harness(sample: Path, lifted: Lifted, values: dict[str, int]) -> str:
     )
 
 
-def replay(cc: str, source: Path, out: Path, kind: str, line: int) -> tuple[bool, str]:
-    """Compile with the one sanitizer that observes ``kind``; True only if it fires at ``line``."""
-    exe = out.with_suffix("")
-    san = SANITIZER_FOR[kind]
-    if san == "-fsanitize=implicit-conversion" and "clang" not in cc:
-        return False, "narrowing needs clang's -fsanitize=implicit-conversion"
-    comp = subprocess.run(
-        [cc, san, *COMMON, str(source), "-o", str(exe)], capture_output=True, text=True
-    )
-    if comp.returncode != 0:
-        return False, "compile failed: " + comp.stderr.strip().splitlines()[-1][:160]
-    run = subprocess.run([str(exe)], capture_output=True, text=True, timeout=60)
-    err = run.stderr
+_UNINIT_ORACLE: dict[str, str | None] = {}
+
+
+def uninit_oracle(cc: str) -> str | None:
+    """How an uninitialised read is observed here: MSan, valgrind, or nothing.
+
+    ``-fsanitize=memory`` exists only in clang and only on some targets, so it
+    is probed by compiling and running a program rather than assumed from the
+    compiler's name; valgrind is the fallback; with neither, the finding is
+    reported as ``no runtime oracle available`` and counted apart from the
+    replayed ones — never as a replay.
+    """
+    if cc in _UNINIT_ORACLE:
+        return _UNINIT_ORACLE[cc]
+    oracle: str | None = None
+    with tempfile.TemporaryDirectory(prefix="axeyum-msan-probe-") as tmp:
+        probe = Path(tmp) / "probe.c"
+        probe.write_text("int main(void) { return 0; }\n")
+        exe = Path(tmp) / "probe"
+        comp = subprocess.run(
+            [cc, "-fsanitize=memory", "-O0", str(probe), "-o", str(exe)],
+            capture_output=True,
+            text=True,
+        )
+        if comp.returncode == 0:
+            run = subprocess.run([str(exe)], capture_output=True, text=True, timeout=60)
+            if run.returncode == 0:
+                oracle = "-fsanitize=memory"
+    if oracle is None and shutil.which("valgrind"):
+        oracle = "valgrind"
+    _UNINIT_ORACLE[cc] = oracle
+    return oracle
+
+
+def sanitizer_report(err: str, sample_name: str, line: int) -> tuple[bool, str]:
+    """The first sanitizer report in ``err``; True only if it names ``line``."""
+    frame_re = re.compile(r"#\d+ .*?" + re.escape(sample_name) + r":(\d+)")
     for report in err.splitlines():
-        if "ERROR: AddressSanitizer" in report or "runtime error" in report:
+        if any(mark in report for mark in _REPORT_MARKS):
             report = re.sub(r"^==\d+==", "", report).strip()
             report = re.sub(r" on address 0x[0-9a-f]+ at pc .*$", "", report)
-            report = re.sub(r"^.*?/samples/", "", report)
+            report = re.sub(r"^.*?/(?=" + re.escape(sample_name) + ")", "", report)
             m = _LINE_RE.search(report)
             where = int(m.group(1)) if m else None
             if where is None:
-                # An ASan report names the line in its first user-code stack frame.
-                frames = [int(f) for f in _FRAME_RE.findall(err)]
+                # An ASan/MSan report names the line in its first user-code stack frame.
+                frames = [int(f) for f in frame_re.findall(err)]
                 where = frames[0] if frames else None
             if where is not None and where != line:
                 return (
@@ -211,15 +257,75 @@ def replay(cc: str, source: Path, out: Path, kind: str, line: int) -> tuple[bool
                     f"sanitizer fired at line {where}, not the finding's line {line}: {report[:120]}",
                 )
             return True, f"{report[:150]} (line {where})" if where is not None else report[:160]
+    return False, ""
+
+
+def valgrind_report(err: str, sample_name: str, line: int) -> tuple[bool, str]:
+    frame_re = re.compile(r"\(" + re.escape(sample_name) + r":(\d+)\)")
+    for report in err.splitlines():
+        if "uninitialised value" in report:
+            report = re.sub(r"^==\d+==\s*", "", report).strip()
+            frames = [int(f) for f in frame_re.findall(err)]
+            where = frames[0] if frames else None
+            if where is not None and where != line:
+                return False, f"valgrind fired at line {where}, not the finding's line {line}"
+            return True, f"valgrind: {report[:120]} (line {where})"
+    return False, ""
+
+
+def replay(
+    cc: str, source: Path, out: Path, kind: str, line: int, sample_name: str
+) -> tuple[bool | None, str]:
+    """Compile with the one sanitizer that observes ``kind``; True only if it fires at ``line``.
+
+    ``None`` means no oracle exists on this host for this kind: the finding
+    is neither replayed nor refuted, and the driver counts it separately.
+    """
+    exe = out.with_suffix("")
+    san = SANITIZER_FOR[kind]
+    if san == "-fsanitize=memory":
+        oracle = uninit_oracle(cc)
+        if oracle is None:
+            return None, f"{NO_ORACLE}: neither -fsanitize=memory nor valgrind"
+        san = oracle
+    if san in CLANG_ONLY and "clang" not in cc:
+        return None, f"{NO_ORACLE}: {kind} needs clang's {san}"
+    flags = [] if san == "valgrind" else [san]
+    comp = subprocess.run(
+        [cc, *flags, *COMMON, str(source), "-o", str(exe)], capture_output=True, text=True
+    )
+    if comp.returncode != 0:
+        return False, "compile failed: " + comp.stderr.strip().splitlines()[-1][:160]
+    if san == "valgrind":
+        run = subprocess.run(
+            ["valgrind", "-q", "--error-exitcode=99", str(exe)],
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        ok, report = valgrind_report(run.stderr, sample_name, line)
+    else:
+        run = subprocess.run([str(exe)], capture_output=True, text=True, timeout=60)
+        ok, report = sanitizer_report(run.stderr, sample_name, line)
+    if report:
+        return ok, report
     return False, f"exit {run.returncode}, no sanitizer report"
 
 
 def expectations(src: str) -> dict[str, str]:
-    """``// expect: <function> <finding|clean|refused>`` lines, if the sample carries them."""
+    """``// expect: <function> <finding|clean|refused|bounded>`` lines, if the sample carries them."""
     return {
         m.group(1): m.group(2)
-        for m in re.finditer(r"//\s*expect:\s*(\w+)\s+(finding|clean|refused)", src)
+        for m in re.finditer(r"//\s*expect:\s*(\w+)\s+(finding|clean|refused|bounded)", src)
     }
+
+
+def normalize_reason(why: str) -> str:
+    """A refusal reason with its identifiers blanked, so a histogram groups by construct."""
+    why = re.sub(r"^line \d+: ", "", why)
+    why = re.sub(r"'[^']*'", "'…'", why)
+    why = re.sub(r"\d+", "N", why)
+    return why
 
 
 def main() -> int:
@@ -241,6 +347,12 @@ def main() -> int:
     )
     ap.add_argument("--cc", default="clang" if shutil.which("clang") else "cc")
     ap.add_argument("--timeout-ms", type=int, default=10000)
+    ap.add_argument(
+        "--unroll",
+        type=int,
+        default=DEFAULT_UNROLL,
+        help="loop unrolling bound (a file's `// axeyum: unroll = N` overrides it)",
+    )
     args = ap.parse_args()
     backend: Backend
     if args.cli:
@@ -265,13 +377,24 @@ def main() -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     rows: list[tuple[str, ...]] = []
     failures = 0
-    for sample in sorted(args.samples.glob("*.c")):
-        src = sample.read_text()
+    replayed = 0
+    unoracled = 0
+    refusals: Counter[str] = Counter()
+    for sample in sorted(args.samples.rglob("*.c")):
+        src = sample.read_text(errors="replace")
         expect = expectations(src)
-        for item in lift_source(src):
+        try:
+            items = lift_source(src, unroll=args.unroll)
+        except RuntimeError as e:
+            # cindergraph could not parse the file: every function in it is unreached.
+            rows.append((sample.name, "-", "parse-error", "-", "-", str(e)[:200]))
+            refusals[normalize_reason(str(e)[:80])] += 1
+            continue
+        for item in items:
             if isinstance(item, tuple):
                 name, why = item
                 rows.append((sample.name, name, "refused", "-", "-", str(why)))
+                refusals[normalize_reason(why.why)] += 1
                 if expect.get(name, "refused") != "refused":
                     failures += 1
                 continue
@@ -279,25 +402,25 @@ def main() -> int:
             witnesses = 0
             seen: set[tuple[int, str]] = set()
             findings: list[tuple[str, ...]] = []
+            # A dead branch is one whose edge is infeasible on EVERY path that
+            # reaches it — inside an unrolled loop that is every iteration, so
+            # verdicts are gathered per (line, edge) and judged after the sweep.
+            edges: dict[tuple[int, str, str], list[str]] = {}
+            bound_hit: dict[tuple[int, str], bool] = {}
+            tag = f"; unrolled to {lifted.unrolled}" if lifted.unrolled else ""
             for k, q in enumerate(lifted.queries):
                 ob = q.obligation
                 verdict, values = solve(backend, q, args.timeout_ms)
                 (args.out / f"{sample.stem}.{lifted.function}.{k}.smt2").write_text(q.smtlib)
                 if ob.kind == "dead-branch":
                     # The query asks "is this edge reachable"; unsat means dead.
-                    if verdict == "unsat" and (ob.line, ob.note) not in seen:
-                        seen.add((ob.line, ob.note))
-                        findings.append(
-                            (
-                                sample.name,
-                                lifted.function,
-                                "dead-branch",
-                                f"line {ob.line}",
-                                f"`{ob.text}` {ob.note} is infeasible",
-                                "proved unreachable (no replay: nothing executes)",
-                            )
-                        )
-                        witnesses += 1
+                    edges.setdefault((ob.line, ob.text, ob.note), []).append(verdict)
+                    continue
+                if ob.kind == "loop-bound":
+                    # The query asks "does some input still loop after K iterations".
+                    bound_hit[(ob.line, ob.text)] = (
+                        bound_hit.get((ob.line, ob.text), False) or verdict != "unsat"
+                    )
                     continue
                 if verdict != "sat":
                     continue
@@ -308,14 +431,23 @@ def main() -> int:
                 witnesses += 1
                 hsrc = args.out / f"{sample.stem}.{lifted.function}.{k}.main.c"
                 hsrc.write_text(harness(sample, lifted, values))
-                ok, report = replay(args.cc, hsrc, hsrc.with_suffix(".bin"), ob.kind, ob.line)
+                ok, report = replay(
+                    args.cc, hsrc, hsrc.with_suffix(".bin"), ob.kind, ob.line, sample.name
+                )
                 inputs = ", ".join(
                     f"{p}={c_literal(values.get(p, 0), t)}" for p, t in lifted.scalar_params
                 )
                 caps = ", ".join(
-                    f"cap({p})={values.get(lifted.capacities[p], lifted.capacities[p])}"
+                    f"cap({p})={resolve(lifted.capacities[p], values)}"
                     for p in lifted.pointer_params
                     if not lifted.capacities[p].startswith("(_ bv")
+                )
+                status = (
+                    "REPLAYED: "
+                    if ok
+                    else "NO RUNTIME ORACLE: "
+                    if ok is None
+                    else "DID NOT REPLAY: "
                 )
                 findings.append(
                     (
@@ -323,12 +455,41 @@ def main() -> int:
                         lifted.function,
                         ob.kind,
                         f"line {ob.line}",
-                        f"`{ob.text}` with {inputs}{'; ' + caps if caps else ''}",
-                        ("REPLAYED: " if ok else "DID NOT REPLAY: ") + report,
+                        f"`{ob.text}` with {inputs}{'; ' + caps if caps else ''}{tag}",
+                        status + report,
                     )
                 )
-                if not ok:
+                if ok:
+                    replayed += 1
+                elif ok is None:
+                    unoracled += 1
+                else:
                     failures += 1
+            for (line, text, note), verdicts in edges.items():
+                if all(v == "unsat" for v in verdicts):
+                    findings.append(
+                        (
+                            sample.name,
+                            lifted.function,
+                            "dead-branch",
+                            f"line {line}",
+                            f"`{text}` {note} is infeasible{tag}",
+                            "proved unreachable (no replay: nothing executes)",
+                        )
+                    )
+                    witnesses += 1
+            bounded_loops = [key for key, hit in bound_hit.items() if hit]
+            for line, text in bounded_loops:
+                findings.append(
+                    (
+                        sample.name,
+                        lifted.function,
+                        "bounded",
+                        f"line {line}",
+                        f"`{text}` can still hold after {lifted.unrolled} iterations",
+                        f"bounded: no witness within {lifted.unrolled} iterations",
+                    )
+                )
             if findings:
                 rows.extend(findings)
             else:
@@ -338,12 +499,19 @@ def main() -> int:
                         lifted.function,
                         "clean",
                         "-",
-                        f"{len(lifted.queries)} obligations over {lifted.paths} paths, all unsat",
+                        f"{len(lifted.queries)} obligations over {lifted.paths} paths, all unsat{tag}",
                         "no witness within the model",
                     )
                 )
             want = expect.get(lifted.function)
-            if want == "finding" and witnesses == 0 or want == "clean" and witnesses > 0:
+            met = {
+                None: True,
+                "finding": witnesses > 0,
+                "clean": witnesses == 0 and not bounded_loops,
+                "bounded": witnesses == 0 and bool(bounded_loops),
+                "refused": False,
+            }[want]
+            if not met:
                 failures += 1
                 rows.append(
                     (
@@ -360,10 +528,20 @@ def main() -> int:
     for r in rows:
         print("| " + " | ".join(str(c).replace("|", "\\|") for c in r) + " |")
     (args.out / "results.tsv").write_text("\n".join("\t".join(r) for r in rows) + "\n")
+    kinds = Counter(r[2] for r in rows)
     print(
-        f"\n{len(rows)} rows, {failures} failure(s); queries and harnesses in {args.out}",
+        f"\n{len(rows)} rows ({', '.join(f'{k} {n}' for k, n in sorted(kinds.items()))}); "
+        f"{replayed} replayed, {unoracled} without a runtime oracle, {failures} failure(s); "
+        f"queries and harnesses in {args.out}",
         file=sys.stderr,
     )
+    if refusals:
+        print("\nrefusal reasons (first blocking construct per function):", file=sys.stderr)
+        for reason, n in refusals.most_common():
+            print(f"  {n:4d}  {reason}", file=sys.stderr)
+        (args.out / "refusals.tsv").write_text(
+            "".join(f"{n}\t{reason}\n" for reason, n in refusals.most_common())
+        )
     return 1 if failures else 0
 
 
