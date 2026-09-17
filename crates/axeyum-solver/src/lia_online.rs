@@ -130,7 +130,9 @@ pub struct LiaTheory {
     /// Per registered atom: how its polarities translate to live constraints.
     kinds: Vec<AtomKind>,
     /// Per atom index: the value it is currently asserted at (`None` if
-    /// unassigned), so a re-assert of the same value is idempotent.
+    /// unassigned), so a re-assert of the same value is idempotent and a
+    /// re-assert of the OPPOSITE value is a conflict, never an overwrite
+    /// (ADR-2143).
     assigned: Vec<Option<bool>>,
     /// Atom indices assigned since the start, in order — the backtrack log.
     assigned_log: Vec<usize>,
@@ -1786,9 +1788,31 @@ impl TheorySolver for LiaTheory {
     /// infeasible). The driver in [`check_qf_lia_online`] does not abstract bare
     /// equalities, so equality atoms are only ever asserted true there anyway.
     fn assert(&mut self, index: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
-        // Idempotent re-assert at the same value.
-        if self.assigned.get(index).copied().flatten() == Some(value) {
-            return Ok(());
+        match self.assigned.get(index).copied().flatten() {
+            // Idempotent re-assert at the same value.
+            Some(current) if current == value => return Ok(()),
+            // ADR-2143: the opposite polarity is live at this or an enclosing
+            // level. Assertions ACCUMULATE until the next `pop` (the trait
+            // contract), so `a ∧ ¬a` is a conflict, and the core is exactly
+            // that pair — the live literal and the trigger literal. Before this
+            // the value was overwritten in place and only the atom INDEX was
+            // logged, so the matching `pop` set the atom to `None` instead of
+            // restoring the shadowed outer value: `push; assert(x ≥ 10); push;
+            // assert(¬(x ≥ 10)); pop` left `x ≥ 10` gone, and a following
+            // `assert(x ≤ 0)` was accepted (the ax-proptest audit's STOP
+            // finding, `tests/lia_online.rs` seed 9). Rejecting here keeps the
+            // invariant `pop` relies on: every `assigned_log` entry is a
+            // `None → Some` transition, so restoring `None` is exact.
+            Some(current) => {
+                return Err(vec![
+                    TheoryLit {
+                        atom: index,
+                        value: current,
+                    },
+                    TheoryLit { atom: index, value },
+                ]);
+            }
+            None => {}
         }
         self.assigned[index] = Some(value);
         self.assigned_log.push(index);
@@ -1814,12 +1838,22 @@ impl TheorySolver for LiaTheory {
 
     /// Restores to the most recent [`push`](TheorySolver::push): drops every atom
     /// assignment added since.
+    ///
+    /// Exact because [`assert`](TheorySolver::assert) never overwrites a live
+    /// value (ADR-2143): every logged atom went `None → Some` at this level, so
+    /// `None` is the value the level shadowed. The debug assertion pins that
+    /// invariant — a `None` here would mean an entry was logged without an
+    /// assignment, and restoring it would be a no-op hiding a lost constraint.
     fn pop(&mut self) {
         let Some(log_len) = self.trail.pop() else {
             return;
         };
         while self.assigned_log.len() > log_len {
             let atom = self.assigned_log.pop().expect("log non-empty above marker");
+            debug_assert!(
+                self.assigned[atom].is_some(),
+                "assigned_log entry for atom {atom} without a live assignment"
+            );
             self.assigned[atom] = None;
         }
     }

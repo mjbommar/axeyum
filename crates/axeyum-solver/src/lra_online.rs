@@ -594,7 +594,9 @@ pub struct LraTheory {
     /// live constraint list Fourier–Motzkin runs over.
     live: Vec<Constraint>,
     /// Per atom index: the value it is currently asserted at (`None` if
-    /// unassigned), so a re-assert of the same value is idempotent.
+    /// unassigned), so a re-assert of the same value is idempotent and a
+    /// re-assert of the OPPOSITE value is a conflict, never an overwrite
+    /// (ADR-2143).
     assigned: Vec<Option<bool>>,
     /// Atom indices assigned since the start, in order — the backtrack log for
     /// `assigned`.
@@ -2593,9 +2595,29 @@ impl TheorySolver for LraTheory {
     /// driver only ever sets equality atoms *true* anyway, since
     /// [`check_qf_lra_online`] does not abstract bare equalities).
     fn assert(&mut self, index: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
-        // Idempotent re-assert at the same value.
-        if self.assigned.get(index).copied().flatten() == Some(value) {
-            return Ok(());
+        match self.assigned.get(index).copied().flatten() {
+            // Idempotent re-assert at the same value.
+            Some(current) if current == value => return Ok(()),
+            // ADR-2143: the opposite polarity is live at this or an enclosing
+            // level — a conflict, and the core is that pair. Here `live` already
+            // accumulated both constraints, so the feasibility check below DID
+            // report the conflict; what went wrong was the bookkeeping: the
+            // marker was overwritten and the index logged a second time, so the
+            // driver's `pop` past the conflict set `assigned[index]` to `None`
+            // while the outer constraint stayed in `live` — a stale marker that
+            // idempotence, `propagate`'s skip list and the explanation walk all
+            // read. Rejecting before touching any state keeps every log entry
+            // a `None → Some` transition, which is what makes `pop` exact.
+            Some(current) => {
+                return Err(vec![
+                    TheoryLit {
+                        atom: index,
+                        value: current,
+                    },
+                    TheoryLit { atom: index, value },
+                ]);
+            }
+            None => {}
         }
         self.assigned[index] = Some(value);
         self.assigned_log.push(index);
@@ -2637,6 +2659,9 @@ impl TheorySolver for LraTheory {
 
     /// Restores to the most recent [`push`](TheorySolver::push): drops every
     /// constraint and atom assignment added since.
+    ///
+    /// Exact because [`assert`](TheorySolver::assert) never overwrites a live
+    /// marker (ADR-2143): every logged atom went `None → Some` at this level.
     fn pop(&mut self) {
         let Some((live_len, log_len)) = self.trail.pop() else {
             return;
@@ -2644,6 +2669,10 @@ impl TheorySolver for LraTheory {
         // Unassign atoms recorded since the marker.
         while self.assigned_log.len() > log_len {
             let atom = self.assigned_log.pop().expect("log non-empty above marker");
+            debug_assert!(
+                self.assigned[atom].is_some(),
+                "assigned_log entry for atom {atom} without a live assignment"
+            );
             self.assigned[atom] = None;
         }
         if self.deferred_final_check {

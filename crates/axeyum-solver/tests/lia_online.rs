@@ -180,6 +180,67 @@ fn push_assert_pop_restores_feasibility() {
     assert!(theory.assert(1, false).is_ok(), "x>=0 ∧ ¬(x<=-1) feasible");
 }
 
+/// ADR-2143, the soundness-negative sequence from the ax-proptest audit
+/// (`bench-results/proptest-box-audit-20260916/README.md`, seed 9 of the
+/// push/pop fuzz):
+///
+/// ```text
+/// push; assert(x ≥ 10)      -> Ok
+/// push; assert(¬(x ≥ 10))   -> MUST be a conflict (was: Ok, silent overwrite)
+/// pop                       -> MUST leave x ≥ 10 live (was: atom set to None)
+/// assert(x ≤ 0)             -> MUST be a conflict (was: Ok — a wrong `sat`)
+/// ```
+///
+/// Every step is asserted on its own so a mutation of the conflict check and a
+/// mutation of the pop restore die at different lines.
+#[test]
+fn opposite_polarity_reassert_conflicts_and_pop_keeps_the_outer_assignment() {
+    let mut arena = TermArena::new();
+    let s = arena.declare("x", Sort::Int).expect("declare");
+    let x = arena.var(s);
+    let ten = arena.int_const(10);
+    let zero = arena.int_const(0);
+    let ge10 = arena.int_ge(x, ten).expect("x>=10");
+    let le0 = arena.int_le(x, zero).expect("x<=0");
+
+    let mut theory = LiaTheory::new(&arena, &[ge10, le0]);
+    theory.push();
+    assert!(theory.assert(0, true).is_ok(), "x>=10 alone is feasible");
+    theory.push();
+    let core = theory
+        .assert(0, false)
+        .expect_err("¬(x>=10) while x>=10 is live at the enclosing level is a conflict");
+    assert!(
+        core.contains(&axeyum_solver::TheoryLit {
+            atom: 0,
+            value: false
+        }) && core.contains(&axeyum_solver::TheoryLit {
+            atom: 0,
+            value: true
+        }),
+        "the core names both polarities of the atom: {core:?}"
+    );
+    // Driver discipline: backtrack past the conflicting assertion.
+    theory.pop();
+    // The outer x>=10 must still be live: x<=0 conflicts with it.
+    assert!(
+        theory.assert(1, true).is_err(),
+        "x<=0 must conflict with the still-live x>=10 (the audit's wrong-sat step)"
+    );
+    // And idempotence still holds for the live polarity.
+    assert!(
+        theory.assert(0, true).is_ok(),
+        "re-assert at the live polarity is a no-op"
+    );
+    // Popping the outer level frees the atom entirely.
+    theory.pop();
+    assert!(
+        theory.assert(0, false).is_ok(),
+        "after the outer pop ¬(x>=10) is feasible"
+    );
+    assert!(theory.assert(1, true).is_ok(), "and x<=0 with it");
+}
+
 #[test]
 fn non_lia_atom_declines_gracefully() {
     // A BV equality atom is a no-op; asserting it never panics or conflicts.
@@ -191,8 +252,20 @@ fn non_lia_atom_declines_gracefully() {
 
     let mut theory = LiaTheory::new(&arena, &[eq]);
     assert!(!theory.tracks(0));
+    theory.push();
     assert!(theory.assert(0, true).is_ok());
-    assert!(theory.assert(0, false).is_ok());
+    // ADR-2143: even an untracked atom is an ASSERTION, and `a ∧ ¬a` at one
+    // level is a conflict (the lemma `¬(a ∧ ¬a)` is valid for any `a`). Before
+    // the repair this was accepted as a silent overwrite.
+    assert!(
+        theory.assert(0, false).is_err(),
+        "the opposite polarity of a live atom is a conflict, tracked or not"
+    );
+    theory.pop();
+    assert!(
+        theory.assert(0, false).is_ok(),
+        "after the pop either polarity is a no-op"
+    );
 }
 
 /// The load-bearing differential fuzz over random conjunctions: the online
@@ -298,6 +371,7 @@ fn differential_fuzz_push_pop_assert_sequences_agree() {
     let mut conflict_steps = 0_u32;
     let mut clean_steps = 0_u32;
     let mut explicit_pops = 0_u32;
+    let mut polarity_conflicts = 0_u32;
 
     for seed in 0..SCHEDULE_SEEDS {
         let mut rng = schedule_rng(seed);
@@ -354,9 +428,31 @@ fn differential_fuzz_push_pop_assert_sequences_agree() {
                     depth += 1;
 
                     let result = theory.assert(atom, value);
+                    let current = effective(&log, atom);
+                    // ADR-2143: an atom whose OPPOSITE polarity is live at this
+                    // or an enclosing level is a conflict — `a ∧ ¬a` — and the
+                    // theory must say so without touching its state. Until the
+                    // repair it overwrote the value in place and logged only the
+                    // index, so the `pop` below dropped the OUTER assignment
+                    // (seed 9: `x ≥ 10` vanished and `x ≤ 0` was then accepted).
+                    // The mirror records nothing for the rejected step; the
+                    // driver-discipline pop below undoes the wrapping push.
+                    if current == Some(!value) {
+                        assert!(
+                            result.is_err(),
+                            "DISAGREEMENT seed {seed}: atom {atom} is live at {current:?} and \
+                             the theory accepted its negation (live={:?})",
+                            effective_set(&log, natoms)
+                        );
+                        polarity_conflicts += 1;
+                        theory.pop();
+                        let mark = marks.pop().expect("just pushed a mark");
+                        log.truncate(mark);
+                        depth -= 1;
+                        continue;
+                    }
                     // The theory logs a (possibly-changed) assignment only when the
                     // value differs from the current effective one (idempotence).
-                    let current = effective(&log, atom);
                     if current != Some(value) {
                         log.push((atom, value));
                     }
@@ -405,11 +501,16 @@ fn differential_fuzz_push_pop_assert_sequences_agree() {
 
     eprintln!(
         "COVERAGE push/pop/assert: conflict_steps={conflict_steps} clean_steps={clean_steps} \
-         explicit_pops={explicit_pops}"
+         explicit_pops={explicit_pops} polarity_conflicts={polarity_conflicts}"
     );
     assert!(
         conflict_steps > 0,
         "push/pop/assert fuzz must reach at least one conflict state"
+    );
+    assert!(
+        polarity_conflicts > 0,
+        "push/pop/assert fuzz must re-assert a live atom at the opposite polarity \
+         (the ADR-2143 shape) at least once"
     );
     assert!(
         clean_steps > 0,

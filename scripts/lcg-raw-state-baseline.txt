@@ -26,7 +26,6 @@ crates/axeyum-solver/tests/difference_logic_differential_fuzz.rs:1
 crates/axeyum-solver/tests/fp_differential_fuzz.rs:1
 crates/axeyum-solver/tests/lia_interpolant.rs:1
 crates/axeyum-solver/tests/lra_interpolant_cnf.rs:1
-crates/axeyum-solver/tests/lra_online.rs:1
 crates/axeyum-solver/tests/lra_warm_screen_2132.rs:1
 crates/axeyum-solver/tests/mbp.rs:1
 crates/axeyum-solver/tests/nra_differential_fuzz.rs:1
