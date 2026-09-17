@@ -148,6 +148,7 @@ now. Nothing was deleted.
 |---|---|---|
 | 2026-09-17 | `3425a51ab` | ax-lifter: the cindergraph-defects pipeline over cindergraph's fixtures and Glaurung's decompiler output with the refusal histogram; replay must name the finding's kind; per-function refusal on a cindergraph diagnostic; multi-declarator declarations (item 12). |
 | 2026-09-17 | `8bdccc57b` | ax-lifter: `strcpy`/`strcat`/`strlen` with `// axeyum: strlen`, `malloc`-sized locals with `alloc-size-wrap`, `free`/use-after-free, uninitialised reads under MSan/valgrind/no-oracle; samples 11–12 (item 11). |
+| 2026-09-17 | ax-policy | ADR-2140: `ModelPreference` on `SolverConfig` (SAT-core forced phase + replay-checked shrink), `solve_smtlib_least_witness`, `:model-preference` option, `AXEYUM_MODEL_PREFERENCE` lever, `smt.least_witness`, typed `IncrementalStats`; `tests/model_preference_2140.rs` (identity, non-vacuity, determinism, replay) + mutation controls; three model-choice seeds in `corpus/regression/qf_bv/`. |
 | 2026-09-16 | `5bd0e77c4` | `axeyum-bench` gains a `full` feature forwarding to `axeyum-solver/full`; doc lines updated to the new flag spelling. |
 | 2026-09-16 | `a306a017b` | `cindergraph_defects/lift.py` uses SMT-LIB 2.6 overflow predicates instead of a double-width shadow computation; documented in `smtlib-support.md`. |
 | 2026-09-16 | `68f8887c9` | `cindergraph_defects/check.py` calls `axeyum.smt.solve` by default; `axeyum_cli` subprocess kept as an explicit `--cli` fallback. |
@@ -46828,6 +46829,23 @@ struct members / pointer locals into the frame (10, the memory model). A
 finding on decompiler output has no clang oracle by construction; the
 evidence would be running the decompiled *binary* under the witness, which is
 a Glaurung-side harness.
+
+**AX-POLICY (`WIP`, ax-policy, 2026-09-17).** `ModelPreference { Any, PreferZero,
+LeastUnsigned }` on `SolverConfig`, reaching the one-shot and warm SAT cores as a
+forced decision polarity and finishing the model with a replay-checked shrink;
+`solve_smtlib_least_witness` (the 1/16/256/4096 magnitude ladder) behind
+`(set-option :model-preference …)`, `AXEYUM_MODEL_PREFERENCE` and
+`axeyum.smt.least_witness`; typed `IncrementalStats` with a `profiled` field in
+the Python bindings. **`Any` ships; no default moved.** The sizing finding that
+shaped the design: the Boolean core already decides `false` first, and the forced
+phase alone moved 0 of 15 corpus models (gate variables, not input bits, are what
+the search decides) while costing +25-27 % wall on the QF_BV pinned list with one
+stable gain against one stable loss; so `PreferZero` finishes on the lifted model
+(replay-checked shrink, +12 %, no movers, 0 `:status` disagreements) and the
+SAT-core phase ships off behind `AXEYUM_MODEL_PREFERENCE_PHASE=on`. Next: the
+defects example (`check.py`) can drop its `BOUNDS` loop for `smt.least_witness`
+once item 1 (call the library, not the subprocess) lands; Glaurung's
+concretization sweep is now a one-variable experiment.
 
 **`WIP`, bench-boolean-core, 2026-09-07.** The native core's per-conflict cost is
 now instrumented and decomposed, closing the gap the

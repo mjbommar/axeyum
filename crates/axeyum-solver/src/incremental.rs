@@ -47,6 +47,50 @@ const MAX_WARM_ARRAY_UF_APPS_PER_ROOT: usize = 64;
 // next root starts fresh once this threshold is reached.
 const MAX_REPLAY_SHARED_MEMO_ENTRIES: usize = 4_096;
 
+/// The evaluator calls the replay-checked model shrink of ADR-2140 may spend
+/// per `sat` before it stops and keeps whatever it has.
+///
+/// Each call re-evaluates every active assertion and assumption against a
+/// candidate model with one more bit cleared, so the pass costs
+/// `evaluations x |assertion DAG|`. The budget bounds the pass on a query
+/// with thousands of symbols; it never bounds the verdict, which was decided
+/// before the pass began, and a pass cut short leaves a model that is still
+/// a model -- only less small than it could have been. Also cut short by the
+/// check's own deadline. Shared with the text front door
+/// (`smtlib::shrink_model_toward_zero`), which is the same pass over a
+/// `Script`.
+pub const MODEL_SHRINK_EVALUATIONS: usize = 4_096;
+
+/// The least wall time the replay-checked model shrink (ADR-2140) may spend
+/// even when the solve that produced the model was faster than this.
+///
+/// The pass's time budget is **what the solve spent**, floored here and
+/// capped by the query's deadline (see [`shrink_deadline`]). Measured
+/// 2026-09-17 on `QF_BV/Sage2/bench_12354.smt2` (549 symbols, 192 KB): with
+/// only the evaluation budget the pass spent 25 s on a 1.7 s `sat`, which the
+/// 24 s harness reported as a LOSS. Bounding the pass by the solve's own time
+/// keeps a preference from more than doubling a query. The floor exists so a
+/// millisecond solve on a small query still gets a pass that can clear
+/// anything.
+pub const MODEL_SHRINK_MIN_BUDGET: Duration = Duration::from_millis(100);
+
+/// The deadline the model shrink runs under (ADR-2140): `max(elapsed,
+/// MODEL_SHRINK_MIN_BUDGET)` from now, never past `deadline`.
+///
+/// `elapsed` is what the solve that produced the model cost. A pass bounded
+/// this way at most doubles a query and still never crosses the query's own
+/// deadline -- and it is a bound on the MODEL's finishing, never on the
+/// verdict, which was decided before the pass began.
+#[must_use]
+pub fn shrink_deadline(deadline: Option<Instant>, elapsed: Duration) -> Option<Instant> {
+    let own = Instant::now().checked_add(elapsed.max(MODEL_SHRINK_MIN_BUDGET));
+    match (own, deadline) {
+        (Some(own), Some(query)) => Some(own.min(query)),
+        (own, None) => own,
+        (None, query) => query,
+    }
+}
+
 /// Monotone phase attribution for one incremental bit-vector solver.
 ///
 /// When constructed with
@@ -812,6 +856,9 @@ pub struct IncrementalBvSolver {
     last_profiled_cnf_assumptions: Option<Vec<CnfVar>>,
     stats: IncrementalBvStats,
     replay_checked_sat_cache: ReplayCheckedSatCache,
+    /// When the check in progress began; the model shrink's time budget is
+    /// what the check has spent so far (ADR-2140, [`shrink_deadline`]).
+    check_started: Option<Instant>,
 }
 
 impl Default for IncrementalBvSolver {
@@ -833,11 +880,14 @@ impl IncrementalBvSolver {
     /// [`Self::assert_configured`]; structural admission budgets remain a
     /// one-shot-backend concern.
     pub fn with_config(config: SolverConfig) -> Self {
-        let cnf = if config.incremental_positive_and_flattening {
+        let mut cnf = if config.incremental_positive_and_flattening {
             IncrementalCnf::with_internal_positive_and_flattening()
         } else {
             IncrementalCnf::new()
         };
+        // ADR-2140: the model preference reaches the retained core as a forced
+        // decision polarity; `Any` sets `None`, which is the core as built.
+        cnf.set_forced_phase(config.model_preference.forced_phase());
         Self {
             lowering: IncrementalLowering::new(),
             cnf,
@@ -867,6 +917,7 @@ impl IncrementalBvSolver {
             last_profiled_cnf_assumptions: None,
             stats: IncrementalBvStats::default(),
             replay_checked_sat_cache: ReplayCheckedSatCache::default(),
+            check_started: None,
         }
     }
 
@@ -886,6 +937,15 @@ impl IncrementalBvSolver {
             IncrementalCnf::with_profiling()
         };
         solver
+            .cnf
+            .set_forced_phase(solver.config.model_preference.forced_phase());
+        solver
+    }
+
+    /// Which model a `sat` prefers (ADR-2140), as configured.
+    #[must_use]
+    pub fn model_preference(&self) -> crate::backend::ModelPreference {
+        self.config.model_preference
     }
 
     /// Replaces the wall-clock allowance used by the next warm SAT check.
@@ -3779,6 +3839,7 @@ impl IncrementalBvSolver {
         let one_shot = collect_warm_one_shot_terms(assumptions);
         let active_selects = self.active_warm_array_select_closure(&one_shot.selects);
 
+        self.check_started = Some(Instant::now());
         let deadline = self
             .config
             .timeout
@@ -3924,7 +3985,100 @@ impl IncrementalBvSolver {
         if let Some(reason) = replay? {
             return Ok(WarmCandidateCheck::Unknown(reason));
         }
+        // ADR-2140: a preference other than `Any` finishes the model here, on
+        // the lifted values where the input bits are visible (the forced SAT
+        // phase alone does not reach them through the gate variables the
+        // search actually decides). Only the MODEL changes, and only to a
+        // candidate this same `replay` accepted.
+        let mut model = model;
+        if self.config.model_preference.finishes_model() {
+            let elapsed = self
+                .check_started
+                .map_or(Duration::ZERO, |started| started.elapsed());
+            let budget = shrink_deadline(deadline, elapsed);
+            self.shrink_model_toward_zero(arena, &original_assumptions, &mut model, budget);
+        }
         Ok(WarmCandidateCheck::Sat(model))
+    }
+
+    /// Greedily clears bits of a replayed model while it still replays
+    /// (ADR-2140's `PreferZero`/`LeastUnsigned` finishing pass on the warm
+    /// engine), returning how many bits were cleared.
+    ///
+    /// Deterministic: symbols in the model's own (sorted) order, internal
+    /// symbols skipped, bits from the most significant down, a `Bool` tried
+    /// `false`; a candidate is kept iff [`Self::replay`] accepts it against
+    /// every active assertion plus `assumptions`. Bounded by
+    /// [`MODEL_SHRINK_EVALUATIONS`] and by `deadline`. A local minimum in the
+    /// unsigned order, never claimed as the global one.
+    fn shrink_model_toward_zero(
+        &self,
+        arena: &TermArena,
+        assumptions: &[TermId],
+        model: &mut Model,
+        deadline: Option<Instant>,
+    ) -> usize {
+        let mut evaluations = 0usize;
+        let mut cleared = 0usize;
+        let out_of_budget = |evaluations: usize| {
+            evaluations >= MODEL_SHRINK_EVALUATIONS
+                || deadline.is_some_and(|at| Instant::now() >= at)
+        };
+        let accepts = |model: &Model| matches!(self.replay(arena, assumptions, model), Ok(None));
+        let symbols: Vec<(SymbolId, Value)> = model
+            .iter()
+            .filter(|(symbol, _)| !self.internal_symbols.contains(symbol))
+            .collect();
+        for (symbol, value) in symbols {
+            match value {
+                Value::Bool(true) => {
+                    if out_of_budget(evaluations) {
+                        return cleared;
+                    }
+                    evaluations += 1;
+                    model.set(symbol, Value::Bool(false));
+                    if accepts(model) {
+                        cleared += 1;
+                    } else {
+                        model.set(symbol, Value::Bool(true));
+                    }
+                }
+                Value::Bv { width, value } if value != 0 => {
+                    let mut current = value;
+                    for bit in (0..width).rev() {
+                        if current & (1u128 << bit) == 0 {
+                            continue;
+                        }
+                        if out_of_budget(evaluations) {
+                            return cleared;
+                        }
+                        evaluations += 1;
+                        let candidate = current & !(1u128 << bit);
+                        model.set(
+                            symbol,
+                            Value::Bv {
+                                width,
+                                value: candidate,
+                            },
+                        );
+                        if accepts(model) {
+                            current = candidate;
+                            cleared += 1;
+                        } else {
+                            model.set(
+                                symbol,
+                                Value::Bv {
+                                    width,
+                                    value: current,
+                                },
+                            );
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        cleared
     }
 
     fn activate_warm_array_semantics(

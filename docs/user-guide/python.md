@@ -166,6 +166,37 @@ Every result is still a `cas.Expr` with its Rust certificates reachable, and
 `None` means the Rust side declined (multivariate `Factor`, a symbolic
 exponent -- `CasExpr::Pow` is `u32` -- and similar gaps are real and stated).
 
+## Which model a `sat` returns, and what a check cost
+
+Three surfaces from ADR-2140 (items 6, 7 and 9 of the 2026-09-16 list):
+
+- **`model_preference`** on `smt.solve(...)` and `solver.Config(...)`:
+  `"any"` (the default, and byte-for-byte the search as shipped), `"zero"`
+  (a replay-checked greedy bit-clearing pass over the witness, so it is a
+  local minimum in the unsigned order; bounded by what the solve spent), or
+  `"least-unsigned"` (the bounded re-solve below, then the same pass inside
+  the winning rung). A preference never moves a verdict; every `sat` still
+  replays. `AXEYUM_MODEL_PREFERENCE` sets the same policy for a whole process,
+  and `AXEYUM_MODEL_PREFERENCE_PHASE=on` additionally makes the SAT core
+  decide every variable `false` first (z3's `phase=always_false`; measured to
+  cost search time without moving models, so off by default). A malformed
+  value of either refuses rather than running the default arm.
+- **`smt.least_witness(script, symbols=[], ...)`** returns a `Witness`: an
+  `Outcome` whose model is the first satisfiable rung of the magnitude ladder
+  `1, 16, 256, 4096` over the named bit-vector constants (all of them when
+  `symbols` is empty), else the unbounded model, with `.bound` saying which.
+  The bound is two's-complement magnitude, so `a + b < a` comes back as
+  `a = 0xFFFFFFFF, b = 1` at bound 1. This is the ladder
+  `python/examples/cindergraph_defects/check.py` used to run by hand.
+- **`solver.Incremental(arena, config, profile=True).stats()`** returns a
+  typed `IncrementalStats`: `solve_ns`, `bit_blast_ns`, `cnf_encode_ns`,
+  `model_lift_ns`, `replay_ns`, `word_rewrite_ns`, the counts, and
+  `delta_since(earlier)` for one check's cost. **Without `profile=True` the
+  timers and `checks` are zero by contract** — the Rust engine only reads
+  the clock when profiling is on — and `IncrementalStats.profiled` says
+  which case you are in. `as_dict()` is the `dict` `stats()` returned before
+  this type existed.
+
 ## See also: C defects through cindergraph
 
 [`python/examples/cindergraph_defects/`](../../python/examples/cindergraph_defects/README.md)

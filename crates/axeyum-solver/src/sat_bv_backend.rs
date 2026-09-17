@@ -43,7 +43,7 @@ use axeyum_cnf::{
     OccurrencePass, ProofCoverage, ProofSolveOutcome, ReducedReason, ReductionLink, SatProofStatus,
     SatResult, SatUnknownReason, SatUnsatEvidence, ScheduledInprocess, VivifyOptions,
     XorCdclResult, check_drat, extract_xors, inprocess_scheduled, solve_with_drat_proof,
-    solve_with_drat_proof_with_limits, solve_with_xor_cdcl, tseitin_encode,
+    solve_with_drat_proof_with_limits_and_phase, solve_with_xor_cdcl, tseitin_encode,
     tseitin_encode_profiled_with_origins, write_drat, xor_gauss_drat_refutation,
 };
 use axeyum_ir::budget::{EffortAccount, EffortPolicy, Grant, WorkMeter};
@@ -2337,6 +2337,7 @@ fn primary_sat_search(
         config.resource_limit,
         config.prove_unsat,
         reduction,
+        config.model_preference.forced_phase(),
     );
     if let Some(duration) = outcome.proof_replay {
         push_duration_ms(stats, "unsat_proof_replay_ms", duration);
@@ -2429,11 +2430,19 @@ fn solve_with_native_cdcl(
     resource_limit: Option<u64>,
     check_proof: bool,
     reduction: Option<(&CnfFormula, &ReductionLink)>,
+    forced_phase: Option<bool>,
 ) -> NativeCdclOutcome {
     let max_conflicts = resource_limit.map_or(DEFAULT_PROOF_SAT_CONFLICT_LIMIT, |limit| {
         usize::try_from(limit).unwrap_or(usize::MAX)
     });
-    match solve_with_drat_proof_with_limits(formula, deadline, max_conflicts) {
+    // ADR-2140: `forced_phase` is `None` under `ModelPreference::Any`, and
+    // that arm is the plain entry point byte for byte.
+    match solve_with_drat_proof_with_limits_and_phase(
+        formula,
+        deadline,
+        max_conflicts,
+        forced_phase,
+    ) {
         ProofSolveOutcome::Sat(assignment) => NativeCdclOutcome {
             result: SatResult::Sat(assignment),
             proof_replay: None,
@@ -3526,7 +3535,7 @@ mod tests {
     fn native_cdcl_checks_inline_proof_for_unsat() {
         // `x ∧ ¬x` is unsat.
         let f = formula(1, &[&[(0, false)], &[(0, true)]]);
-        let result = solve_with_native_cdcl(&f, None, None, true, None);
+        let result = solve_with_native_cdcl(&f, None, None, true, None, None);
         assert_eq!(
             result.result,
             SatResult::Unsat(SatUnsatEvidence {
@@ -3543,7 +3552,7 @@ mod tests {
     #[test]
     fn native_cdcl_skips_inline_check_when_not_requested() {
         let f = formula(1, &[&[(0, false)], &[(0, true)]]);
-        let result = solve_with_native_cdcl(&f, None, None, false, None);
+        let result = solve_with_native_cdcl(&f, None, None, false, None, None);
         assert_eq!(
             result.result,
             SatResult::Unsat(SatUnsatEvidence {

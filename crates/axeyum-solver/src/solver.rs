@@ -1053,7 +1053,7 @@ fn warm_fragment_admits(arena: &TermArena, terms: &[TermId]) -> bool {
 /// actually reads.
 ///
 /// [`IncrementalBvSolver`] consults `timeout`, `resource_limit`,
-/// `incremental_positive_and_flattening` and `preprocess`, and **silently
+/// `incremental_positive_and_flattening`, `model_preference` and `preprocess`, and **silently
 /// ignores every other field** — measured, not assumed: no other field name
 /// appears anywhere in `incremental.rs`. Routing a query that sets one of them
 /// through the warm engine would quietly drop it, and `prove_unsat` alone makes
@@ -1069,6 +1069,9 @@ fn warm_config_is_honored(config: &SolverConfig) -> bool {
         timeout: _,
         resource_limit: _,
         incremental_positive_and_flattening: _,
+        // Read by both routes (ADR-2140): the one-shot backend hands it to the
+        // core per check and the warm engine installs it at construction.
+        model_preference: _,
         // Read by neither route: `SatBvBackend::check` does not consult
         // `preprocess` either (the auto-dispatcher does), and the warm route
         // asserts raw for the same reason, so the two agree.

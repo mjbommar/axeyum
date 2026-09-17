@@ -9,6 +9,7 @@ __all__ = [
     "Response",
     "Script",
     "ScriptTerm",
+    "Witness",
     "get_assertions",
     "get_assignment",
     "get_info",
@@ -16,6 +17,7 @@ __all__ = [
     "get_proof",
     "get_value",
     "incremental",
+    "least_witness",
     "parse",
     "session",
     "solve",
@@ -232,6 +234,35 @@ class ScriptTerm:
     def __eq__(self, other: typing.Any) -> builtins.bool: ...
     def __hash__(self) -> builtins.int: ...
 
+@typing.final
+class Witness:
+    r"""
+    A decided script with the smallest-magnitude witness the bounded re-solve
+    ladder found (ADR-2140, item 7 of the 2026-09-16 list).
+    
+    `outcome` is an ordinary `Outcome` -- same `status`, and `model` /
+    `replay()` describe the RETURNED witness -- and `bound` is the magnitude
+    bound that witness satisfies (`1`, `16`, `256` or `4096`: every bounded
+    symbol `x` has `-bound <= x <= bound` in two's complement), or `None` when
+    no rung applied or succeeded and the unbounded model was returned.
+    """
+    @property
+    def outcome(self) -> Outcome:
+        r"""
+        The verdict and the returned witness.
+        """
+    @property
+    def status(self) -> builtins.str:
+        r"""
+        `"sat"`, `"unsat"`, or `"unknown"` -- `outcome.status`, for convenience.
+        """
+    @property
+    def bound(self) -> typing.Optional[builtins.int]:
+        r"""
+        The magnitude bound the witness satisfies, or `None` (unbounded).
+        """
+    def __repr__(self) -> builtins.str: ...
+
 def get_assertions(script: builtins.str) -> typing.Optional[builtins.list[builtins.list[builtins.str]]]:
     r"""
     The assertion-stack snapshots the script's `(get-assertions)` commands ask
@@ -304,6 +335,24 @@ def incremental(script: builtins.str, *, timeout_ms: builtins.int = 10000) -> bu
     Delegates to the same session walk, so the two cannot disagree.
     """
 
+def least_witness(script: builtins.str, symbols: typing.Optional[typing.Sequence[builtins.str]] = None, *, timeout_ms: builtins.int = 10000, resource_limit: typing.Optional[builtins.int] = None, memory_limit_mb: typing.Optional[builtins.int] = None, preprocess: builtins.bool = True) -> Witness:
+    r"""
+    Decides an SMT-LIB 2 script and, on `sat`, re-solves under growing
+    magnitude bounds (1, 16, 256, 4096) on `symbols` -- every declared
+    bit-vector constant when `symbols` is `None` or empty -- returning the first bounded
+    witness, else the unbounded one, with the bound reported (ADR-2140).
+    
+    This is the ladder `python/examples/cindergraph_defects/check.py` used to
+    run by hand with up to five subprocess solves per finding. The verdict is
+    the unbounded one; a rung can only replace the MODEL, and the returned
+    model always replays against the script's own assertions.
+    
+    # Errors
+    
+    As `solve`: `SmtLibParseError` for malformed text, `AxeyumError` for any
+    other solver failure.
+    """
+
 def parse(script: builtins.str, *, timeout_ms: typing.Optional[builtins.int] = None) -> Script:
     r"""
     Parses an SMT-LIB 2 script without solving it.
@@ -332,7 +381,7 @@ def session(script: builtins.str, *, timeout_ms: builtins.int = 10000) -> builti
     is an `error` RESPONSE, not an exception.
     """
 
-def solve(script: builtins.str, *, timeout_ms: builtins.int = 10000, resource_limit: typing.Optional[builtins.int] = None, memory_limit_mb: typing.Optional[builtins.int] = None, node_budget: typing.Optional[builtins.int] = None, cnf_variable_budget: typing.Optional[builtins.int] = None, cnf_clause_budget: typing.Optional[builtins.int] = None, prove_unsat: builtins.bool = False, preprocess: builtins.bool = True) -> Outcome:
+def solve(script: builtins.str, *, timeout_ms: builtins.int = 10000, resource_limit: typing.Optional[builtins.int] = None, memory_limit_mb: typing.Optional[builtins.int] = None, node_budget: typing.Optional[builtins.int] = None, cnf_variable_budget: typing.Optional[builtins.int] = None, cnf_clause_budget: typing.Optional[builtins.int] = None, prove_unsat: builtins.bool = False, preprocess: builtins.bool = True, model_preference: builtins.str = 'any') -> Outcome:
     r"""
     Decides an SMT-LIB 2 script.
     

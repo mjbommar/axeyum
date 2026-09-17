@@ -17,6 +17,7 @@ __all__ = [
     "EvidenceReport",
     "IR_STATUSES",
     "Incremental",
+    "IncrementalStats",
     "PARSER_STATUSES",
     "PROOF_STATUSES",
     "ProofOutcome",
@@ -217,6 +218,12 @@ class Config:
     [`CheckResult`](axeyum.solver.CheckResult), never as an exception.
     """
     @property
+    def model_preference(self) -> builtins.str:
+        r"""
+        Which model a `sat` prefers (ADR-2140): `"any"`, `"zero"` or
+        `"least-unsigned"`.
+        """
+    @property
     def timeout_ms(self) -> typing.Optional[builtins.int]:
         r"""
         The wall-clock budget in milliseconds, or `None`.
@@ -236,7 +243,7 @@ class Config:
         r"""
         The translation node budget, or `None`.
         """
-    def __new__(cls, *, timeout_ms: typing.Optional[builtins.int] = None, resource_limit: typing.Optional[builtins.int] = None, memory_limit_mb: typing.Optional[builtins.int] = None, node_budget: typing.Optional[builtins.int] = None, cnf_variable_budget: typing.Optional[builtins.int] = None, cnf_clause_budget: typing.Optional[builtins.int] = None, prove_unsat: builtins.bool = False, cnf_inprocessing: builtins.bool = False, cnf_vivify: builtins.bool = False, preprocess: builtins.bool = True, profile_bit_demand: builtins.bool = False, profile_cnf_construction: builtins.bool = False, bit_lowering_mode: builtins.str = 'eager', incremental_positive_and_flattening: builtins.bool = False, xor_cdcl_fallback: builtins.bool = False, lazy_bv: builtins.bool = False, native_cdcl: builtins.bool = False, lazy_bv_abstract_ite: builtins.bool = False) -> Config:
+    def __new__(cls, *, timeout_ms: typing.Optional[builtins.int] = None, resource_limit: typing.Optional[builtins.int] = None, memory_limit_mb: typing.Optional[builtins.int] = None, node_budget: typing.Optional[builtins.int] = None, cnf_variable_budget: typing.Optional[builtins.int] = None, cnf_clause_budget: typing.Optional[builtins.int] = None, prove_unsat: builtins.bool = False, cnf_inprocessing: builtins.bool = False, cnf_vivify: builtins.bool = False, preprocess: builtins.bool = True, profile_bit_demand: builtins.bool = False, profile_cnf_construction: builtins.bool = False, bit_lowering_mode: builtins.str = 'eager', incremental_positive_and_flattening: builtins.bool = False, xor_cdcl_fallback: builtins.bool = False, lazy_bv: builtins.bool = False, native_cdcl: builtins.bool = False, lazy_bv_abstract_ite: builtins.bool = False, model_preference: builtins.str = 'any') -> Config:
         r"""
         Builds a configuration. Every argument defaults to the Rust default.
         """
@@ -358,6 +365,16 @@ class Incremental:
     arena and asserts it is that one; a foreign arena raises `EpochError`.
     """
     @property
+    def profiled(self) -> builtins.bool:
+        r"""
+        Whether this solver records per-phase timing (`profile=True`).
+        """
+    @property
+    def model_preference(self) -> builtins.str:
+        r"""
+        Which model a `sat` prefers (ADR-2140), as configured.
+        """
+    @property
     def epoch(self) -> builtins.int:
         r"""
         The arena epoch this solver is bound to.
@@ -382,9 +399,14 @@ class Incremental:
         r"""
         Retained AIG node count.
         """
-    def __new__(cls, arena: ir.Arena, config: typing.Optional[Config] = None) -> Incremental:
+    def __new__(cls, arena: ir.Arena, config: typing.Optional[Config] = None, *, profile: builtins.bool = False) -> Incremental:
         r"""
         Creates a warm solver bound to `arena`.
+        
+        `profile=True` builds the solver with phase profiling on, so `stats()`
+        carries real per-phase wall time and check counts; without it those
+        fields are zero by contract (see `IncrementalStats.profiled`). The
+        solving policy is identical either way -- profiling only reads clocks.
         """
     def assert_(self, arena: ir.Arena, term: ir.Term) -> None:
         r"""
@@ -407,9 +429,11 @@ class Incremental:
         r"""
         Decides the current stack plus `assumptions`, without asserting them.
         """
-    def stats(self) -> dict:
+    def stats(self) -> IncrementalStats:
         r"""
-        Retained-encoding and timing counters.
+        A monotone snapshot of retained work: per-phase timing (only with
+        `profile=True`) and the structural gauges. `IncrementalStats.as_dict()`
+        is the `dict` this used to return.
         """
     def enable_replay_checked_sat_cache(self, max_entries: builtins.int = 128, max_values: builtins.int = 4096, max_bits: builtins.int = 65536) -> None:
         r"""
@@ -426,6 +450,107 @@ class Incremental:
     def replay_checked_sat_cache_stats(self) -> dict:
         r"""
         Cache counters, including every DECLINE class.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class IncrementalStats:
+    r"""
+    A snapshot of a warm solver's retained work: per-phase wall time and the
+    structural gauges (ADR-2140, item 9 of the 2026-09-16 list).
+    
+    **The timers are zero unless the solver was built with `profile=True`.**
+    That is the Rust contract (`IncrementalBvSolver::with_config_and_profiling`
+    reads the clock; the ordinary constructor never does), and it is why
+    `profiled` is a field: a consumer reading `solve_ns == 0` from an
+    unprofiled solver would otherwise conclude the check was free. The counts
+    `aig_nodes`, `cnf_variables` and `cnf_clauses` are always current gauges;
+    `checks` and `root_encodings` are also profiling-gated.
+    
+    Snapshots are monotone, so `later.delta_since(earlier)` isolates one check
+    or one retained path segment.
+    """
+    @property
+    def profiled(self) -> builtins.bool:
+        r"""
+        Whether the solver was built with `profile=True`; when `False` every
+        timer and the `checks`/`root_encodings` counts are zero BY CONTRACT.
+        """
+    @property
+    def word_rewrite_ns(self) -> builtins.int:
+        r"""
+        Nanoseconds in word-level canonicalization (`preprocess`).
+        """
+    @property
+    def bit_blast_ns(self) -> builtins.int:
+        r"""
+        Nanoseconds bit-blasting newly asserted terms.
+        """
+    @property
+    def cnf_encode_ns(self) -> builtins.int:
+        r"""
+        Nanoseconds Tseitin-encoding newly lowered nodes.
+        """
+    @property
+    def solve_ns(self) -> builtins.int:
+        r"""
+        Nanoseconds inside the retained SAT core.
+        """
+    @property
+    def model_lift_ns(self) -> builtins.int:
+        r"""
+        Nanoseconds lifting a CNF assignment to a term-level model.
+        """
+    @property
+    def replay_ns(self) -> builtins.int:
+        r"""
+        Nanoseconds replaying a `sat` model against the original terms.
+        """
+    @property
+    def total_seconds(self) -> builtins.float:
+        r"""
+        Seconds of the phases above, summed, as a float (lossy; prefer the
+        `_ns` fields for arithmetic).
+        """
+    @property
+    def root_encodings(self) -> builtins.int:
+        r"""
+        Root literals encoded so far (profiling-gated).
+        """
+    @property
+    def checks(self) -> builtins.int:
+        r"""
+        Checks performed so far (profiling-gated).
+        """
+    @property
+    def aig_nodes(self) -> builtins.int:
+        r"""
+        AIG nodes lowered so far; always current.
+        """
+    @property
+    def cnf_variables(self) -> builtins.int:
+        r"""
+        CNF variables encoded so far; always current.
+        """
+    @property
+    def cnf_clauses(self) -> builtins.int:
+        r"""
+        CNF clauses encoded so far; always current.
+        """
+    def delta_since(self, earlier: IncrementalStats) -> IncrementalStats:
+        r"""
+        The work between `earlier` and this snapshot, component-wise and
+        saturating -- one check's cost when the two bracket it.
+        """
+    def as_dict(self) -> dict:
+        r"""
+        The same numbers as a `dict` -- the shape `stats()` returned before
+        this type existed, with the timers in microseconds (not nanoseconds) under their old
+        keys, plus `profiled`.
+        
+        # Errors
+        
+        Propagates any Python error raised while building the dictionary.
         """
     def __repr__(self) -> builtins.str: ...
 

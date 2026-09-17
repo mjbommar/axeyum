@@ -53,8 +53,12 @@
 //! | `get-info`, `get-option`, `get-assignment`, `get-objectives`, `get-unsat-assumptions` | `unsupported` |
 //!
 //! The honored options are `:produce-models`, `:produce-unsat-cores`,
-//! `:produce-proofs`, `:print-success` and `:timeout`. **Every other option
-//! draws `unsupported`**, which is the point of this table: before ADR-0541 an
+//! `:produce-proofs`, `:print-success`, `:timeout` and `:model-preference`
+//! (`any` | `zero` | `least-unsigned`, ADR-2140: which model a `sat` prefers;
+//! `zero` finishes the witness with a replay-checked bit-clearing pass, and
+//! `least-unsigned` re-solves under magnitude bounds 1, 16, 256, 4096 so
+//! `get-model` answers with the smallest witness found). **Every other
+//! option draws `unsupported`**, which is the point of this table: before ADR-0541 an
 //! unknown `set-option` was accepted and ignored, and a consumer could not tell
 //! an option that worked from one that did nothing. cvc5 1.3.4 answers
 //! `unsupported` here too; Z3 4.13.3 raises an error instead, and SMT-LIB §4.1.7
