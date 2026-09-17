@@ -13185,5 +13185,92 @@ SUITES["lia-pop-pop-restore-lra"] = (
     ],
 )
 
+# --------------------------------------------------------------------------
+# ADR-2145: the retained-trail warm schedule (`AXEYUM_WARM_KEEP_TRAIL`).  The
+# core keeps the surviving scopes' trail across solves; each guard below is
+# one half of "the assignment after pop equals a fresh propagation of the
+# surviving clauses".  The suite is the `keep_trail_*` tests of the warm
+# adapter, whose random-session differential compares every verdict against a
+# fresh solver and replays every model, so a guard that lets a popped scope's
+# assignment or a pending propagation leak has to show up as a wrong verdict
+# or an invalid model rather than as a counter.
+#
+# On the brief's named control -- "learned clauses derived under assumptions
+# are dropped": this core's 1-UIP analysis never resolves an assumption away
+# (assumptions are decisions and appear in the learned clause as literals),
+# so every learned clause is entailed by the clause database alone and there
+# is no such drop rule to delete.  The equivalent guard here is the FIRST
+# mutation: the surviving-scope count is the longest common prefix of the two
+# assumption sequences by IDENTITY; keeping levels by count alone lets a
+# popped scope's implications survive into a solve that no longer assumes it.
+# --------------------------------------------------------------------------
+
+SUITES["warm-keep-trail-2145"] = (
+    "crates/axeyum-cnf/src/proof_sat/incremental.rs",
+    Cargo(("-p", "axeyum-cnf", "--lib", "keep_trail"), "warm-keep-trail-2145"),
+    [
+        (
+            "the surviving-scope count compares assumption literals, not just positions",
+            "            .take_while(|(held, next)| held == next)",
+            "            .take_while(|_| true)",
+        ),
+        (
+            "a clause added against a live trail is registered live, not after a reset",
+            "        if self.keep_trail && self.needs_reset {\n            // ADR-2145: the trail is kept",
+            "        if false && self.keep_trail && self.needs_reset {\n            // ADR-2145: the trail is kept",
+        ),
+        (
+            "an outright unsat pins the empty clause so a resumed search cannot miss the consumed conflict",
+            "                self.cdcl.has_empty_clause = true;",
+            "                let _ = &self.cdcl.has_empty_clause;",
+        ),
+        (
+            "backtrack clamps the propagation queue instead of resetting it past a pending literal",
+            "        self.qhead = self.qhead.min(self.trail.len());",
+            "        self.qhead = self.trail.len();",
+            "crates/axeyum-cnf/src/proof_sat.rs",
+        ),
+        (
+            # The mutant backtracks only when the literal is already assigned
+            # above the implied level, and enqueues an UNASSIGNED one at the
+            # current level: a later backtrack that keeps the implied level
+            # and drops the current one then loses the propagation.  (Deleting
+            # the backtrack outright makes the assigned-above case spin, which
+            # is a hang and names nothing.)
+            "a clause unit at a retained level is propagated AT that level, not at the current one",
+            "                    if self.decision_level() > implied_level {",
+            "                    if self.assign[var].is_some() {",
+            "crates/axeyum-cnf/src/proof_sat.rs",
+        ),
+    ],
+)
+
+# The same first guard, measured from the OTHER end of the stack: the QF_BV
+# session fuzz (`tests/incremental_bv_session_fuzz.rs`) drives the whole warm
+# engine through push/assert/check/pop and compares against a fresh one-shot
+# solve and a replay, so a popped scope leaking through the CNF core has to
+# surface as a wrong verdict at the term level too.  ~60 s; run deliberately.
+SUITES["warm-keep-trail-2145-session-fuzz"] = (
+    "crates/axeyum-cnf/src/proof_sat/incremental.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "incremental_bv_session_fuzz",
+        ),
+        "warm-keep-trail-2145-session-fuzz",
+    ),
+    [
+        (
+            "a popped scope's assignment cannot survive into a check that no longer assumes it",
+            "            .take_while(|(held, next)| held == next)",
+            "            .take_while(|_| true)",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
