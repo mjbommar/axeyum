@@ -31,7 +31,14 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out (ADR-2141): bit `k` of an LCG
+        // modulo 2^64 has period 2^(k+1), so `below(4)` at a fixed draw offset
+        // is a constant and the push/pop schedule below locked to one cycle —
+        // which is why `LraTheory`'s twin of the ADR-2143 defect was read, not
+        // fuzzed, by the audit. SplitMix64's finalizer mixes every bit.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
 
     /// A value in `0..n`.
@@ -204,6 +211,80 @@ fn unit_push_assert_pop_round_trip() {
         theory.assert(1, false).is_ok(),
         "x>=0 and not(x<-2) feasible"
     );
+}
+
+/// ADR-2143, the LRA twin of the ax-proptest audit's STOP sequence
+/// (`bench-results/proptest-box-audit-20260916/README.md`):
+///
+/// ```text
+/// push; assert(¬(x ≥ 10))   -> Ok            (x < 10 live)
+/// push; assert(x ≥ 10)      -> a conflict whose core names both polarities
+/// pop                       -> x < 10 stays live AND stays marked `false`
+/// assert(x ≥ 20)            -> a conflict whose core says (0, false), (1, true)
+/// ```
+///
+/// Here the `live` constraint list already accumulated both constraints, so
+/// the second step did report a conflict before the repair; what was wrong was
+/// the marker. The inner assert overwrote `assigned[0]` and logged the index a
+/// second time, so the driver's `pop` past the conflict set `assigned[0]` to
+/// `None` while `x < 10` stayed in `live`. `rows_to_core` then reads the
+/// polarity as `assigned[atom].unwrap_or(true)`, so the final conflict's core
+/// came back as `(0, true), (1, true)` — "x ≥ 10 ∧ x ≥ 20 is infeasible", a
+/// FALSE lemma. The core's polarity is the observable this test pins.
+#[test]
+fn opposite_polarity_reassert_conflicts_and_pop_keeps_the_outer_assignment() {
+    let mut arena = TermArena::new();
+    let vars = real_vars(&mut arena, 1);
+    let x = vars[0];
+    let ten = arena.real_const(Rational::integer(10));
+    let twenty = arena.real_const(Rational::integer(20));
+    let ge10 = arena.real_ge(x, ten).expect("x>=10");
+    let ge20 = arena.real_ge(x, twenty).expect("x>=20");
+
+    let mut theory = LraTheory::new(&arena, &[ge10, ge20]);
+    theory.push();
+    assert!(theory.assert(0, false).is_ok(), "x<10 alone is feasible");
+    theory.push();
+    let core = theory
+        .assert(0, true)
+        .expect_err("x>=10 while x<10 is live at the enclosing level is a conflict");
+    assert!(
+        core.contains(&TheoryLit {
+            atom: 0,
+            value: false
+        }) && core.contains(&TheoryLit {
+            atom: 0,
+            value: true
+        }),
+        "the core names both polarities of the atom: {core:?}"
+    );
+    // Driver discipline: backtrack past the conflicting assertion.
+    theory.pop();
+    // x>=20 conflicts with the still-live x<10, and the core must carry the
+    // polarity x<10 was asserted with — `(0, false)` — not a defaulted `true`.
+    let core = theory
+        .assert(1, true)
+        .expect_err("x>=20 must conflict with the still-live x<10");
+    assert!(
+        core.contains(&TheoryLit {
+            atom: 0,
+            value: false
+        }),
+        "the core must name atom 0 at its LIVE polarity (false): {core:?}"
+    );
+    assert!(
+        !core.contains(&TheoryLit {
+            atom: 0,
+            value: true
+        }),
+        "a core naming (0, true) is the stale-marker false lemma: {core:?}"
+    );
+    theory.pop();
+    assert!(
+        theory.assert(0, true).is_ok(),
+        "after the outer pop x>=10 is feasible"
+    );
+    assert!(theory.assert(1, true).is_ok(), "and x>=20 with it");
 }
 
 #[test]
@@ -392,6 +473,226 @@ fn differential_fuzz_push_pop_sequences_track_offline() {
     assert!(checks > 100, "push/pop fuzz made too few checks ({checks})");
     assert!(sat_seen, "push/pop fuzz saw no sat states");
     assert!(unsat_seen, "push/pop fuzz saw no conflict states");
+}
+
+/// One step of the random `push`/`pop`/`assert` schedule below.
+enum ScheduleStep {
+    Push,
+    Pop,
+    Assert { atom: usize, value: bool },
+}
+
+const SCHEDULE_SEEDS: u64 = 300;
+const SCHEDULE_STEPS: usize = 24;
+
+/// Draws the next schedule step: `below(4)` picks push (0), pop (1, only while
+/// `depth > 0`; at depth 0 the draw falls through to an assert) or an assert of
+/// a random atom at a random polarity.
+fn draw_schedule_step(rng: &mut Lcg, natoms: usize, depth: u32) -> ScheduleStep {
+    match rng.below(4) {
+        0 => ScheduleStep::Push,
+        1 if depth > 0 => ScheduleStep::Pop,
+        _ => {
+            let atom = usize::try_from(rng.below(natoms as u64)).expect("fits");
+            let value = rng.below(2) == 1;
+            ScheduleStep::Assert { atom, value }
+        }
+    }
+}
+
+/// The latest logged value of `atom`, if any.
+fn effective(log: &[(usize, bool)], atom: usize) -> Option<bool> {
+    log.iter().rev().find(|(a, _)| *a == atom).map(|(_, v)| *v)
+}
+
+/// The effective `(atom, value)` set over all atoms, in atom-index order.
+fn effective_set(log: &[(usize, bool)], natoms: usize) -> Vec<(usize, bool)> {
+    (0..natoms)
+        .filter_map(|atom| effective(log, atom).map(|value| (atom, value)))
+        .collect()
+}
+
+/// The offline conjunctive query for a live `(atom, value)` set: each order atom
+/// and each *true* equality atom contributes its polarity-applied term; a *false*
+/// equality atom (a disjunction) is dropped, as the theory drops it.
+fn live_query(
+    arena: &TermArena,
+    atoms: &[TermId],
+    live: &[(usize, bool)],
+) -> (TermArena, Vec<TermId>) {
+    let mut arena = arena.clone();
+    let mut terms = Vec::new();
+    for &(atom, value) in live {
+        let t = atoms[atom];
+        let is_eq = matches!(
+            arena.node(t),
+            axeyum_ir::TermNode::App {
+                op: axeyum_ir::Op::Eq,
+                ..
+            }
+        );
+        if is_eq && !value {
+            continue;
+        }
+        terms.push(if value { t } else { arena.not(t).expect("not") });
+    }
+    (arena, terms)
+}
+
+/// Driver discipline: backtrack past the assertion just made (its wrapping
+/// `push`), in the theory and in the mirror.
+fn backtrack(
+    theory: &mut LraTheory,
+    marks: &mut Vec<usize>,
+    log: &mut Vec<(usize, bool)>,
+    depth: &mut u32,
+) {
+    theory.pop();
+    let mark = marks.pop().expect("just pushed a mark");
+    log.truncate(mark);
+    *depth -= 1;
+}
+
+/// A conflict core is a lemma `¬⋀core`, so every literal it names must be
+/// ASSERTED at that polarity: the mirrored live value, or the trigger literal
+/// itself. A core naming the other polarity is a false lemma — the shape a
+/// stale marker produces (ADR-2143, `rows_to_core`'s `unwrap_or(true)`).
+fn assert_core_is_asserted(
+    seed: u64,
+    log: &[(usize, bool)],
+    natoms: usize,
+    trigger: (usize, bool),
+    core: &[TheoryLit],
+) {
+    for lit in core {
+        let asserted = effective(log, lit.atom) == Some(lit.value)
+            || (lit.atom == trigger.0 && lit.value == trigger.1);
+        assert!(
+            asserted,
+            "DISAGREEMENT seed {seed}: core literal {lit:?} is not asserted \
+             (live={:?}, trigger={trigger:?})",
+            effective_set(log, natoms)
+        );
+    }
+}
+
+/// The LRA twin of `tests/lia_online.rs::differential_fuzz_push_pop_assert_sequences_agree`
+/// (ADR-2143): random `push`/`pop`/`assert` schedules at BOTH polarities, each
+/// assert wrapped in its own `push` and popped on a conflict (driver
+/// discipline), the theory's per-step verdict compared with `check_with_lra`
+/// on the mirrored live set. A re-assert of a live atom at the opposite
+/// polarity must be a conflict, and after the pop the outer assignment must
+/// still be there — the sequence the audit found `LiaTheory` losing and read
+/// (but could not reach) in `LraTheory`, whose schedule was locked to one LCG
+/// cycle until the finalizer above.
+#[test]
+fn differential_fuzz_push_pop_assert_sequences_agree() {
+    let mut conflict_steps = 0_u32;
+    let mut clean_steps = 0_u32;
+    let mut explicit_pops = 0_u32;
+    let mut polarity_conflicts = 0_u32;
+
+    for seed in 0..SCHEDULE_SEEDS {
+        let mut rng = Lcg(seed.wrapping_mul(0xD1B5_4A32_D192_ED03).wrapping_add(7));
+        let mut arena = TermArena::new();
+        let nvars = 1 + usize::try_from(rng.below(2)).expect("fits");
+        let vars = real_vars(&mut arena, nvars);
+        let natoms = 3 + usize::try_from(rng.below(4)).expect("fits");
+        let atoms: Vec<TermId> = (0..natoms)
+            .map(|_| random_atom(&mut arena, &mut rng, &vars))
+            .collect();
+
+        let mut theory = LraTheory::new(&arena, &atoms);
+        if !(0..natoms).all(|i| theory.tracks(i)) {
+            continue;
+        }
+        let mut log: Vec<(usize, bool)> = Vec::new();
+        let mut marks: Vec<usize> = Vec::new();
+        let mut depth = 0_u32;
+
+        for _ in 0..SCHEDULE_STEPS {
+            match draw_schedule_step(&mut rng, natoms, depth) {
+                ScheduleStep::Push => {
+                    theory.push();
+                    marks.push(log.len());
+                    depth += 1;
+                }
+                ScheduleStep::Pop => {
+                    theory.pop();
+                    let mark = marks.pop().expect("depth>0 has a mark");
+                    log.truncate(mark);
+                    depth -= 1;
+                    explicit_pops += 1;
+                }
+                ScheduleStep::Assert { atom, value } => {
+                    theory.push();
+                    marks.push(log.len());
+                    depth += 1;
+
+                    let result = theory.assert(atom, value);
+                    let current = effective(&log, atom);
+                    if let Err(core) = &result {
+                        assert_core_is_asserted(seed, &log, natoms, (atom, value), core);
+                    }
+                    if current == Some(!value) {
+                        assert!(
+                            result.is_err(),
+                            "DISAGREEMENT seed {seed}: atom {atom} is live at {current:?} and \
+                             the theory accepted its negation (live={:?})",
+                            effective_set(&log, natoms)
+                        );
+                        polarity_conflicts += 1;
+                        backtrack(&mut theory, &mut marks, &mut log, &mut depth);
+                        continue;
+                    }
+                    if current != Some(value) {
+                        log.push((atom, value));
+                    }
+
+                    let live = effective_set(&log, natoms);
+                    let (mut live_arena, live_terms) = live_query(&arena, &atoms, &live);
+                    let offline = if live_terms.is_empty() {
+                        Some(true)
+                    } else {
+                        offline_verdict(&mut live_arena, &live_terms)
+                    };
+                    match (result.is_err(), offline) {
+                        (true, Some(false)) => conflict_steps += 1,
+                        (false, Some(true)) => clean_steps += 1,
+                        (true, Some(true)) => panic!(
+                            "DISAGREEMENT seed {seed}: theory reported a conflict but the \
+                             live set is offline-SAT (live={live:?})"
+                        ),
+                        (false, Some(false)) => panic!(
+                            "DISAGREEMENT seed {seed}: theory reported no conflict but the \
+                             live set is offline-UNSAT (live={live:?})"
+                        ),
+                        (_, None) => {}
+                    }
+
+                    if result.is_err() {
+                        backtrack(&mut theory, &mut marks, &mut log, &mut depth);
+                    }
+                }
+            }
+        }
+    }
+
+    eprintln!(
+        "COVERAGE push/pop/assert (LRA): conflict_steps={conflict_steps} \
+         clean_steps={clean_steps} explicit_pops={explicit_pops} \
+         polarity_conflicts={polarity_conflicts}"
+    );
+    assert!(
+        conflict_steps > 0,
+        "the schedule must reach a conflict state"
+    );
+    assert!(clean_steps > 0, "the schedule must reach a feasible state");
+    assert!(explicit_pops > 0, "the schedule must draw an explicit pop");
+    assert!(
+        polarity_conflicts > 0,
+        "the schedule must re-assert a live atom at the opposite polarity (ADR-2143)"
+    );
 }
 
 /// Builds the typed Boolean term for the *negation* of an order atom `lhs REL 0`

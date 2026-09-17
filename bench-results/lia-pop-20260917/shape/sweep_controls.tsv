@@ -1,0 +1,3 @@
+file	logic	A_n	B_n	z3_n	A_vs_z3	B_vs_z3	A_vs_B	A_rc	B_rc	z3_rc
+shadow_lia.smt2	QF_LIA	3	3	3	agree	agree	agree	0	0	0
+shadow_lra.smt2	QF_LRA	3	3	3	agree	agree	agree	0	0	0

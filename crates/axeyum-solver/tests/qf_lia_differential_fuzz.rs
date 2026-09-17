@@ -97,7 +97,21 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): every corner's inner `flip()`/`below(4)` was the
+        // same for all 80 of its seeds — `DivByConstZero` was ALWAYS negated
+        // (the satisfiable `(div p 0) = c` shape, `a946f925`'s own, was never
+        // in the random population), `DivZeroCongruence` never drew `a == b`,
+        // `StrictTightening` was always `not (k*x < c)`, `ExtremeConstant`
+        // was always the `i64::MAX` variant, and the two variable-divisor
+        // corners never swapped pin polarity.
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
     fn below(&mut self, n: u64) -> usize {
         usize::try_from(self.next_u64() % n).expect("modulus fits usize")
@@ -992,6 +1006,138 @@ fn corner_coverage_is_total() {
         var_divisors > 0,
         "no `div`/`mod` by a variable divisor was generated"
     );
+}
+
+/// The arm-level guard [`corner_coverage_is_total`] cannot be: it tallies
+/// `corner.name()`, so a corner whose inner `flip()`/`below(4)` arm is dead
+/// still counts as covered. Measured 2026-09-16 under the raw-state LCG
+/// (lane ax-proptest, bench-results/proptest-box-audit-20260916), each of
+/// these arms was generated **0 times** in the sweep this suite runs:
+///
+/// - `DivByConstZero` with `neg == false` — the SATISFIABLE `(div p 0) ⋈ c`
+///   shape, `a946f925`'s own: 0/80 (`neg` was `true` for all 80 seeds);
+/// - `DivZeroCongruence` with `a == b` — the sat companion the corner's own
+///   comment promises: 0/80 (`b` was always `a + 1`);
+/// - `ExtremeConstant` at `i64::MIN`, `i32::MIN`, `i32::MAX`: 0/80 each
+///   (`below(4)` returned `1` for all 80 seeds);
+/// - `StrictTightening` with `Gt`: 0/80, and with `neg == false`: 0/80 (every
+///   asserted atom was `not (k*x < c)`, i.e. `k*x >= c`, never a strict form);
+/// - `DivByVar` with its divisor pinned NONZERO: 0/80, and `ModByVar` with
+///   its divisor pinned to ZERO: 0/80 (the pin `flip()` was `false` for every
+///   `DivByVar` seed and `true` for every `ModByVar` seed).
+///
+/// The cause was structural: `seed % 12` fixes `seed % 4`, and the raw LCG's
+/// low two bits at a fixed draw offset are a function of exactly that. This
+/// regenerates the same population (no solver, no Z3) and requires each arm
+/// at a floor about a quarter of what the mixed generator produces.
+#[test]
+#[allow(clippy::too_many_lines)]
+fn the_generator_reaches_the_parity_dead_corner_arms() {
+    let mut div_const_zero_positive = 0u64;
+    let mut div_zero_congruence_equal_rhs = 0u64;
+    let mut extreme_i64_min = 0u64;
+    let mut extreme_i32_min = 0u64;
+    let mut extreme_i32_max = 0u64;
+    let mut strict_gt = 0u64;
+    let mut strict_positive = 0u64;
+    let mut div_by_var_pinned_nonzero = 0u64;
+    let mut mod_by_var_pinned_zero = 0u64;
+    let mut per_corner: BTreeMap<&'static str, u64> = BTreeMap::new();
+
+    for seed in 0..INSTANCES {
+        let inst = Instance::generate(seed);
+        *per_corner.entry(inst.corner.name()).or_default() += 1;
+        // The corner's own atoms are pushed first, before the filler.
+        let a0 = &inst.atoms[0];
+        match inst.corner {
+            Corner::DivByConstZero => {
+                assert_eq!(a0.wrap, Some(Wrap::Div(Divisor::Const(0))));
+                if !a0.neg {
+                    div_const_zero_positive += 1;
+                }
+            }
+            Corner::DivZeroCongruence => {
+                let a1 = &inst.atoms[1];
+                assert_eq!(a0.wrap, Some(Wrap::Div(Divisor::Const(0))));
+                assert_eq!(a1.wrap, Some(Wrap::Div(Divisor::Const(0))));
+                if a0.rhs == a1.rhs {
+                    div_zero_congruence_equal_rhs += 1;
+                }
+            }
+            Corner::ExtremeConstant => {
+                let r = a0.rhs;
+                if (i64::MIN..=i64::MIN + 4).contains(&r) {
+                    extreme_i64_min += 1;
+                } else if (i64::from(i32::MIN)..=i64::from(i32::MIN) + 4).contains(&r) {
+                    extreme_i32_min += 1;
+                } else if (i64::from(i32::MAX) - 4..=i64::from(i32::MAX)).contains(&r) {
+                    extreme_i32_max += 1;
+                } else {
+                    assert!(
+                        (i64::MAX - 4..=i64::MAX).contains(&r),
+                        "seed {seed}: ExtremeConstant rhs {r} is at no extreme"
+                    );
+                }
+            }
+            Corner::StrictTightening => {
+                assert!(matches!(a0.rel, Rel::Lt | Rel::Gt));
+                if a0.rel == Rel::Gt {
+                    strict_gt += 1;
+                }
+                if !a0.neg {
+                    strict_positive += 1;
+                }
+            }
+            Corner::DivByVar => {
+                let pin = &inst.atoms[1];
+                assert!(matches!(a0.wrap, Some(Wrap::Div(Divisor::Var(_)))));
+                assert_eq!((pin.rel, pin.rhs), (Rel::Eq, 0));
+                if pin.neg {
+                    div_by_var_pinned_nonzero += 1;
+                }
+            }
+            Corner::ModByVar => {
+                let pin = &inst.atoms[1];
+                assert!(matches!(a0.wrap, Some(Wrap::Mod(Divisor::Var(_)))));
+                assert_eq!((pin.rel, pin.rhs), (Rel::Eq, 0));
+                if !pin.neg {
+                    mod_by_var_pinned_zero += 1;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let counts = [
+        (
+            "DivByConstZero neg=false (sat shape)",
+            div_const_zero_positive,
+            10,
+        ),
+        ("DivZeroCongruence a==b", div_zero_congruence_equal_rhs, 9),
+        ("ExtremeConstant i64::MIN", extreme_i64_min, 5),
+        ("ExtremeConstant i32::MIN", extreme_i32_min, 3),
+        ("ExtremeConstant i32::MAX", extreme_i32_max, 4),
+        ("StrictTightening Gt", strict_gt, 10),
+        ("StrictTightening neg=false", strict_positive, 8),
+        (
+            "DivByVar divisor pinned NONZERO",
+            div_by_var_pinned_nonzero,
+            10,
+        ),
+        ("ModByVar divisor pinned ZERO", mod_by_var_pinned_zero, 8),
+    ];
+    for (name, n, floor) in counts {
+        eprintln!("  arm {name:<40} {n:>4} instances (floor {floor})");
+    }
+    for (name, n, floor) in counts {
+        assert!(
+            n >= floor,
+            "arm `{name}` was generated {n} times (floor {floor}) over {INSTANCES} seeds \
+             (corner sizes {per_corner:?}) — measured 0 under the raw-state LCG, \
+             this arm is parity-dead again"
+        );
+    }
 }
 
 /// One hand-written pin: name, variable count, atoms, roots.

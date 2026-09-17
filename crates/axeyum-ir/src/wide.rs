@@ -517,19 +517,30 @@ mod tests {
     use super::*;
 
     // A small linear-congruential generator (no external deps, deterministic).
+    //
+    // The raw state is never handed out. Bit `k` of an LCG modulo `2^64` has
+    // period `2^(k+1)`, and `next` advances the state twice per call, so the
+    // low bits of what it returned were LOCKED to the call parity: measured
+    // 2026-09-16 (lane ax-proptest), masked to width 1 all 200 draws of
+    // `ops_match_u128_reference_over_widths` were the pair `(0, 0)` and at
+    // width 2 all 200 were `(2, 0)`; width 7 saw 32 distinct pairs and width
+    // 8 saw 64 of 200. A "width 1" sweep that never forms `1 + 1` tests the
+    // carry of nothing. The SplitMix64 finalizer makes every output bit depend
+    // on the whole state; `random_pairs_cover_the_small_widths` pins that.
     struct Lcg(u64);
     impl Lcg {
+        fn next_u64(&mut self) -> u64 {
+            self.0 = self
+                .0
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1);
+            let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+            let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+            z ^ (z >> 31)
+        }
         fn next(&mut self) -> u128 {
-            self.0 = self
-                .0
-                .wrapping_mul(6_364_136_223_846_793_005)
-                .wrapping_add(1);
-            let hi = u128::from(self.0);
-            self.0 = self
-                .0
-                .wrapping_mul(6_364_136_223_846_793_005)
-                .wrapping_add(1);
-            (hi << 64) | u128::from(self.0)
+            let hi = u128::from(self.next_u64());
+            (hi << 64) | u128::from(self.next_u64())
         }
     }
 
@@ -537,13 +548,61 @@ mod tests {
         v & low_mask_u128(w)
     }
 
+    /// The operand pairs a random draw reaches with probability `~2^-2w`, or
+    /// not at all: both zero, both one, both all-ones, the signed minimum
+    /// against `-1` (`INT_MIN / -1`, the one signed division that overflows a
+    /// two's-complement width), the signed minimum against zero, and a
+    /// nonzero dividend against a zero divisor (SMT-LIB totality). Emitted
+    /// BEFORE the random draws in every width so the class is present in the
+    /// run whatever the seed does — the CLAUDE.md rule that an underspecified
+    /// operator carries a seed class that deliberately emits the degenerate
+    /// argument.
+    fn degenerate_pairs(width: u32) -> Vec<(u128, u128)> {
+        let ones = low_mask_u128(width);
+        let min = 1u128 << (width - 1);
+        vec![
+            (0, 0),
+            (1, 1),
+            (ones, ones),
+            (min, ones),
+            (min, 0),
+            (ones, 0),
+            (1, 0),
+            (0, 1),
+            (ones, 1),
+            (min, min),
+        ]
+    }
+
+    /// The random population must actually vary at the small widths. Before
+    /// the output mixer it did not (see `Lcg`), and a sweep over one pair per
+    /// width is a fixed example wearing a loop.
+    #[test]
+    fn random_pairs_cover_the_small_widths() {
+        let mut rng = Lcg(0x1234_5678_9abc_def0);
+        for width in [1u32, 2] {
+            let mut seen = std::collections::BTreeSet::new();
+            for _ in 0..200 {
+                let a = mask128(rng.next(), width);
+                let b = mask128(rng.next(), width);
+                seen.insert((a, b));
+            }
+            let all = 1usize << (2 * width);
+            assert_eq!(
+                seen.len(),
+                all,
+                "width {width}: 200 draws must reach every one of the {all} operand pairs, got {seen:?}"
+            );
+        }
+    }
+
     #[test]
     fn ops_match_u128_reference_over_widths() {
         let mut rng = Lcg(0x1234_5678_9abc_def0);
         for width in [1u32, 2, 7, 8, 31, 32, 63, 64, 65, 100, 127, 128] {
-            for _ in 0..200 {
-                let a = mask128(rng.next(), width);
-                let b = mask128(rng.next(), width);
+            let random = (0..200).map(|_| (mask128(rng.next(), width), mask128(rng.next(), width)));
+            let random: Vec<(u128, u128)> = random.collect();
+            for (a, b) in degenerate_pairs(width).into_iter().chain(random) {
                 let wa = WideUint::from_u128(a, width);
                 let wb = WideUint::from_u128(b, width);
                 assert_eq!(wa.to_u128(), a, "round-trip a width {width}");
@@ -608,9 +667,9 @@ mod tests {
         let mut rng = Lcg(0x0f1e_2d3c_4b5a_6978);
         for width in [1u32, 2, 8, 13, 32, 63, 64, 65, 100, 127, 128] {
             let m = |v: u128| v & low_mask_u128(width);
-            for _ in 0..300 {
-                let a = m(rng.next());
-                let b = m(rng.next());
+            let random: Vec<(u128, u128)> =
+                (0..300).map(|_| (m(rng.next()), m(rng.next()))).collect();
+            for (a, b) in degenerate_pairs(width).into_iter().chain(random) {
                 let wa = WideUint::from_u128(a, width);
                 let wb = WideUint::from_u128(b, width);
 
@@ -633,17 +692,26 @@ mod tests {
                 let srem_ref = if sb == 0 { sa } else { sa.wrapping_rem(sb) };
                 assert_eq!(wa.sdiv(&wb).to_u128(), m(sdiv_ref as u128), "sdiv w{width}");
                 assert_eq!(wa.srem(&wb).to_u128(), m(srem_ref as u128), "srem w{width}");
+                // SMT-LIB bvsmod over magnitudes, so the reference is total at
+                // width 128 too: `sb.abs()` panics at `i128::MIN`, and the seed
+                // class `(min, min)` reaches exactly that pair. The sign of the
+                // result follows the divisor; a zero remainder stays zero.
                 let smod_ref = if sb == 0 {
-                    sa
+                    m(sa as u128)
                 } else {
-                    let r = sa.rem_euclid(sb.abs());
-                    if sb < 0 && r != 0 { r - sb.abs() } else { r }
+                    let u = sa.unsigned_abs() % sb.unsigned_abs();
+                    if u == 0 {
+                        0
+                    } else {
+                        match (sa < 0, sb < 0) {
+                            (false, false) => u,
+                            (true, false) => sb.unsigned_abs().wrapping_sub(u),
+                            (false, true) => m(u.wrapping_sub(sb.unsigned_abs())),
+                            (true, true) => m(u.wrapping_neg()),
+                        }
+                    }
                 };
-                assert_eq!(
-                    wa.smod(&wb).to_u128(),
-                    m(smod_ref as u128),
-                    "smod {sa} {sb} w{width}"
-                );
+                assert_eq!(wa.smod(&wb).to_u128(), smod_ref, "smod {sa} {sb} w{width}");
 
                 // Signed compares.
                 assert_eq!(wa.slt(&wb), sa < sb, "slt w{width}");
@@ -665,6 +733,47 @@ mod tests {
                     assert_eq!(wa.ashr(sh).to_u128(), want, "ashr {sa} by {sh} w{width}");
                 }
             }
+        }
+    }
+
+    /// The structural shapes the random draw below cannot form: `hi = lo +
+    /// rand % (width - lo)` reaches the full-width extract with probability
+    /// `1/width²` (measured 0 of 1400 before the seed class), and `by = rand %
+    /// (128 - width)` can never equal `128 - width`, so no extension or concat
+    /// ever landed exactly on 128 bits — the boundary where the two-limb
+    /// representation is full and `to_u128` has no slack.
+    #[test]
+    fn structural_ops_reach_the_full_width_and_the_128_bit_boundary() {
+        let mut rng = Lcg(0x7e57_0a1b_2c3d_4e5f);
+        for width in [4u32, 8, 16, 32, 60, 64, 96, 127, 128] {
+            let a = rng.next() & low_mask_u128(width);
+            let wa = WideUint::from_u128(a, width);
+            assert_eq!(
+                wa.extract(width - 1, 0).to_u128(),
+                a,
+                "full extract w{width}"
+            );
+            assert_eq!(
+                wa.extract(width - 1, width - 1).to_u128(),
+                a >> (width - 1),
+                "top-bit extract w{width}"
+            );
+            if width < 128 {
+                let by = 128 - width;
+                assert_eq!(wa.zero_ext(by).to_u128(), a, "zext w{width} to 128");
+                let sref = (to_signed(a, width) as u128) & low_mask_u128(128);
+                assert_eq!(wa.sign_ext(by).to_u128(), sref, "sext w{width} to 128");
+                let b = rng.next() & low_mask_u128(by);
+                let wb = WideUint::from_u128(b, by);
+                assert_eq!(
+                    wa.concat(&wb).to_u128(),
+                    (a << by) | b,
+                    "concat w{width}++{by} lands on 128"
+                );
+            }
+            // Extension by zero is the identity, at every width.
+            assert_eq!(wa.zero_ext(0).to_u128(), a, "zext by 0 w{width}");
+            assert_eq!(wa.sign_ext(0).to_u128(), a, "sext by 0 w{width}");
         }
     }
 

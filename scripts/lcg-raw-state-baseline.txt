@@ -1,0 +1,64 @@
+# Baseline for scripts/check-lcg-raw-state.py: every file that still returns
+# a raw LCG state from a generator, with its site count. The count can only go
+# DOWN: a new file fails the gate, a grown count fails it, and an entry the tree
+# no longer needs fails it too (ratchet the number here down, do not delete the
+# gate). Pinned 2026-09-17 (lane ax-proptest, ADR-2141) at 56 files / 64 sites,
+# after 24 generators in six crates were fixed. Why a raw state is a defect and
+# what it did to these suites: bench-results/proptest-box-audit-20260916/.
+#
+# Format: <path relative to the repository root>:<count>
+crates/axeyum-cas/src/ntheory.rs:2
+crates/axeyum-cnf/tests/deterministic_work_budget.rs:1
+crates/axeyum-cnf/tests/external_sat_referee.rs:1
+crates/axeyum-fp/src/lib.rs:8
+crates/axeyum-ir/src/rational.rs:1
+crates/axeyum-lean-kernel/tests/kernel_seam_fuzz.rs:1
+crates/axeyum-lean-kernel/tests/mutual_inductive_group_grammar.rs:1
+crates/axeyum-lean-kernel/tests/nested_inductive_grammar.rs:1
+crates/axeyum-lean-kernel/tests/strict_positivity.rs:1
+crates/axeyum-rewrite/src/canonical.rs:1
+crates/axeyum-solver/src/lex_reconstruct/tests.rs:1
+crates/axeyum-solver/src/lia_online.rs:1
+crates/axeyum-solver/src/lra_online.rs:1
+crates/axeyum-solver/src/simplex.rs:1
+crates/axeyum-solver/tests/bv_differential_fuzz.rs:1
+crates/axeyum-solver/tests/difference_logic_differential_fuzz.rs:1
+crates/axeyum-solver/tests/fp_differential_fuzz.rs:1
+crates/axeyum-solver/tests/lia_interpolant.rs:1
+crates/axeyum-solver/tests/lra_interpolant_cnf.rs:1
+crates/axeyum-solver/tests/lra_warm_screen_2132.rs:1
+crates/axeyum-solver/tests/mbp.rs:1
+crates/axeyum-solver/tests/nra_differential_fuzz.rs:1
+crates/axeyum-solver/tests/qf_dt_equality_differential_fuzz.rs:1
+crates/axeyum-solver/tests/qf_dt_selector_differential_fuzz.rs:1
+crates/axeyum-solver/tests/qf_lra_cube_sequence_differential_fuzz.rs:1
+crates/axeyum-solver/tests/qf_nia_iand_differential_fuzz.rs:1
+crates/axeyum-solver/tests/qf_nia_pow2_differential_fuzz.rs:1
+crates/axeyum-solver/tests/qf_s_online_membership_differential_fuzz.rs:1
+crates/axeyum-solver/tests/qf_s_replace_fold_differential_fuzz.rs:1
+crates/axeyum-solver/tests/qf_slia_length_lia_differential_fuzz.rs:1
+crates/axeyum-solver/tests/qf_slia_lex_order_differential_fuzz.rs:1
+crates/axeyum-solver/tests/qinst_bounded_instance_soundness.rs:1
+crates/axeyum-solver/tests/quantified_uflia_model_finder_differential_fuzz.rs:1
+crates/axeyum-solver/tests/regex_membership_differential_fuzz.rs:1
+crates/axeyum-solver/tests/route_trace.rs:1
+crates/axeyum-solver/tests/seq_differential_fuzz.rs:1
+crates/axeyum-solver/tests/simplex_lra_fallback_differential.rs:1
+crates/axeyum-solver/tests/string_code_bridge.rs:1
+crates/axeyum-solver/tests/string_differential_fuzz.rs:1
+crates/axeyum-solver/tests/string_update_reference_fuzz.rs:1
+crates/axeyum-solver/tests/uf_arith_dispatch_differential.rs:1
+crates/axeyum-solver/tests/uflia_differential_fuzz.rs:1
+crates/axeyum-solver/tests/word_alethe.rs:1
+crates/axeyum-solver/tests/word_equation_cvc5_crosscheck.rs:1
+crates/axeyum-strings/src/lex_order.rs:1
+crates/axeyum-strings/tests/arrange_property.rs:1
+crates/axeyum-strings/tests/classes_property.rs:1
+crates/axeyum-strings/tests/infer_property.rs:1
+crates/axeyum-strings/tests/normalize_denotation_fuzz.rs:1
+crates/axeyum-strings/tests/property.rs:1
+crates/axeyum-strings/tests/refute_chain.rs:1
+crates/axeyum-strings/tests/refute_congruence.rs:1
+crates/axeyum-strings/tests/refute_property.rs:1
+crates/axeyum-strings/tests/regex_derivative.rs:1
+crates/axeyum-strings/tests/regex_predicate.rs:1

@@ -47,7 +47,17 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): `cmp` and `neg` are consecutive draws, so `=`, `<`
+        // and `>` were ALWAYS negated and `<=`, `>=`, `!=` never — not one
+        // positively asserted equality or strict inequality in 1500 seeds.
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
     fn below(&mut self, n: u64) -> usize {
         usize::try_from(self.next_u64() % n).expect("modulus fits usize")
@@ -393,6 +403,64 @@ fn qf_lra_differential_fuzz_disagree_zero() {
         "expected >= {} agreements, got {agree} (axeyum-unknown {ax_unknown}) — LRA dispatch regression?",
         INSTANCES / 3
     );
+}
+
+/// Coverage guard for the atom polarities the raw-state LCG could not reach.
+/// Measured 2026-09-16 under the old generator (lane ax-proptest,
+/// bench-results/proptest-box-audit-20260916), over the same 1500 seeds this
+/// sweep runs: `cmp: Cmp::pick(rng)` and `neg: rng.flip()` were consecutive
+/// draws, and the raw LCG's low bit alternates, so `neg` was exactly
+/// "the comparator index is even" — `=`, `<` and `>` were asserted **0** times
+/// positively (`('<',neg)=751 ('>',neg)=728 ('=',neg)=744`), and `<=`, `>=`,
+/// `!=` were never negated. The effective atom set was `{>=, <=, !=}`: no
+/// strict inequality (the `x > 0 ∧ x < ε` infinitesimal shapes) and no
+/// equality were ever in the population.
+///
+/// Regenerates the population without a solver and requires each dead
+/// polarity at a floor about a quarter of what the mixed generator produces.
+#[test]
+fn the_generator_reaches_positive_equalities_and_strict_atoms() {
+    let mut atoms_total = 0u64;
+    let mut eq_positive = 0u64;
+    let mut lt_positive = 0u64;
+    let mut gt_positive = 0u64;
+    let mut le_negated = 0u64;
+    let mut ge_negated = 0u64;
+    let mut ne_negated = 0u64;
+    for seed in 0..INSTANCES {
+        let inst = Instance::generate(&mut Lcg::new(seed));
+        for atom in &inst.atoms {
+            atoms_total += 1;
+            match (atom.cmp, atom.neg) {
+                (Cmp::Eq, false) => eq_positive += 1,
+                (Cmp::Lt, false) => lt_positive += 1,
+                (Cmp::Gt, false) => gt_positive += 1,
+                (Cmp::Le, true) => le_negated += 1,
+                (Cmp::Ge, true) => ge_negated += 1,
+                (Cmp::Ne, true) => ne_negated += 1,
+                _ => {}
+            }
+        }
+    }
+    let counts = [
+        ("`=` asserted positively", eq_positive, 100),
+        ("`<` asserted positively", lt_positive, 100),
+        ("`>` asserted positively", gt_positive, 100),
+        ("`<=` negated", le_negated, 100),
+        ("`>=` negated", ge_negated, 100),
+        ("`!=` negated (an equality)", ne_negated, 100),
+    ];
+    eprintln!("  atoms in the sweep: {atoms_total}");
+    for (name, n, floor) in counts {
+        eprintln!("  {name:<30} {n:>5} (floor {floor})");
+    }
+    for (name, n, floor) in counts {
+        assert!(
+            n >= floor,
+            "{name}: {n} atoms over {INSTANCES} seeds (floor {floor}) — measured 0 under \
+             the raw-state LCG; `cmp`/`neg` are parity-locked again"
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------

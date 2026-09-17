@@ -77,7 +77,17 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): `ALPHABET[below(2)]` read that bit, so every
+        // literal strictly alternated `abab...` and 0/600 scripts contained a
+        // repeated adjacent letter (`"aa"` / `"bb"`).
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
 
     /// A uniform integer in `0..n` (`n > 0`).
@@ -432,5 +442,48 @@ fn word_equation_differential_fuzz_disagree_zero() {
         axeyum_sat > 0 && axeyum_unsat > 0,
         "expected both sat and unsat verdicts to be adjudicated (sat={axeyum_sat}, \
          unsat={axeyum_unsat})"
+    );
+}
+
+/// Does any quoted string literal in `script` contain a repeated adjacent
+/// letter (`aa` or `bb`)? Only the odd segments between `"` delimiters are
+/// literals; the generator never emits a `"` inside one.
+fn script_has_repeated_letter_literal(script: &str) -> bool {
+    script
+        .split('"')
+        .skip(1)
+        .step_by(2)
+        .any(|lit| lit.contains("aa") || lit.contains("bb"))
+}
+
+/// Coverage guard for the generator box (lane ax-proptest, 2026-09-16).
+///
+/// Under the raw-state LCG the audit measured **0/600** scripts containing a
+/// literal with a repeated adjacent letter (`"aa"` / `"bb"`): `ALPHABET` has
+/// two entries indexed by `below(2)`, the LCG low bit, which alternates on
+/// every draw, so every literal was a prefix of `abab...` or `baba...` and no
+/// periodic / commuting word shape (`x x = "aa"`, `x "a" = "a" x`) was ever
+/// generated. This regenerates the same population without any solver.
+///
+/// `\u{...}` escapes and code points above 0xFF remain unreachable for a
+/// STRUCTURAL reason (the alphabet literal `b"ab"`), not the PRNG; that box
+/// widening is a separate decision (CLAUDE.md: string fuzz generators must
+/// cover the full SMT-LIB literal grammar, ba0d9149).
+#[test]
+fn the_generator_reaches_repeated_adjacent_letters() {
+    let mut repeated = 0u64;
+    for seed in 0..INSTANCES {
+        let inst = Instance::generate(&mut Lcg::new(seed));
+        repeated += u64::from(script_has_repeated_letter_literal(&inst.text));
+    }
+    eprintln!(
+        "word-equation generator coverage over {INSTANCES} seeds: scripts with a repeated \
+         adjacent letter in a literal {repeated}"
+    );
+    // Old generator: 0. New generator measured 2026-09-16: 563; the floor is
+    // about a quarter of that count.
+    assert!(
+        repeated >= 140,
+        "literals with a repeated adjacent letter reached only {repeated}/{INSTANCES} scripts (old generator: 0)"
     );
 }

@@ -59,7 +59,17 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): 0 of 600 universal bodies mentioned a bound
+        // variable (every sentence was `forall x y. <ground formula>`) and 0
+        // of 400 nested shapes were `Shape::NotForall`.
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
     fn below(&mut self, n: u64) -> usize {
         usize::try_from(self.next_u64() % n).expect("modulus fits usize")
@@ -574,6 +584,99 @@ fn quantified_bv_nested_polarity_matches_z3() {
     assert!(
         compared >= 50,
         "too few adjudicated nested-polarity agreements ({compared}) — degenerate sweep"
+    );
+}
+
+/// Does the BV expression mention a variable whose index lies in `[lo, hi)`?
+fn bv_mentions_var(e: &BvE, lo: usize, hi: usize) -> bool {
+    match e {
+        BvE::Var(i) => (lo..hi).contains(i),
+        BvE::Const(_) => false,
+        BvE::And(a, b) | BvE::Or(a, b) | BvE::Xor(a, b) | BvE::Add(a, b) => {
+            bv_mentions_var(a, lo, hi) || bv_mentions_var(b, lo, hi)
+        }
+        BvE::Not(a) => bv_mentions_var(a, lo, hi),
+    }
+}
+
+/// Does the Boolean expression mention a variable whose index lies in `[lo, hi)`?
+fn bool_mentions_var(e: &BoolE, lo: usize, hi: usize) -> bool {
+    match e {
+        BoolE::Eq(a, b) => bv_mentions_var(a, lo, hi) || bv_mentions_var(b, lo, hi),
+        BoolE::And(a, b) | BoolE::Or(a, b) => {
+            bool_mentions_var(a, lo, hi) || bool_mentions_var(b, lo, hi)
+        }
+        BoolE::Not(a) => bool_mentions_var(a, lo, hi),
+    }
+}
+
+/// Coverage guard for the two LCG-driven sweeps above (no solver, no z3).
+///
+/// Regenerates exactly the populations `quantified_bv_differential_matches_z3`
+/// (seeds `0..INSTANCES`, `gen_bool(_, 3)`) and
+/// `quantified_bv_nested_polarity_matches_z3` (seeds `0..NESTED_INSTANCES`
+/// xor the offset, `gen_bool_range` body + ground + `shape_of`) run, and
+/// counts the classes the 2026-09-16 box audit measured at ZERO under the
+/// raw-state LCG:
+///
+/// - a universal body that mentions a bound variable (audit: 0/600 — every
+///   adjudicated sentence was `forall x y. <ground formula>`, so falsifying
+///   the universal never required choosing `x`/`y`);
+/// - a nested-polarity body that mentions a bound variable (same defect,
+///   same generator, second population);
+/// - the `Shape::NotForall` wrapper (audit: 0/400 — a FALSE universal under
+///   a top-level `not` must be SAT, and the shape was never drawn).
+#[test]
+fn the_generator_reaches_bound_variables_and_not_forall() {
+    let mut top_bodies_with_bound_var = 0u64;
+    for seed in 0..INSTANCES {
+        let mut rng = Lcg::new(seed);
+        let body = gen_bool(&mut rng, 3);
+        if bool_mentions_var(&body, 0, 2) {
+            top_bodies_with_bound_var += 1;
+        }
+    }
+
+    let mut nested_bodies_with_bound_var = 0u64;
+    let mut nested_not_forall = 0u64;
+    let mut nested_ground_with_free_var = 0u64;
+    for seed in 0..NESTED_INSTANCES {
+        let mut rng = Lcg::new(seed ^ 0xD1CE_5EED_A5A5_1234);
+        let body = gen_bool_range(&mut rng, 3, 0, 2);
+        let ground = gen_bool_range(&mut rng, 2, 2, 4);
+        let shape = shape_of(&mut rng);
+        if bool_mentions_var(&body, 0, 2) {
+            nested_bodies_with_bound_var += 1;
+        }
+        if bool_mentions_var(&ground, 2, 4) {
+            nested_ground_with_free_var += 1;
+        }
+        if matches!(shape, Shape::NotForall) {
+            nested_not_forall += 1;
+        }
+    }
+
+    eprintln!(
+        "quantified-BV generator coverage: top_bodies_with_bound_var={top_bodies_with_bound_var}/{INSTANCES}, \
+         nested_bodies_with_bound_var={nested_bodies_with_bound_var}/{NESTED_INSTANCES}, \
+         nested_ground_with_free_var={nested_ground_with_free_var}/{NESTED_INSTANCES}, \
+         nested_not_forall={nested_not_forall}/{NESTED_INSTANCES}"
+    );
+    assert!(
+        top_bodies_with_bound_var >= 130,
+        "top-level bodies mentioning a bound variable: {top_bodies_with_bound_var}/{INSTANCES} (audit measured 0)"
+    );
+    assert!(
+        nested_bodies_with_bound_var >= 90,
+        "nested bodies mentioning a bound variable: {nested_bodies_with_bound_var}/{NESTED_INSTANCES}"
+    );
+    assert!(
+        nested_ground_with_free_var >= 90,
+        "nested ground atoms mentioning a free variable: {nested_ground_with_free_var}/{NESTED_INSTANCES}"
+    );
+    assert!(
+        nested_not_forall >= 20,
+        "Shape::NotForall drawn: {nested_not_forall}/{NESTED_INSTANCES} (audit measured 0)"
     );
 }
 
