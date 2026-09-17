@@ -1,0 +1,6 @@
+[nia] products=1 mccormick=0 splits=0 relaxed=22 timeout=Some(23.564438287s) policy=off order_lemmas=true refine=true grant=ProductShare(3)
+[nia] round 0: Ok("sat") (relaxed=22, 7.85481161s left)
+[nia] order/monotone: built=1 new=1
+[nia] round 0: refined with 5 tangent lemmas
+[nia] round 1: Ok("unsat") (relaxed=27, 7.853406129s left)
+unsat

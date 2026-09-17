@@ -1,0 +1,69 @@
+[nia] products=1 mccormick=0 splits=0 relaxed=32 timeout=Some(748.717776ms) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Ok("sat") (relaxed=32, 599.997636ms left)
+[nia] products=1 mccormick=0 splits=0 relaxed=9 timeout=Some(15.932324ms) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Ok("sat") (relaxed=9, 15.931262ms left)
+[nia] products=1 mccormick=0 splits=0 relaxed=32 timeout=Some(93.26261ms) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Ok("sat") (relaxed=32, 93.260677ms left)
+[nia] products=1 mccormick=0 splits=0 relaxed=32 timeout=Some(93.074603ms) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Ok("unsat") (relaxed=32, 93.072288ms left)
+[nia] products=1 mccormick=0 splits=0 relaxed=32 timeout=Some(186.836332ms) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Ok("sat") (relaxed=32, 186.833948ms left)
+[nia] products=1 mccormick=0 splits=0 relaxed=21 timeout=Some(224.571806ms) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Ok("unknown") (relaxed=21, 224.569491ms left)
+[nia] products=1 mccormick=0 splits=0 relaxed=12 timeout=Some(55.017787ms) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Ok("sat") (relaxed=12, 55.016324ms left)
+[nia] products=10 mccormick=0 splits=6 relaxed=274 timeout=Some(2.349093ms) policy=off order_lemmas=false refine=true grant=Envelopes
+[nia] round 0: Ok("unsat") (relaxed=274, 2.343673ms left)
+[nia] products=11 mccormick=0 splits=4 relaxed=283 timeout=Some(2.209055ms) policy=off order_lemmas=false refine=true grant=Envelopes
+[nia] round 0: Ok("unknown") (relaxed=283, 2.203725ms left)
+[nia] products=11 mccormick=0 splits=4 relaxed=283 timeout=Some(2.046314ms) policy=off order_lemmas=false refine=true grant=Envelopes
+[nia] round 0: Ok("unknown") (relaxed=283, 2.039892ms left)
+[nia] products=10 mccormick=0 splits=0 relaxed=127 timeout=Some(249.226774ms) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Err(Unsupported("lazy arithmetic: assertion is not Boolean structure over linear-arithmetic atoms")) (relaxed=127, 249.223318ms left)
+[nia] products=10 mccormick=0 splits=0 relaxed=127 timeout=Some(16.868982821s) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Err(Unsupported("lazy arithmetic: assertion is not Boolean structure over linear-arithmetic atoms")) (relaxed=127, 599.997375ms left)
+[nia] products=10 mccormick=0 splits=0 relaxed=148 timeout=Some(22.488382885s) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Err(Unsupported("lazy arithmetic: assertion is not Boolean structure over linear-arithmetic atoms")) (relaxed=148, 599.998077ms left)
+[nia] products=10 mccormick=0 splits=0 relaxed=122 timeout=Some(224.177001ms) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Err(Unsupported("lazy arithmetic: assertion is not Boolean structure over linear-arithmetic atoms")) (relaxed=122, 224.173384ms left)
+[nia] products=10 mccormick=0 splits=0 relaxed=122 timeout=Some(1.68597924s) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Err(Unsupported("lazy arithmetic: assertion is not Boolean structure over linear-arithmetic atoms")) (relaxed=122, 599.996874ms left)
+[nia] products=10 mccormick=0 splits=0 relaxed=143 timeout=Some(2.244795281s) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Err(Unsupported("lazy arithmetic: assertion is not Boolean structure over linear-arithmetic atoms")) (relaxed=143, 599.998207ms left)
+[nia] products=10 mccormick=0 splits=0 relaxed=199 timeout=Some(248.774982ms) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Err(Unsupported("lazy arithmetic: assertion is not Boolean structure over linear-arithmetic atoms")) (relaxed=199, 248.770604ms left)
+[nia] products=10 mccormick=0 splits=0 relaxed=199 timeout=Some(16.853256958s) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Err(Unsupported("lazy arithmetic: assertion is not Boolean structure over linear-arithmetic atoms")) (relaxed=199, 599.996142ms left)
+[nia] products=10 mccormick=0 splits=0 relaxed=220 timeout=Some(22.46538387s) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Err(Unsupported("lazy arithmetic: assertion is not Boolean structure over linear-arithmetic atoms")) (relaxed=220, 599.997064ms left)
+[nia] products=31 mccormick=0 splits=0 relaxed=509 timeout=Some(248.326226ms) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Err(Unsupported("lazy arithmetic: assertion is not Boolean structure over linear-arithmetic atoms")) (relaxed=509, 248.318562ms left)
+[nia] products=31 mccormick=0 splits=0 relaxed=509 timeout=Some(16.617278763s) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Err(Unsupported("lazy arithmetic: assertion is not Boolean structure over linear-arithmetic atoms")) (relaxed=509, 599.992737ms left)
+[nia] products=31 mccormick=0 splits=0 relaxed=578 timeout=Some(22.148079822s) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Err(Unsupported("lazy arithmetic: assertion is not Boolean structure over linear-arithmetic atoms")) (relaxed=578, 599.991344ms left)
+[nia] products=21 mccormick=0 splits=0 relaxed=331 timeout=Some(248.64886ms) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Ok("sat") (relaxed=331, 248.643991ms left)
+[nia] products=21 mccormick=0 splits=0 relaxed=331 timeout=Some(16.603212129s) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Ok("sat") (relaxed=331, 599.995251ms left)
+[nia] products=21 mccormick=0 splits=0 relaxed=331 timeout=Some(19.113438032s) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Ok("sat") (relaxed=331, 599.994219ms left)
+[nia] products=21 mccormick=0 splits=0 relaxed=331 timeout=Some(18.641626282s) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Ok("unknown") (relaxed=331, 599.993949ms left)
+[nia] products=1473 mccormick=0 splits=88 relaxed=14029 timeout=Some(13.468562313s) policy=off order_lemmas=false refine=true grant=Envelopes
+[nia] round 0: Err(Unsupported("lazy arithmetic: assertion is not Boolean structure over linear-arithmetic atoms")) (relaxed=14029, 4.489438339s left)
+[nia] products=1473 mccormick=0 splits=88 relaxed=14029 timeout=Some(17.849807744s) policy=off order_lemmas=false refine=true grant=Envelopes
+[nia] round 0: Err(Unsupported("lazy arithmetic: assertion is not Boolean structure over linear-arithmetic atoms")) (relaxed=14029, 5.949850206s left)
+[nia] products=1463 mccormick=0 splits=366 relaxed=14202 timeout=Some(3.264620651s) policy=off order_lemmas=false refine=true grant=Envelopes
+[nia] round 0: Ok("unknown") (relaxed=14202, 1.088122628s left)
+[nia] products=1464 mccormick=0 splits=88 relaxed=13932 timeout=Some(3.231651099s) policy=off order_lemmas=false refine=true grant=Envelopes
+[nia] round 0: Ok("unknown") (relaxed=13932, 1.077038965s left)
+[nia] products=1464 mccormick=0 splits=88 relaxed=13932 timeout=Some(5.764323886s) policy=off order_lemmas=false refine=true grant=Envelopes
+[nia] round 0: Ok("unknown") (relaxed=13932, 1.921281811s left)
+[nia] products=1463 mccormick=0 splits=366 relaxed=14202 timeout=Some(1.043358724s) policy=off order_lemmas=false refine=true grant=Envelopes
+[nia] round 0: Ok("unknown") (relaxed=14202, 599.916537ms left)
+[nia] products=1464 mccormick=0 splits=88 relaxed=13932 timeout=Some(1.003391333s) policy=off order_lemmas=false refine=true grant=Envelopes
+[nia] round 0: Ok("unknown") (relaxed=13932, 599.849472ms left)
+[nia] products=1464 mccormick=0 splits=88 relaxed=13932 timeout=Some(1.854667382s) policy=off order_lemmas=false refine=true grant=Envelopes
+[nia] round 0: Ok("unknown") (relaxed=13932, 618.064799ms left)
+unknown

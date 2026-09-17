@@ -1,0 +1,7 @@
+[nia] products=31 mccormick=0 splits=100 relaxed=290 timeout=Some(19.924555356s) policy=off order_lemmas=false refine=true grant=Envelopes
+[nia] round 0: Ok("sat") (relaxed=290, 6.641514204s left)
+[nia] round 0: refined with 24 tangent lemmas
+[nia] round 1: Ok("sat") (relaxed=314, 4.369928156s left)
+[nia] round 1: refined with 16 tangent lemmas
+[nia] round 2: Ok("unknown") (relaxed=330, 2.760932351s left)
+unknown
