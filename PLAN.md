@@ -48781,7 +48781,7 @@ nested) — that histogram is the next build's brief.
 
 | lane | ADR | question | state |
 |---|---|---|---|
-| NRA-ALGEBRAIC-WITNESS | 2134 | the algebraic sample the clause-loop census pointed at | built OFF: an algebraic FINAL coordinate gated on exact replay; pinned QF_NRA 124 → 128, 4 STABLE-GAIN / 0 loss / 0 unstable at 3×/arm, QF_NIA and QF_LRA controls flat, 0 flips; **held-out draw stopped at 23 of 200 when the round closed**, so the criterion is unmet and the lever stays OFF (~60 min to finish); the census predicted 1 of the 4 movers (a first-wins decline slot makes a cause census non-predictive); **`RealAlgebraic::sign_at` read two endpoint samples as an enclosure and returned a wrong sign** — fixed with an exact Sturm count, no shipped wrong verdict found; merged `20e835755` |
+| NRA-ALGEBRAIC-WITNESS | 2134 | the algebraic sample the clause-loop census pointed at | built OFF: an algebraic FINAL coordinate gated on exact replay; pinned QF_NRA 124 → 128, 4 STABLE-GAIN / 0 loss / 0 unstable at 3×/arm, QF_NIA and QF_LRA controls flat, 0 flips; **held-out draw completed 2026-09-17 by AX-2134-HELDOUT (s7, head `43f1e0f90`): pinned re-run 124 → 128 with the same 4 STABLE-GAIN / 0 loss / 0 flips, held-out 200 (ADR-2126's draw, 0/200 overlap) 109 → 109 with ZERO movers**, so the `≥ 1 stable gain on BOTH lists` clause fails and the lever stays OFF by the criterion, `CAD_DEFAULT` = `SINGLE_CELL`, ADR-2134 stays `proposed` (`bench-results/nra-algebraic-witness-heldout-20260917/`); the census predicted 1 of the 4 movers (a first-wins decline slot makes a cause census non-predictive); **`RealAlgebraic::sign_at` read two endpoint samples as an enclosure and returned a wrong sign** — fixed with an exact Sturm count, no shipped wrong verdict found; merged `20e835755` |
 | NIA-ORDER-LEMMAS | 2136 | z3's order/monotonicity lemma portfolio, the only QF_NIA mechanism the trace left untried | built DISARMED: order lemmas apply on 111 of 116 undecided rows, monotonicity on 115, median 2,249 shared-factor pairs per file (max 9.4 M) so emission is model-driven and capped; A/B over 800: QF_NIA 82 → 80, QF_NRA control 124/124, **UFNIA 54 → 61**, held-out 85/85, 0 disagreements; 15 movers at 3×/arm: **10 STABLE-GAIN / 3 STABLE-LOSS / 2 unstable**, the losses all `unsat → unknown` budget starvation of a later route because arming also widens the refine slice; 67 of 116 never reach the pass because the linear relaxation itself times out; next: separate "emit lemmas" from "widen the slice" on the three losing files; six NIA z3 fuzzes run by the coordinator on the merged tree, green; merged with the day's batch |
 | LRA-ATOM-SCREEN | — | the atom-count admission screen ADR-2111 left unrun, now that the tableau is sparse | measured, does not ship: QF_LRA decided 106 at 1x/2x/4x/16x/off while admitted rose 130 → 200; 16x and off add 6 and 8 allocator aborts (7.4 GiB, 24/24 stable); QF_UFLRA and QF_RDL null, QF_LIA and QF_IDL never reach the offline loop; 28 of the 32 target rows stop at "model did not replay" in the online engine's model reconstruction, which is the next QF_LRA increment; merged `5d827fe02` |
 | QUANT-REACH-DIFF | — | per core, where each of z3's proof instances is lost | done: 1,025 unique bodies over 53 UFLIA cores — ADMITTED 11, MATCHED-REJECTED 169, NEVER-MATCHED 369, NESTED 476 (46 %, reproducing the probe's 46 %); nested universals are matched and their tuples computed, then dropped as inactive at `qinst_egraph.rs:7294` because nothing records that the universal is currently entailed; ADR-2120's activation-by-assignment (built, OFF) recovers 102 of the 169 rejected; three worked examples at `file:line`; merged `8441384c0` |
@@ -63285,17 +63285,23 @@ scratch copy and restoring). Folding it in is the coordinator's step.
 
 ## Status
 
-**In progress, 2026-09-16.** The lever is built and OFF. The larger finding is a
-wrong sign in the trusted evaluator, fixed and not behind any lever.
+**Measured and decided, 2026-09-17 (lane `AX-2134-HELDOUT`).** The lever is
+built, reproducible, loss-free, and **stays OFF**: the ship criterion (0 stable
+losses AND 0 flips AND ≥ 1 stable gain on BOTH the pinned and the held-out
+lists) fails on the held-out gain clause. `CAD_DEFAULT` remains
+`CadPolicy::SINGLE_CELL`; ADR-2134 remains `proposed`. The larger finding
+(a wrong sign in the trusted evaluator, fixed, not behind any lever) is
+unchanged.
 
 | exit criterion | state |
 | --- | --- |
 | 1. sizing before code | **MET** — `algebraic-witness` = 7 of the pinned 200, 6 of them `unknown` |
 | 2. design claims at `file:line` | **MET** — ADR-2134 §"Design claims" |
 | 3. lever, exact replay, root objects, three fixtures, fuzz nonzero | **MET** — fuzz `algebraic_models=855`, 855 agreements, 0 disagreements |
-| 4. interleaved A/B | **PARTIAL** — QF_NRA +4 (4 STABLE-GAIN, 0 STABLE-LOSS), QF_NIA flat after recheck, QF_LRA flat (0 movers), 4/4 replays accepted; **held-out NOT COMPLETE (23 of 200)**, exactness A/B NOT RUN |
+| 4. interleaved A/B | **COMPLETE** — pinned at head `43f1e0f90`: 124 → 128, 4 STABLE-GAIN / 0 STABLE-LOSS / 0 UNSTABLE, 0 flips, 0 `:status` disagreements of 250; **held-out 200 (ADR-2126's draw, 0/200 overlap): 109 → 109, zero movers of any kind**, 0 flips, 0 disagreements of 216; QF_NIA / QF_LRA controls flat (2026-09-16); exactness A/B NOT RUN |
 | 5. mutation | **MET** — 14 mutations across 4 suites, every one killed, `--check-anchors` 1130 anchors stale=0 |
-| 6. gates | **MET** — see the table below |
+| 6. gates | **MET** — see the tables below |
+| 7. ship decision by the criterion | **DECIDED: does not ship** — held-out stable gains = 0 |
 
 ## The finding
 
@@ -63346,7 +63352,39 @@ FIRST cause and the loop runs after `non-conjunctive` is already recorded, so an
 Full table and the seven file names:
 `bench-results/nra-algebraic-witness-20260916/README.md`.
 
-## The A/B, so far
+## The A/B, completed (2026-09-17, s7, head `43f1e0f90`)
+
+`bench-results/nra-algebraic-witness-heldout-20260917/README.md`. One
+`smtcomp_cli` (`--release --features full`, sha256 `d3606850…`), two
+`AXEYUM_NRA_CAD` values, interleaved per file on s7 core pairs `1,9` / `3,11`,
+24 s / 8 GiB, `$EPOCHREALTIME` timing (200 ms self-check read 203–205 ms).
+
+| list | A `single-cell` | B `algebraic-witness` | delta | movers | flips | `:status` disagreements | nonzero exits |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| pinned 200 at head | 124 | **128** | **+4** | 4 (`unknown → sat`) | 0 | 0 of 250 | 0 |
+| **held-out 200** | 109 | **109** | **0** | **0** | 0 | 0 of 216 | 0 |
+
+Pinned recheck (s7 core pair `5,13`, 3× per arm, arms alternating within the
+passes): **4 STABLE-GAIN, 0 STABLE-LOSS, 0 UNSTABLE, exit 0 on all 24 runs**
+— the same four `meti-tarski/atan/problem/2/` files as on 2026-09-16. Held-out
+recheck NOT RUN because its input is empty (0 movers), not because it was
+skipped.
+
+The held-out population is ADR-2126's (same script, `SEED = 20260916`;
+re-drawn at head to the byte-identical list; `comm -12` against the pinned
+list = 0). Arm A's 109 reproduces ADR-2126's arm A on it. The held-out list
+holds 4 `atan/problem/2` files and both arms decide all four in ≤ 209 ms.
+
+| criterion clause | pinned | held-out |
+| --- | --- | --- |
+| 0 stable losses | holds (0) | holds (0) |
+| 0 flips | holds (0) | holds (0) |
+| ≥ 1 stable gain | holds (4) | **fails (0)** |
+
+**Decision: does not ship.** A lane re-opening this must draw a NEW held-out
+population (new seed, said so); this one has been scored twice.
+
+## The A/B, first round (2026-09-16, s5)
 
 Treatment `df2dfc0f…` against baseline `6261a505…`, one binary and two env
 values, interleaved per file on pinned cores `5,13` and `6,14` of s5.
@@ -63411,23 +63449,46 @@ number, and the wrapper had to touch all 14,392 build inputs to get it.
 | date | sha | what |
 | --- | --- | --- |
 | 2026-09-16 | `1a2d58286` | `sign_at` read two endpoint samples as an enclosure — wrong sign at an algebraic point; exact Sturm side condition, three tests, plus this lane's sizing scaffolding (4 files) |
+| 2026-09-17 | `e1befc425` | AX-2134-HELDOUT: the sizing at head — harness (`ab-cad-env.sh`, `drive-shard.sh`, `summarize.py`), the two shard lists per population, the binary SHA |
+
+## Gates, 2026-09-17 (no code changed; docs and bench artefacts only)
+
+Run from the lane worktree at `43f1e0f90` + this lane's commits, target dir
+`/data0/axeyum/target/ax-2134-heldout` (created fresh 2026-09-17, so no
+stale-mtime artefacts predate the tree), heavy cargo through
+`scripts/cargo-serialized.sh`.
+
+| gate | result |
+| --- | --- |
+| `test -p axeyum-solver --features full --test nra_algebraic_witness --test nra_clause_cert_2131 --test corpus_regression` | 4 + 12 + 2 passed, 0 failed |
+| `test -p axeyum-solver --lib --features full nra` | **197 passed**, 0 failed (1784 filtered out) |
+| `clippy --workspace --all-targets --all-features -- -D warnings` | 0 diagnostics, 52 `Checking` lines, exit 0 |
+| `cargo check --workspace --all-targets` | exit 0 |
+| `cargo fmt --all --check` | exit 0 |
+| `scripts/check-suite-gating.py` | `suites=356 gated=55 excused=303` PASS |
+| `scripts/check-merge-hygiene.sh` | `markers=0 adr_index=ok generated=current` PASS |
+| `scripts/check-links.sh` | all links ok |
+| `scripts/tests/mutation_controls.py --check-anchors` | `suites=204 anchors=1187 stale=0` |
+| `scripts/check-config-registry-staleness.py` | 35 stale, 35 accepted, **0 unexplained** |
+| `scripts/gen-adr-index.py --check` / `scripts/gen-plan.py --check` | both 0 |
 
 ## What did NOT run
 
-* **Held-out 200-file QF_NRA draw — NOT COMPLETE**, 23 of 200 files (0 movers)
-  when the round closed. This is one quarter of the shipping criterion, so the
-  ADR stays `proposed` and the lever stays OFF. Finishing it is a re-run of
-  `ab-sweep.sh`'s `heldout` population, ~60 min on two pinned core pairs;
-  nothing new has to be decided.
 * **The binary-against-binary A/B pricing the `sign_at` exactness fix — NOT
   RUN.** That fix is not behind a lever and is in BOTH arms of every number
   above, so those numbers do not price it. It can only convert an accept into a
   decline, so what is unmeasured is lost coverage, never a wrong verdict.
   ~60 min per population.
+* **The eight nonlinear z3 differential fuzzes — NOT RUN on 2026-09-17**; they
+  are mandatory only if the default moves, and it did not.
+* **The held-out recheck — NOT RUN**, input empty (0 movers).
 
 ## Next
 
-The A/B, the mutation controls and the gate sweep; then the ship decision.
+Nothing on this lever until a NEW held-out population is drawn. The
+`sign_at` exactness A/B (two binaries, same arm, `ab-run.sh --binary-a`) is
+the one unpriced change and is the next measurement if anyone touches this
+area; it prices coverage, not soundness.
 
 Status: the exact delineability check, its scope guard, the `CadDecline::Projection`
 split, the clause loop and both fuzz seed classes are landed. **No sample is

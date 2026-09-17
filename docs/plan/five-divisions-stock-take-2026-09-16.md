@@ -122,9 +122,12 @@ merge (one stale fuzz premise sat red on main for 40 minutes).
 
 ## The resume queue, ranked
 
-1. **Finish ADR-2134's held-out draw** (~60 min on two pinned core pairs,
-   `bench-results/nra-algebraic-witness-20260916/ab-sweep.sh heldout`). On 0
-   stable losses, move `CAD_DEFAULT` and ship: QF_NRA 126 expected.
+1. ~~**Finish ADR-2134's held-out draw**~~ Done 2026-09-17
+   (`bench-results/nra-algebraic-witness-heldout-20260917/`): pinned +4 stable
+   held, held-out 109 → 109 with zero movers, so the criterion's gain clause
+   failed and the lever stays OFF. The four pinned gains are one benchmark
+   family (`meti-tarski/atan/problem/2`); the held-out draw does not contain
+   the shape.
 2. **QF_LRA admission currency** (27 files): admit the online tableau on
    nonzeros, the currency the cube decider already uses (`lra_online.rs:2144`),
    not dense cells. Then **the disequality split lemma** (11 files): turn the
