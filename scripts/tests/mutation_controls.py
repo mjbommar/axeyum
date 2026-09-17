@@ -13242,8 +13242,8 @@ SUITES["warm-keep-trail-2145"] = (
         ),
         (
             "the re-init replay re-propagates a clause that is unit again at the new level",
-            "                None => self.enqueue(l0, Reason::clause(cid)),\n                Some(_) => {}",
-            "                None | Some(_) => {}",
+            "            if self.value(l0).is_none() {\n                self.enqueue(l0, Reason::clause(cid));\n            }",
+            "            if false && self.value(l0).is_none() {\n                self.enqueue(l0, Reason::clause(cid));\n            }",
             "crates/axeyum-cnf/src/proof_sat.rs",
         ),
         (
@@ -13252,8 +13252,8 @@ SUITES["warm-keep-trail-2145"] = (
             # it puts the variable on the trail twice. `enqueue`'s debug
             # assertion is the observer.
             "the backjump does not enqueue an asserting literal the re-init replay already assigned",
-            "        match self.value(asserting) {\n            None => self.enqueue(asserting, Reason::clause(clause_id)),",
-            "        match None::<bool> {\n            None => self.enqueue(asserting, Reason::clause(clause_id)),",
+            "        if self.value(asserting).is_none() {\n            self.enqueue(asserting, Reason::clause(clause_id));\n        }",
+            "        if true || self.value(asserting).is_none() {\n            self.enqueue(asserting, Reason::clause(clause_id));\n        }",
             "crates/axeyum-cnf/src/proof_sat.rs",
         ),
     ],
@@ -13282,6 +13282,14 @@ SUITES["warm-keep-trail-2145-session-fuzz"] = (
             "a popped scope's assignment cannot survive into a check that no longer assumes it",
             "            .take_while(|(held, next)| held == next)",
             "            .take_while(|_| true)",
+        ),
+        (
+            # The decision ADR-2145 took, pinned the way ADR-2140 pinned
+            # `Any`: exactly the default-carrying test dies on a moved default.
+            "the shipped default keeps the trail",
+            "pub const DEFAULT_WARM_KEEP_TRAIL: bool = true;",
+            "pub const DEFAULT_WARM_KEEP_TRAIL: bool = false;",
+            "crates/axeyum-solver/src/backend.rs",
         ),
     ],
 )

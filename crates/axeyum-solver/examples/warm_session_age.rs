@@ -480,8 +480,13 @@ fn main() {
         trail.push(solver.retained_sat_trail_len());
         reused.push(solver.last_check_reused_trail_len());
         let counters = solver.sat_search_counters();
-        decisions.push((counters.decisions - last_counters.decisions) as usize);
-        propagations.push((counters.propagations - last_counters.propagations) as usize);
+        decisions.push(
+            usize::try_from(counters.decisions - last_counters.decisions).unwrap_or(usize::MAX),
+        );
+        propagations.push(
+            usize::try_from(counters.propagations - last_counters.propagations)
+                .unwrap_or(usize::MAX),
+        );
         last_counters = counters;
         let verdict = match result {
             Ok(CheckResult::Sat(model)) => {

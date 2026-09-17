@@ -349,9 +349,10 @@ pub struct SolverConfig {
     /// What moves is the search trajectory of a check that needs decisions,
     /// and so its time and which model comes back.
     ///
-    /// The default is [`DEFAULT_WARM_KEEP_TRAIL`] unless the process has
-    /// `AXEYUM_WARM_KEEP_TRAIL` set (`on`/`off`), the one-binary A/B lever;
-    /// a malformed value is a hard error rather than a silent default arm.
+    /// The default is [`DEFAULT_WARM_KEEP_TRAIL`] (on) unless the process
+    /// has `AXEYUM_WARM_KEEP_TRAIL` set (`on`/`off`), the one-binary A/B
+    /// lever; a malformed value is a hard error rather than a silent default
+    /// arm.
     pub warm_keep_trail: bool,
 }
 
@@ -472,10 +473,15 @@ fn process_model_preference_phase() -> bool {
 }
 
 /// Whether the warm engine keeps the surviving scopes' trail across checks
-/// when nothing chose (ADR-2145): OFF, the schedule as shipped before the
-/// lever existed. A `const` so it is one named, registered value
+/// when nothing chose (ADR-2145): ON, by measurement. The replayed
+/// `DptfDevGen` session (1,206 checks) runs 1.21 -> 0.45 s with the same
+/// verdict+model digest; the `QF_BV` and `QF_ABV` pinned lists (200 files
+/// each, 24 s, interleaved per file) show 0 verdict movers, 0 flips and 0
+/// `:status` disagreements, with 9 files stably faster and 1 stably slower
+/// on `QF_ABV` at three runs per arm. `AXEYUM_WARM_KEEP_TRAIL=off` is the
+/// pre-ADR-2145 schedule. A `const` so it is one named, registered value
 /// (`config_registry`) a mutation can flip.
-pub const DEFAULT_WARM_KEEP_TRAIL: bool = false;
+pub const DEFAULT_WARM_KEEP_TRAIL: bool = true;
 
 /// [`DEFAULT_WARM_KEEP_TRAIL`] unless `AXEYUM_WARM_KEEP_TRAIL` is set to
 /// `on` or `off`; read once, a malformed value refuses.

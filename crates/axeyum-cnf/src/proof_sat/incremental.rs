@@ -516,7 +516,7 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
     ///
     /// With this on, a solve starts by backtracking to the longest common
     /// prefix of the previous solve's assumption sequence and the new one
-    /// (CaDiCaL's `ilb=1`, `assume.cpp::sort_and_reuse_assumptions`), so the
+    /// (`CaDiCaL`'s `ilb=1`, `assume.cpp::sort_and_reuse_assumptions`), so the
     /// assignment implied by the scopes both solves share is reused instead
     /// of re-derived; clauses added in between are registered against the
     /// live assignment (`Cdcl::add_input_clause_live`). The invariant kept:
@@ -671,7 +671,7 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
     /// --synthetic`, ~94 of 19k entries reusable per check because every
     /// check re-decides its path): resuming unconditionally cost +15 % over
     /// the shipped schedule with identical decision and propagation counts;
-    /// the DptfDevGen replay reuses ~80 % and is never near the threshold.
+    /// the `DptfDevGen` replay reuses ~80 % and is never near the threshold.
     fn resume_for_solve(&mut self, assumptions: &[CnfLit]) -> usize {
         let common = self
             .retained_assumptions
@@ -1358,7 +1358,7 @@ mod tests {
         );
     }
 
-    /// SplitMix64: a finalised generator (ADR-2141), never the raw LCG state.
+    /// `SplitMix64`: a finalised generator (ADR-2141), never the raw LCG state.
     struct Mix(u64);
 
     impl Mix {
@@ -1382,9 +1382,11 @@ mod tests {
     /// model checked against the clauses and assumptions in force, every
     /// failed-assumption core re-solved.
     ///
-    /// Sessions are small (8 variables, clauses of 1..=3 literals) so a fresh
+    /// Sessions are small (10 variables, clauses of 1..=3 literals) so a fresh
     /// solve is instant; what varies is the ORDER of scope changes and clause
     /// additions relative to solves, which is what the schedule is about.
+    // One session loop, read top to bottom as the differential it is.
+    #[allow(clippy::too_many_lines)]
     #[test]
     fn keep_trail_random_sessions_agree_with_a_fresh_solver_and_every_model_replays() {
         const VARS: u64 = 10;

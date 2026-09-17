@@ -2827,7 +2827,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// every check (a fresh node's definition clause is unit as soon as one
     /// input is assigned, and the inputs are assigned at low levels), so the
     /// session got SLOWER (1.74 -> 2.09 s, 94 of 19k trail entries reused).
-    /// Recording the literal at the current level is what MiniSat does for
+    /// Recording the literal at the current level is what `MiniSat` does for
     /// every propagation -- a level label that is higher than the minimal one
     /// is sound, it only backjumps less far -- and the re-init list is what
     /// z3 adds to make clauses registered at a non-base level behave as if
@@ -3008,9 +3008,8 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             if self.value(l1).is_none() {
                 continue;
             }
-            match self.value(l0) {
-                None => self.enqueue(l0, Reason::clause(cid)),
-                Some(_) => {}
+            if self.value(l0).is_none() {
+                self.enqueue(l0, Reason::clause(cid));
             }
             if level > 0 {
                 self.reinit[write] = (cid, level);
@@ -4125,17 +4124,16 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         self.learned_live += 1;
         self.bump_clause(clause_id);
         self.backtrack_to(backjump);
-        match self.value(asserting) {
-            None => self.enqueue(asserting, Reason::clause(clause_id)),
-            // Only reachable when `backtrack_to`'s re-init replay (ADR-2145)
-            // assigned the asserting variable at the backjump level: true, and
-            // the learned clause is satisfied with its reason elsewhere;
-            // false, and the clause is conflicting at this level -- the
-            // literal that falsified it is pending in the propagation queue,
-            // so the next `propagate` visits this clause's slot-0 watch and
-            // reports the conflict. Overwriting the assignment here would put
-            // the variable on the trail twice.
-            Some(_) => {}
+        // Already assigned is only reachable when `backtrack_to`'s re-init
+        // replay (ADR-2145) assigned the asserting variable at the backjump
+        // level: true, and the learned clause is satisfied with its reason
+        // elsewhere; false, and the clause is conflicting at this level -- the
+        // literal that falsified it is pending in the propagation queue, so
+        // the next `propagate` visits this clause's slot-0 watch and reports
+        // the conflict. Overwriting the assignment here would put the
+        // variable on the trail twice.
+        if self.value(asserting).is_none() {
+            self.enqueue(asserting, Reason::clause(clause_id));
         }
         self.conflicts_since_restart += 1;
         self.decay();

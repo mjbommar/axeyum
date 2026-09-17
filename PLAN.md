@@ -152,6 +152,7 @@ now. Nothing was deleted.
 | 2026-09-17 | ax-policy | ADR-2140: `ModelPreference` on `SolverConfig` (SAT-core forced phase + replay-checked shrink), `solve_smtlib_least_witness`, `:model-preference` option, `AXEYUM_MODEL_PREFERENCE` lever, `smt.least_witness`, typed `IncrementalStats`; `tests/model_preference_2140.rs` (identity, non-vacuity, determinism, replay) + mutation controls; three model-choice seeds in `corpus/regression/qf_bv/`. |
 | 2026-09-17 | `ax-proptest` | Property-test box audit: 599-row inventory, LCG output finalizer in 24 generators + the production faithfulness sampler, one reachability probe and one mutation control each, seed classes in `wide.rs` and the inprocessing corpus, `check-lcg-raw-state.py` ratchet (81 → 56 files) in pre-push L0, ADR-2141. STOP finding: `LiaTheory` loses a shadowed assertion on `pop`; `tests/lia_online.rs` left red by design. |
 | 2026-09-17 | ax-warm | `warm_session_age` reproducer (verbatim trace replay + synthetic explorer walk, verdict+model digest), the `snapshot_target_phase` stable-prefix fix in `axeyum-cnf`, `phase_snapshot_entries` counter and its linear-bound test, `retained_learned_clause_count`/`retained_sat_conflicts` gauges, ADR-2142. |
+| 2026-09-17 | ax-warm2 | ADR-2145: `Cdcl::add_input_clause_live` / `reinit_replay` / `resume_search_state`, `NativeIncrementalCdcl::set_keep_trail` with the longest-common-prefix resume and `KEEP_TRAIL_MIN_REUSE_SHARE`, `SolverConfig::warm_keep_trail` (`AXEYUM_WARM_KEEP_TRAIL`, default ON), trail/reuse/counter gauges through the three layers, `warm_session_age` band columns, `tests/incremental_bv_session_fuzz.rs` (pre-push), `keep_trail_*` unit tests, mutation suites `warm-keep-trail-2145*`, `bench-results/warm-keep-trail-20260917/`. |
 | 2026-09-16 | `5bd0e77c4` | `axeyum-bench` gains a `full` feature forwarding to `axeyum-solver/full`; doc lines updated to the new flag spelling. |
 | 2026-09-16 | `a306a017b` | `cindergraph_defects/lift.py` uses SMT-LIB 2.6 overflow predicates instead of a double-width shadow computation; documented in `smtlib-support.md`. |
 | 2026-09-16 | `68f8887c9` | `cindergraph_defects/check.py` calls `axeyum.smt.solve` by default; `axeyum_cli` subprocess kept as an explicit `--cli` fallback. |
@@ -46920,6 +46921,32 @@ re-pin and campaign rerun (not run here); and the remaining linear-in-database
 term — the warm core re-derives the whole assignment every solve by design
 where z3's `sat::solver::pop` keeps surviving scopes — which changes
 trajectories and so needs the pinned-list A/B.
+
+**AX-WARM2 (`landed`, ax-warm2, 2026-09-17).** Sized at head on the
+replayed DptfDevGen session (1,206 checks): `propagate` 40.6 %, the order-heap
+drain after a from-scratch propagation 29.3 %, the `assignment_is_model`
+self-check 8.3 %, `reset_search_state` 2.8 % — assignment re-derivation is
+~76 % of the session; the retained database grows to 63k variables / 148k
+clauses and the per-check trail to 40k entries. The warm core now backtracks
+to the longest common prefix of the previous and next assumption sequences
+(CaDiCaL `ilb=1`) instead of unwinding, registers clauses added in between
+against the live assignment through a re-init list (z3's
+`m_clauses_to_reinit`), and takes the reset when under half the trail would
+survive; invariant: the assignment at every kept level equals a fresh
+propagation of the surviving clauses. Replayed session 1.21 → 0.45 s at three
+interleaved rounds per arm, same verdict+model digest, propagations per check
+20,976 → 2,107 (July's BatSat engine: 0.87 s); synthetic stream at parity.
+Pinned lists on s7 (200 `QF_BV` + 200 `QF_ABV`, 24 s, interleaved): 0 verdict
+movers, 0 flips, 0 `:status` disagreements; of the time movers rerun 3×/arm,
+`QF_ABV` 9 stably faster / 1 stably slower. Shipped ON
+(`DEFAULT_WARM_KEEP_TRAIL = true`, `AXEYUM_WARM_KEEP_TRAIL=off` is the old
+schedule), ADR-2145 `accepted`. A new session fuzz for the incremental path
+(`tests/incremental_bv_session_fuzz.rs`: push/assert/check/pop against a fresh
+one-shot, a replay, and z3 driven through the same stream) caught the first
+cut's wrong-`unsat` and is in the pre-push hook; two mutation suites, 10
+guards, 10 killed. **Next:** a Glaurung re-pin and six-cell rerun (not run
+here); the `assignment_is_model` pass over every clause per `sat` is the
+largest remaining linear term and could be made incremental.
 
 **`WIP`, bench-boolean-core, 2026-09-07.** The native core's per-conflict cost is
 now instrumented and decomposed, closing the gap the

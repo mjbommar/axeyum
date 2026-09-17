@@ -3652,15 +3652,31 @@ pub static REGISTRY: &[ConfigEntry] = &[
     ConfigEntry {
         name: "DEFAULT_WARM_KEEP_TRAIL",
         module: "crates/axeyum-solver/src/backend.rs",
-        value: "false",
+        value: "true",
         unit: "policy",
         protects: Protects::Time,
         on_exceed: OnExceed::SearchEvent,
         signal: Signal::NotApplicable,
         guarded_by: "",
         env_override: Some("AXEYUM_WARM_KEEP_TRAIL"),
-        justification: undated("ADR-2145"),
-        note: "Whether the warm engine (`IncrementalBvSolver`) keeps the surviving scopes' SAT trail across `pop`/`check` (ADR-2145) or unwinds and re-propagates it every check (the schedule as shipped since ADR-0009). A schedule, not a semantics: with it on, the retained core backtracks to the longest common prefix of the previous and next assumption sequences (CaDiCaL `ilb=1`) and registers clauses added in between against the live assignment, keeping the assignment at every kept level equal to a fresh propagation of the surviving clauses; every `sat` still replays and the DRAT route still checks (`keep_trail_*` in `axeyum-cnf`, `tests/incremental_bv_session_fuzz.rs`, mutation suites `warm-keep-trail-2145*`). Measured 2026-09-17 on the replayed DptfDevGen session (1,206 checks): same verdict+model digest, total 1.195 -> 0.809 s, last-band p50 1.29 -> 0.36 ms, p90 5.28 -> 4.42 ms. OFF until the pinned-list A/B in ADR-2145 says otherwise; the ADR records the decision and the numbers.",
+        justification: dated(
+            "ADR-2145",
+            "2026-09-17",
+            None,
+            &[
+                sym(
+                    "crates/axeyum-solver/src/backend.rs",
+                    "DEFAULT_WARM_KEEP_TRAIL",
+                ),
+                sym(
+                    "crates/axeyum-cnf/src/proof_sat/incremental.rs",
+                    "resume_for_solve",
+                ),
+                sym("crates/axeyum-cnf/src/proof_sat.rs", "reinit_replay"),
+            ],
+            &[adr("ADR-2145")],
+        ),
+        note: "Whether the warm engine (`IncrementalBvSolver`) keeps the surviving scopes' SAT trail across `pop`/`check` (ADR-2145) or unwinds and re-propagates it every check (the schedule shipped from ADR-0009 to ADR-2145; `AXEYUM_WARM_KEEP_TRAIL=off`). A schedule, not a semantics: the retained core backtracks to the longest common prefix of the previous and next assumption sequences (CaDiCaL `ilb=1`), registers clauses added in between against the live assignment through a re-init list (z3's `m_clauses_to_reinit`), and takes the reset instead when less than `KEEP_TRAIL_MIN_REUSE_SHARE` of the trail would survive; the assignment at every kept level equals a fresh propagation of the surviving clauses, every `sat` still replays and the DRAT route still checks (`keep_trail_*` in `axeyum-cnf`, `tests/incremental_bv_session_fuzz.rs`, mutation suites `warm-keep-trail-2145*`, 8 guards, 8 killed). MEASURED 2026-09-17: the replayed DptfDevGen session (1,206 checks, `examples/warm_session_age.rs --replay`) 1.21 -> 0.45 s at three interleaved rounds per arm, same verdict+model digest `9fe6d1e14afe9c19`, propagations per check 20,976 -> 2,107; the synthetic explorer stream at parity (1.76 vs 1.77 s, the reuse share falls back to the reset). Pinned lists on s7, one binary two env values, interleaved per file, 24 s / 8 GiB (`bench-results/warm-keep-trail-20260917/`): `QF_BV` 187 -> 187 decided, wall -1 %; `QF_ABV` 189 -> 189; 0 verdict movers, 0 sat/unsat flips, 0 `:status` disagreements in 800 solves; of the 20 single-pairing TIME movers re-run three times per arm, `QF_ABV` has 9 stably faster (about -40 %, the `dwp_formulas` refinement loops) and 1 stably slower (`wp_dd.advance_input_offset`, 5.0 -> 6.4 s), `QF_BV` 0 and 0. ON is therefore the default; `off` is the A/B arm.",
     },
     ConfigEntry {
         name: "MAX_ATOMS",

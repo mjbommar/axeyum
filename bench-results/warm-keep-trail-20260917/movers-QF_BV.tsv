@@ -1,0 +1,7 @@
+file	A1	B1	B2	A2	A3	B3
+QF_BV/20221012-MCMPC/dualexecution_affine/dualexecution_affine.t1.i12.955644ef.smt2	sat/207/0	sat/106/0	sat/105/0	sat/105/0	sat/106/0	sat/106/0
+QF_BV/Sage2/bench_4343.smt2	sat/306/0	sat/305/0	sat/306/0	sat/306/0	sat/306/0	sat/306/0
+QF_BV/Sage2/bench_5399.smt2	unsat/506/0	unsat/506/0	unsat/506/0	unsat/506/0	unsat/506/0	unsat/506/0
+QF_BV/bruttomesso/lfsr/lfsr_002_127_112.smt2	unsat/1407/0	unsat/1406/0	unsat/1307/0	unsat/1407/0	unsat/1407/0	unsat/1407/0
+QF_BV/sage/app1/bench_2044.smt2	unsat/306/0	unsat/305/0	unsat/305/0	unsat/306/0	unsat/306/0	unsat/307/0
+QF_BV/sage/app12/bench_3388.smt2	unsat/106/0	unsat/106/0	unsat/107/0	unsat/106/0	unsat/106/0	unsat/106/0

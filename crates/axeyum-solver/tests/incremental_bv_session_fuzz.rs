@@ -21,7 +21,7 @@
 //! is set explicitly, not through the process-wide env lever), so the gate
 //! covers the shipped schedule and the ADR-2145 schedule from one binary.
 //!
-//! Every generator draw goes through a SplitMix64 finaliser (ADR-2141): no
+//! Every generator draw goes through a `SplitMix64` finaliser (ADR-2141): no
 //! raw LCG state is ever returned, so the low bits that select polarities and
 //! scope operations are not a fixed function of the seed's parity.
 //!
@@ -32,13 +32,15 @@
 use std::fmt::Write as _;
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId, Value, eval};
-use axeyum_solver::{CheckResult, IncrementalBvSolver, SolverConfig, solve};
+use axeyum_solver::{
+    CheckResult, DEFAULT_WARM_KEEP_TRAIL, IncrementalBvSolver, SolverConfig, solve,
+};
 
 const VAR_NAMES: [&str; 3] = ["x", "y", "z"];
 const WIDTHS: [u32; 3] = [4, 8, 16];
 const MAX_DEPTH: usize = 5;
 
-/// SplitMix64 -- a finalised generator, never the raw state (ADR-2141).
+/// `SplitMix64` -- a finalised generator, never the raw state (ADR-2141).
 struct Mix(u64);
 
 impl Mix {
@@ -372,7 +374,7 @@ impl Session {
                     depth -= 1;
                     Op::Pop
                 }
-                3 | 4 | 5 => Op::Assert(Atom::generate(rng, width)),
+                3..=5 => Op::Assert(Atom::generate(rng, width)),
                 6 | 7 => Op::Check,
                 _ => {
                     let n = 1 + rng.below(2);
@@ -468,6 +470,10 @@ struct Tally {
 
 /// Runs one session on the warm engine under `keep_trail`, adjudicating
 /// every check three ways. Returns the first disagreement as text.
+// One stream, read top to bottom as the differential it is: splitting the
+// check arm from the scope arms would put the live-set bookkeeping they
+// share across a function boundary.
+#[allow(clippy::too_many_lines)]
 fn run_session(session: &Session, keep_trail: bool, tally: &mut Tally) -> Option<String> {
     let width = session.width;
     let mut arena = TermArena::new();
@@ -694,6 +700,27 @@ fn incremental_sessions_agree_with_one_shot_and_z3_keep_trail_off() {
 #[test]
 fn incremental_sessions_agree_with_one_shot_and_z3_keep_trail_on() {
     sweep(true);
+}
+
+/// The shipped default keeps the trail (ADR-2145's decision), and a solver
+/// built with no explicit choice carries it. Skipped -- and says so -- when
+/// the process-wide lever is set, because then the second half is a
+/// statement about the environment rather than the default.
+#[test]
+fn the_shipped_default_keeps_the_trail() {
+    // `black_box` so the pin is a runtime check of the constant rather than
+    // something clippy folds away as an assertion on a literal; the point is
+    // that a moved default kills exactly this test.
+    assert!(
+        std::hint::black_box(DEFAULT_WARM_KEEP_TRAIL),
+        "ADR-2145 shipped the retained-trail schedule ON; moving it is a new decision"
+    );
+    if std::env::var_os("AXEYUM_WARM_KEEP_TRAIL").is_some() {
+        eprintln!("AXEYUM_WARM_KEEP_TRAIL is set: the default-carrying half is not measured here");
+        return;
+    }
+    assert!(IncrementalBvSolver::new().warm_keep_trail());
+    assert!(SolverConfig::default().warm_keep_trail);
 }
 
 /// The directed shape the schedule exists for: a scope that forces a value is
