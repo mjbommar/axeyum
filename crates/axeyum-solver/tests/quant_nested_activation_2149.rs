@@ -607,17 +607,26 @@ fn a_nested_refutation_carries_a_checked_replacement_chain() {
 // ---------------------------------------------------------------------------
 // The lever: `AXEYUM_QINST_NESTED_ACTIVATION` / `NestedActivationLevelGuard`.
 //
-// Level 0 is the shipped discovery. Level 1 stops spending discovery's
-// budgets on DUPLICATES: a universal a plain instance exposes is not
-// registered when the static registration of the same position already
-// yields a ground conclusion (it binds every binder of the assertion), and a
-// re-derived conclusion does not spend `MAX_POSITIVE_INSTANCES` again. Level 2 adds the
-// reference solvers' ingestion rule: a quantifier inside a ground formula is
-// ONE opaque leaf of the e-graph and its body is never walked, so a
-// registration's trigger can no longer match its own body inside an admitted
-// instance and hand off a tuple that binds a variable to itself.
+// Level 0 is the shipped discovery. Level 1 scans the universals a STAGED
+// replacement exposes before the ones a plain instance exposes, so under the
+// registration cap the budget goes first to the crossed-binder class nothing
+// else produces, and stops a RE-DERIVED conclusion spending
+// `MAX_POSITIVE_INSTANCES` again. Level 2 adds the reference
+// solvers' ingestion rule: a quantifier inside a ground formula is ONE opaque
+// leaf of the e-graph and its body is never walked, so a registration's
+// trigger can no longer match its own body inside an admitted instance and
+// hand off a tuple that binds a variable to itself.
 //
-// The fixture below is the failure all three levels are measured on: enough
+// What the lever deliberately does NOT do: skip the registrations discovery
+// adds from plain instances. That was built first, on the argument that the
+// static registration of the same position covers them, and the 53-core
+// sweep refuted it — `simplify_javafe.parser.TokenQueue.576` went from
+// `unsat` in 4 s to `unknown`. Trigger selection over the instantiated body
+// picks a different pattern than over the static one, so those registrations
+// are handles, not duplicates. The test
+// `level_1_registers_exactly_what_level_0_registers` pins that they stay.
+//
+// The fixture below is the failure the levels are measured on: enough
 // duplicate exposures to fill every discovery budget, then one crossed-binder
 // refutation whose only route is a discovered registration.
 // ---------------------------------------------------------------------------
@@ -717,9 +726,9 @@ fn level_2_reaches_the_crossed_universal_the_shipped_budgets_refuse() {
         "no discovered registration ({stats:?})"
     );
     assert!(
-        stats.discovered < 256 && stats.positive_instances < 4096,
-        "level 2 hit a cap too, so the conversion is not attributable to the \
-         duplicates it stops spending on ({stats:?})"
+        stats.positive_instances < 4096,
+        "level 2 hit the positive-instance cap too, so the conversion is not \
+         attributable to what it stops spending ({stats:?})"
     );
     assert_eq!(
         stats.rejected_by_checker, 0,
@@ -732,26 +741,22 @@ fn level_2_reaches_the_crossed_universal_the_shipped_budgets_refuse() {
     );
 }
 
-/// Level 1's two halves, each read from its own counter on the cap fixture:
-/// the instances are not scanned, and a re-derived conclusion no longer spends
-/// the positive-instance cap. Level 1 alone does NOT convert the fixture —
-/// the self-binding handoffs still flood the per-round cap — which is why
-/// level 2 exists and is stated here rather than left to be inferred.
+/// Level 1, read from its own counter on the cap fixture: a re-derived
+/// conclusion no longer spends the positive-instance cap. Level 1 alone does
+/// NOT convert the fixture — the self-binding handoffs still flood the
+/// per-round cap and the registration cap is still hit — which is why level 2
+/// exists and is stated here rather than left to be inferred.
 #[test]
-fn level_1_stops_spending_the_budgets_on_duplicates_but_the_flood_remains() {
+fn level_1_stops_spending_the_positive_instance_cap_on_duplicates_but_the_flood_remains() {
     let text = crossed_after_duplicates(DUPLICATES, true);
     let (_, stats) = at_level(0, || at_nested_level(1, || ematch(&text)));
     assert!(
-        stats.instances_redundant >= DUPLICATES,
-        "level 1 did not recognise the duplicate exposures ({stats:?})"
-    );
-    assert!(
-        stats.discovered < 256,
-        "level 1 hit MAX_DISCOVERED_REGISTRATIONS ({stats:?})"
-    );
-    assert!(
         stats.positive_instances < 4096,
         "level 1 spent MAX_POSITIVE_INSTANCES on re-derived conclusions ({stats:?})"
+    );
+    assert!(
+        stats.positive_instances >= stats.staged_ground,
+        "the counter fell below the distinct conclusions it bounds ({stats:?})"
     );
     assert!(
         stats.rejected_by_checker > 0,
@@ -804,47 +809,41 @@ fn a_satisfiable_nested_shape_is_not_refuted_at_any_nested_activation_level() {
     }
 }
 
-/// Level 1 registers a strict SUBSET of level 0's registrations: on the
-/// crossed shape it skips the outer instance's exposure of the middle
-/// universal (whose static registration binds `x` and `u`, so its conclusion
-/// is ground — a duplicate) and keeps the one crossed universal. This is the
-/// test a mutation that makes level 1 behave like level 0 has to fail.
+/// The lever removes no registration: on the crossed shape and on the shape
+/// whose inner universal does not use the outer binder, levels 0 and 1
+/// discover exactly the same registrations. This is the test the refuted
+/// "skip the instance-exposed duplicates" rule fails, and the reason it is
+/// pinned: `TokenQueue.576`.
 #[test]
-fn level_1_registers_a_strict_subset_and_counts_what_it_skipped() {
-    let (_, shipped) = at_level(0, || at_nested_level(0, || ematch(CROSSED_BINDER_OR_UNSAT)));
-    let (verdict, raised) = at_level(0, || at_nested_level(1, || ematch(CROSSED_BINDER_OR_UNSAT)));
-    assert!(
-        matches!(verdict, CheckResult::Unsat),
-        "level 1 lost the refutation"
-    );
-    assert_eq!(
-        shipped.instances_redundant, 0,
-        "level 0 skipped something; it has no redundancy rule ({shipped:?})"
-    );
-    assert!(
-        raised.discovered < shipped.discovered,
-        "level 1 did not register strictly fewer than level 0 ({raised:?} vs {shipped:?})"
-    );
-    assert!(
-        raised.discovered >= 1,
-        "level 1 registered nothing, so the refutation did not come through a \
-         discovered registration ({raised:?})"
-    );
-    assert!(
-        raised.instances_redundant >= 1,
-        "level 1 registered fewer but recognised no duplicate, so the difference \
-         is not the rule under test ({raised:?})"
-    );
+fn level_1_registers_exactly_what_level_0_registers() {
+    for (name, text) in [
+        ("CROSSED_BINDER_OR_UNSAT", CROSSED_BINDER_OR_UNSAT),
+        ("OUTER_BINDER_UNUSED_UNSAT", OUTER_BINDER_UNUSED_UNSAT),
+    ] {
+        let (shipped_verdict, shipped) = at_level(0, || at_nested_level(0, || ematch(text)));
+        let (raised_verdict, raised) = at_level(0, || at_nested_level(1, || ematch(text)));
+        assert!(
+            matches!(shipped_verdict, CheckResult::Unsat)
+                && matches!(raised_verdict, CheckResult::Unsat),
+            "{name}: not refuted at both levels ({shipped_verdict:?}, {raised_verdict:?})"
+        );
+        assert!(
+            shipped.discovered >= 1,
+            "{name}: nothing discovered at level 0"
+        );
+        assert_eq!(
+            raised.discovered, shipped.discovered,
+            "{name}: level 1 registered a different set from level 0 ({raised:?} vs {shipped:?})"
+        );
+        assert_eq!(
+            raised.registrations, shipped.registrations,
+            "{name}: level 1 compiled a different number of registrations"
+        );
+    }
 }
 
-/// The redundancy test's other half. `forall y. Q(y)` inside
-/// `forall x. (¬P(x) ∨ forall y. Q(y))` does NOT use `x`, so its static
-/// registration binds `y` alone and its conclusion `forall x. (¬P(x) ∨ Q(b))`
-/// is a PROMOTED universal that still has to be instantiated; the registration
-/// the instance `¬P(a) ∨ forall y. Q(y)` exposes yields `¬P(a) ∨ Q(b)` in one
-/// step. Level 1 must keep it. Measured: skipping it lost
-/// `simplify_javafe.parser.TokenQueue.576`, a core the shipped arm decides in
-/// 2.2 s.
+/// The shape that refuted the skipped rule, kept as a fixture: `forall y. Q(y)`
+/// inside `forall x. (¬P(x) ∨ forall y. Q(y))` does not use `x`.
 const OUTER_BINDER_UNUSED_UNSAT: &str = r"
     (set-logic UF)
     (declare-sort U 0)
@@ -857,30 +856,6 @@ const OUTER_BINDER_UNUSED_UNSAT: &str = r"
     (assert (not (Q b)))
     (check-sat)
 ";
-
-#[test]
-fn a_universal_that_does_not_use_the_outer_binder_is_not_treated_as_redundant() {
-    let (_, shipped) = at_level(0, || {
-        at_nested_level(0, || ematch(OUTER_BINDER_UNUSED_UNSAT))
-    });
-    let (verdict, raised) = at_level(0, || {
-        at_nested_level(1, || ematch(OUTER_BINDER_UNUSED_UNSAT))
-    });
-    assert!(
-        matches!(verdict, CheckResult::Unsat),
-        "level 1 lost the refutation"
-    );
-    assert_eq!(
-        raised.instances_redundant, 0,
-        "level 1 called the instance's registration redundant, but the static \
-         registration's conclusion keeps `x` bound ({raised:?})"
-    );
-    assert!(
-        shipped.discovered >= 1 && raised.discovered == shipped.discovered,
-        "level 1 registered a different set from level 0 on a shape with no \
-         duplicate ({raised:?} vs {shipped:?})"
-    );
-}
 
 /// Level 2's ingestion rule, read on the crossed shape: the same refutation,
 /// and not one self-binding tuple handed off, where levels 0 and 1 hand off
@@ -969,29 +944,42 @@ fn the_level_2_refutation_carries_a_checked_replacement_chain() {
 
 #[test]
 fn the_nested_activation_guard_restores_and_does_not_cross_a_thread_boundary() {
-    let text = crossed_after_duplicates(DUPLICATES, true);
+    // The observable is level 2's: the shipped level hands off self-binding
+    // tuples on the crossed shape and level 2 hands off none.
     let outer = NestedActivationLevelGuard::set(2);
-    let inside_worker = std::thread::spawn({
-        let text = text.clone();
-        move || at_level(0, || ematch(&text)).1.discovered
+    let inside_worker = std::thread::spawn(|| {
+        at_level(0, || ematch(CROSSED_BINDER_OR_UNSAT))
+            .1
+            .rejected_by_checker
     })
     .join()
     .expect("worker finished");
     drop(outer);
-    let shipped = at_level(0, || ematch(&text)).1.discovered;
+    let shipped = at_level(0, || ematch(CROSSED_BINDER_OR_UNSAT))
+        .1
+        .rejected_by_checker;
+    assert!(
+        shipped > 0,
+        "the shipped level refused nothing on this shape"
+    );
     assert_eq!(
         inside_worker, shipped,
         "the worker thread saw a level the guard set on another thread"
     );
     {
         let _raised = NestedActivationLevelGuard::set(2);
-        assert!(
-            at_level(0, || ematch(&text)).1.discovered < shipped,
+        assert_eq!(
+            at_level(0, || ematch(CROSSED_BINDER_OR_UNSAT))
+                .1
+                .rejected_by_checker,
+            0,
             "the guard did not take effect on its own thread"
         );
     }
     assert_eq!(
-        at_level(0, || ematch(&text)).1.discovered,
+        at_level(0, || ematch(CROSSED_BINDER_OR_UNSAT))
+            .1
+            .rejected_by_checker,
         shipped,
         "the guard leaked past its own lifetime"
     );

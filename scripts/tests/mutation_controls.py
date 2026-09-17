@@ -11832,8 +11832,9 @@ SUITES["qinst-positive-path"] = (
 # --------------------------------------------------------------------------
 # `qinst-nested-activation` -- ADR-2149's nested-binder activation: the split
 # of `inactive_dropped` by the first refusal on the registration's path, and
-# the lever `AXEYUM_QINST_NESTED_ACTIVATION` that stops lazy discovery
-# spending its budgets on duplicates (level 1) and stops the matcher walking
+# the lever `AXEYUM_QINST_NESTED_ACTIVATION` that scans staged replacements
+# before plain instances and stops a re-derived conclusion spending the
+# positive-instance cap again (level 1), and stops the matcher walking
 # quantifier bodies inside ground formulas (level 2).
 #
 # The soundness of every level is inherited from ADR-2120's producer/checker
@@ -11886,21 +11887,15 @@ SUITES["qinst-nested-activation"] = (
             "                        }",
         ),
         (
-            # Level 1's redundancy test, one way: calling EVERY instance-exposed
-            # universal redundant skips the ones whose static registration only
-            # promotes -- the loss measured on TokenQueue.576.
-            "an instance-exposed universal is redundant only if the static "
-            "registration binds every outer binder",
-            "        used_prefix(arena, body, &binders).len() == binders.len()",
-            "        true",
-        ),
-        (
-            # And the other way: calling NONE redundant makes level 1 scan
-            # exactly as level 0 does, and the subset is no longer strict.
-            "an instance-exposed universal whose static registration is ground "
-            "is skipped",
-            "        used_prefix(arena, body, &binders).len() == binders.len()",
-            "        false",
+            # Level 1's scan order. Scanning the instances first spends the
+            # registration cap before the crossed-binder rescue is reached.
+            "level 1 scans the staged replacements before the instances",
+            "        let found = discovery.scan(arena, &staged, retained);\n"
+            "        found + discovery.scan(arena, admitted, retained)\n"
+            "    } else {",
+            "        let found = discovery.scan(arena, admitted, retained);\n"
+            "        found + discovery.scan(arena, &staged, retained)\n"
+            "    } else {",
         ),
         (
             # Level 1's budget rule. Counting a re-derived conclusion again
