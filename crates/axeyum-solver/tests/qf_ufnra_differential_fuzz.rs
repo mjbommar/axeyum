@@ -49,7 +49,17 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): every `Eq` atom was `g(x_i,x_j) = x_k` (698/698,
+        // never `!=`), and a `Var` factor was never followed by another `Var`,
+        // so `x*y`, `x*y*z` and `x = y ∧ f(x) != f(y)` were never emitted.
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
     fn below(&mut self, n: u64) -> usize {
         usize::try_from(self.next_u64() % n).expect("modulus fits usize")
@@ -514,3 +524,159 @@ fn qf_ufnra_differential_fuzz_disagree_zero() {
         "expected >= 30 co-decided agreements, got {agree} (axeyum-unknown {ax_unknown}) — UF×NRA route regression?"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Generator coverage guard (no solver, no Z3).
+// ---------------------------------------------------------------------------
+
+impl Factor {
+    fn as_var(self) -> Option<usize> {
+        match self {
+            Factor::Var(i) => Some(i),
+            Factor::FUnary(_) | Factor::GBin(..) => None,
+        }
+    }
+    fn is_applied(self) -> bool {
+        !matches!(self, Factor::Var(_))
+    }
+}
+
+/// Coverage guard for the LCG-driven sweep above.
+///
+/// Regenerates exactly the population `qf_ufnra_differential_fuzz_disagree_zero`
+/// runs (seeds `0..INSTANCES`, `Instance::generate`) and counts the classes the
+/// 2026-09-16 box audit measured at ZERO under the raw-state LCG:
+///
+/// - an `Eq` atom with a function application on BOTH sides (`f(x) (!)= f(y)`,
+///   `g(..) (!)= g(..)`, mixed; audit: 0/700 — every `Eq` was `g(x,y) = z`);
+/// - an `Eq` atom with `ne == true` (audit: 0/700);
+/// - an instance carrying both a bare `x = y` and an `f(s) != f(t)` — the
+///   congruence trap (audit: 0/700);
+/// - a monomial multiplying two DISTINCT variables, `x*y` (audit: 0/700 — a
+///   `Var` factor was always followed by an applied factor);
+/// - a monomial with three `Var` factors, `x*x*x` / `x*y*z` (audit: 0/700 —
+///   the only cubes were `f(x)^3`);
+/// - a lone `c*x*x + k = 0` atom with `k != 0` — the square with a negative
+///   or irrational root (audit: 0/700).
+#[test]
+#[allow(clippy::too_many_lines)]
+fn the_generator_reaches_var_products_and_applied_equalities() {
+    let mut eq_applied_both = 0u64;
+    let mut eq_negated = 0u64;
+    let mut var_eq_and_f_ne = 0u64;
+    let mut two_distinct_var_product = 0u64;
+    let mut three_var_product = 0u64;
+    let mut lone_square_eq_nonzero = 0u64;
+    let mut lone_square_eq_no_real_root = 0u64;
+    for seed in 0..INSTANCES {
+        let inst = Instance::generate(&mut Lcg::new(seed));
+        let eqs: Vec<(Factor, Factor, bool)> = inst
+            .atoms
+            .iter()
+            .filter_map(|atom| match atom {
+                Atom::Eq { lhs, rhs, ne } => Some((*lhs, *rhs, *ne)),
+                Atom::Poly { .. } => None,
+            })
+            .collect();
+        if eqs.iter().any(|(l, r, _)| l.is_applied() && r.is_applied()) {
+            eq_applied_both += 1;
+        }
+        if eqs.iter().any(|(_, _, ne)| *ne) {
+            eq_negated += 1;
+        }
+        let has_var_eq = eqs.iter().any(|(l, r, ne)| {
+            !ne && matches!((l.as_var(), r.as_var()), (Some(i), Some(j)) if i != j)
+        });
+        let has_f_ne = eqs
+            .iter()
+            .any(|(l, r, ne)| *ne && matches!((l, r), (Factor::FUnary(_), Factor::FUnary(_))));
+        if has_var_eq && has_f_ne {
+            var_eq_and_f_ne += 1;
+        }
+        let monomials: Vec<&Monomial> = inst
+            .atoms
+            .iter()
+            .filter_map(|atom| match atom {
+                Atom::Poly { monomials, .. } => Some(monomials.iter()),
+                Atom::Eq { .. } => None,
+            })
+            .flatten()
+            .collect();
+        if monomials.iter().any(|m| {
+            let vars: Vec<usize> = m.factors.iter().filter_map(|f| f.as_var()).collect();
+            vars.len() >= 2 && vars.iter().any(|&v| v != vars[0])
+        }) {
+            two_distinct_var_product += 1;
+        }
+        if monomials
+            .iter()
+            .any(|m| m.factors.iter().filter(|f| f.as_var().is_some()).count() >= 3)
+        {
+            three_var_product += 1;
+        }
+        for atom in &inst.atoms {
+            if let Atom::Poly {
+                monomials,
+                constant,
+                cmp: Cmp::Eq,
+            } = atom
+                && monomials.len() == 1
+                && *constant != 0
+                && monomials[0].coeff != 0
+                && let [Factor::Var(i), Factor::Var(j)] = monomials[0].factors[..]
+                && i == j
+            {
+                lone_square_eq_nonzero += 1;
+                // `c*x*x + k = 0` has a real root iff `-k/c >= 0`, i.e. `c*k <= 0`.
+                if monomials[0].coeff * *constant > 0 {
+                    lone_square_eq_no_real_root += 1;
+                }
+                break;
+            }
+        }
+    }
+
+    eprintln!(
+        "qf_ufnra generator coverage: eq_applied_both={eq_applied_both}/{INSTANCES}, \
+         eq_negated={eq_negated}/{INSTANCES}, var_eq_and_f_ne={var_eq_and_f_ne}/{INSTANCES}, \
+         two_distinct_var_product={two_distinct_var_product}/{INSTANCES}, \
+         three_var_product={three_var_product}/{INSTANCES}, \
+         lone_square_eq_nonzero={lone_square_eq_nonzero}/{INSTANCES} \
+         (no real root: {lone_square_eq_no_real_root})"
+    );
+    assert!(
+        eq_applied_both >= FLOOR_EQ_APPLIED_BOTH,
+        "instances with an applied-both `Eq` atom: {eq_applied_both}/{INSTANCES} (audit measured 0)"
+    );
+    assert!(
+        eq_negated >= FLOOR_EQ_NEGATED,
+        "instances with a `!=` `Eq` atom: {eq_negated}/{INSTANCES} (audit measured 0)"
+    );
+    assert!(
+        var_eq_and_f_ne >= FLOOR_VAR_EQ_AND_F_NE,
+        "instances with both `x = y` and `f(s) != f(t)`: {var_eq_and_f_ne}/{INSTANCES} (audit measured 0)"
+    );
+    assert!(
+        two_distinct_var_product >= FLOOR_TWO_DISTINCT_VAR_PRODUCT,
+        "instances with an `x*y` monomial: {two_distinct_var_product}/{INSTANCES} (audit measured 0)"
+    );
+    assert!(
+        three_var_product >= FLOOR_THREE_VAR_PRODUCT,
+        "instances with a three-variable monomial: {three_var_product}/{INSTANCES} (audit measured 0)"
+    );
+    assert!(
+        lone_square_eq_nonzero >= FLOOR_LONE_SQUARE_EQ,
+        "instances with a lone `c*x*x + k = 0`: {lone_square_eq_nonzero}/{INSTANCES} (audit measured 0)"
+    );
+}
+
+// Measured with the mixed generator (2026-09-16): eq_applied_both 125,
+// eq_negated 241, var_eq_and_f_ne 2, two_distinct_var_product 258,
+// three_var_product 84, lone_square_eq_nonzero 5 (2 with no real root).
+// Floors at about a quarter; the two rare conjunctions keep the load-bearing `>= 1`.
+const FLOOR_EQ_APPLIED_BOTH: u64 = 30;
+const FLOOR_EQ_NEGATED: u64 = 60;
+const FLOOR_VAR_EQ_AND_F_NE: u64 = 1;
+const FLOOR_TWO_DISTINCT_VAR_PRODUCT: u64 = 60;
+const FLOOR_THREE_VAR_PRODUCT: u64 = 20;
+const FLOOR_LONE_SQUARE_EQ: u64 = 1;

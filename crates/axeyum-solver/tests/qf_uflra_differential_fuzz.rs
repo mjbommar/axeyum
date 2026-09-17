@@ -45,7 +45,17 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): every `Eq` atom was `x_i != x_j` between BARE
+        // variables (4185/4185 `ne`, both sides unapplied) — `f(x) = f(y)` and
+        // `f(x) != f(y)` never appeared, so congruence was never exercised.
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
     fn below(&mut self, n: u64) -> usize {
         usize::try_from(self.next_u64() % n).expect("modulus fits usize")
@@ -431,3 +441,89 @@ fn qf_uflra_differential_fuzz_disagree_zero() {
         INSTANCES / 3
     );
 }
+
+// ---------------------------------------------------------------------------
+// Generator coverage guard (no solver, no Z3).
+// ---------------------------------------------------------------------------
+
+/// Coverage guard for the LCG-driven sweep above.
+///
+/// Regenerates exactly the population `qf_uflra_differential_fuzz_disagree_zero`
+/// runs (seeds `0..INSTANCES`, `Instance::generate`) and counts the classes the
+/// 2026-09-16 box audit measured at ZERO under the raw-state LCG:
+///
+/// - an `Eq` atom with a function application on BOTH sides (`f(x) = f(y)` /
+///   `f(x) != f(y)`; audit: 0/1500 — `applied` was pinned `false` on both
+///   sides by the consecutive `flip` draws);
+/// - an `Eq` atom that is an EQUALITY (`ne == false`; audit: 0/1500 — every
+///   one of the 4185 `Eq` atoms had `ne == true`);
+/// - an instance carrying both a bare `x = y` and an `f(s) != f(t)` — the
+///   congruence trap `x = y ∧ f(x) != f(y)` (audit: 0/1500).
+#[test]
+fn the_generator_reaches_applied_equalities() {
+    let mut eq_applied_both = 0u64;
+    let mut eq_positive = 0u64;
+    let mut var_eq_and_f_ne = 0u64;
+    let mut var_eq_and_f_ne_same_pair = 0u64;
+    for seed in 0..INSTANCES {
+        let inst = Instance::generate(&mut Lcg::new(seed));
+        let eqs: Vec<(Base, Base, bool)> = inst
+            .atoms
+            .iter()
+            .filter_map(|atom| match atom {
+                Atom::Eq { lhs, rhs, ne } => Some((*lhs, *rhs, *ne)),
+                Atom::Arith { .. } => None,
+            })
+            .collect();
+        if eqs.iter().any(|(l, r, _)| l.applied && r.applied) {
+            eq_applied_both += 1;
+        }
+        if eqs.iter().any(|(_, _, ne)| !ne) {
+            eq_positive += 1;
+        }
+        let var_eq_pairs: Vec<(usize, usize)> = eqs
+            .iter()
+            .filter(|(l, r, ne)| !ne && !l.applied && !r.applied && l.var != r.var)
+            .map(|(l, r, _)| (l.var, r.var))
+            .collect();
+        let f_ne_pairs: Vec<(usize, usize)> = eqs
+            .iter()
+            .filter(|(l, r, ne)| *ne && l.applied && r.applied)
+            .map(|(l, r, _)| (l.var, r.var))
+            .collect();
+        if !var_eq_pairs.is_empty() && !f_ne_pairs.is_empty() {
+            var_eq_and_f_ne += 1;
+        }
+        if var_eq_pairs.iter().any(|&(i, j)| {
+            f_ne_pairs
+                .iter()
+                .any(|&(s, t)| (s == i && t == j) || (s == j && t == i))
+        }) {
+            var_eq_and_f_ne_same_pair += 1;
+        }
+    }
+
+    eprintln!(
+        "qf_uflra generator coverage: eq_applied_both={eq_applied_both}/{INSTANCES}, \
+         eq_positive={eq_positive}/{INSTANCES}, var_eq_and_f_ne={var_eq_and_f_ne}/{INSTANCES}, \
+         var_eq_and_f_ne_same_pair={var_eq_and_f_ne_same_pair}/{INSTANCES}"
+    );
+    assert!(
+        eq_applied_both >= FLOOR_EQ_APPLIED_BOTH,
+        "instances with `f(s) (!)= f(t)`: {eq_applied_both}/{INSTANCES} (audit measured 0)"
+    );
+    assert!(
+        eq_positive >= FLOOR_EQ_POSITIVE,
+        "instances with a positive `Eq` atom: {eq_positive}/{INSTANCES} (audit measured 0)"
+    );
+    assert!(
+        var_eq_and_f_ne >= FLOOR_VAR_EQ_AND_F_NE,
+        "instances with both `x = y` and `f(s) != f(t)`: {var_eq_and_f_ne}/{INSTANCES} (audit measured 0)"
+    );
+}
+
+// Measured with the mixed generator (2026-09-16): eq_applied_both 515,
+// eq_positive 914, var_eq_and_f_ne 22 (same pair 8). Floors at about a quarter.
+const FLOOR_EQ_APPLIED_BOTH: u64 = 120;
+const FLOOR_EQ_POSITIVE: u64 = 220;
+const FLOOR_VAR_EQ_AND_F_NE: u64 = 5;

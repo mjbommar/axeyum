@@ -53,7 +53,16 @@ fn lcg(state: &mut u64) -> u64 {
     *state = state
         .wrapping_mul(6_364_136_223_846_793_005)
         .wrapping_add(1_442_695_040_888_963_407);
-    *state
+    // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+    // has period 2^(k+1), so `state & 1` alternates on every draw and a
+    // decision made at a fixed draw offset is a constant, not a coin.
+    // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+    // audit-20260916): a literal costs two draws (var, sign), so every
+    // sign in one clause agreed and 0 of 500 formulas had a mixed clause.
+    // SplitMix64's finalizer makes every output bit depend on the state.
+    let z = (*state ^ (*state >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
 }
 fn below(state: &mut u64, bound: usize) -> usize {
     usize::try_from(lcg(state) >> 33).unwrap_or(0) % bound
@@ -161,4 +170,56 @@ fn equisatisfiability_differential_with_model_replay() {
     assert!(sat_n > 0, "no SAT coverage");
     assert!(unsat_n > 0, "no UNSAT coverage");
     assert!(strengthen_n > 0, "no strengthening coverage");
+}
+
+/// Coverage guard for the two random sweeps above (same seeds, same counts,
+/// same `random_formula`; no vivification is run).
+///
+/// Class: a clause containing both a positive and a negative literal (an
+/// implication such as `(¬a ∨ b)`, the shape a vivification assumption
+/// propagates THROUGH). With the raw-state LCG the sign draw inside one clause
+/// always landed on the same parity, so every clause was all-positive or
+/// all-negative: measured 2026-09-16, 0 of 500 formulas per seed contained a
+/// mixed-polarity clause (lane ax-proptest,
+/// `bench-results/proptest-box-audit-20260916`).
+#[test]
+fn the_generator_reaches_mixed_polarity_clauses() {
+    const NVARS: usize = 5;
+    let seeds = [0x5EED_1234_DEAD_C0DEu64, 0xFACE_FEED_0BAD_BEEFu64];
+    for seed in seeds {
+        let mut state = seed;
+        let mut mixed_formulas = 0usize;
+        let mut mixed_clauses = 0usize;
+        let mut total_clauses = 0usize;
+        for _ in 0..500 {
+            let f = random_formula(&mut state, NVARS);
+            let mut any = false;
+            for c in f.clauses() {
+                total_clauses += 1;
+                let has_pos = c.lits().iter().any(|l| !l.is_negated());
+                let has_neg = c.lits().iter().any(|l| l.is_negated());
+                if has_pos && has_neg {
+                    mixed_clauses += 1;
+                    any = true;
+                }
+            }
+            if any {
+                mixed_formulas += 1;
+            }
+        }
+        eprintln!(
+            "seed {seed:#x}: mixed-polarity clauses {mixed_clauses}/{total_clauses}, \
+             formulas with one {mixed_formulas}/500"
+        );
+        assert!(
+            mixed_formulas >= 250,
+            "seed {seed:#x}: only {mixed_formulas}/500 formulas contain a \
+             mixed-polarity clause (old generator: 0)"
+        );
+        assert!(
+            mixed_clauses >= 800,
+            "seed {seed:#x}: only {mixed_clauses}/{total_clauses} clauses mix \
+             polarities (old generator: 0)"
+        );
+    }
 }

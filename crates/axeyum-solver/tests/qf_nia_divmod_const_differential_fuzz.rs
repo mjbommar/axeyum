@@ -60,7 +60,18 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): Flat terms were ALWAYS `mod` with k in {0,1,2,3}
+        // and Nested terms ALWAYS `(div (mod p k2) k)` with (k2,k) in
+        // {(0,-1),(1,-2),(2,0),(3,0)} — no `div` by a positive constant, no
+        // `mod` by a negative one, no other nesting order, no (0,0) chain.
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
     fn below(&mut self, n: u64) -> usize {
         usize::try_from(self.next_u64() % n).expect("modulus fits usize")
@@ -636,4 +647,98 @@ fn qf_nia_divmod_const_differential_fuzz_disagree_zero() {
         jointly_decided > 100,
         "too few jointly-decided instances ({jointly_decided}); gate not exercised"
     );
+}
+
+/// Coverage guard for the constant-divisor shapes the raw-state LCG could not
+/// reach. Measured 2026-09-16 under the old generator (lane ax-proptest,
+/// bench-results/proptest-box-audit-20260916), over the same 1500 seeds this
+/// sweep runs: the Flat/Nested draw and the op draw are consecutive, so Flat
+/// terms were ALWAYS `mod` (`div` only via the forced `k = 0` append) and
+/// Nested terms ALWAYS `(div (mod p k2) k)`; the two `divisor_const` draws sat
+/// at fixed offsets in the period-8 low-bit cycle, so (k2, k) took only
+/// {(0,-1), (1,-2), (2,0), (3,0)}. Each of these was generated **0 times**:
+///
+/// - `div` by a POSITIVE nonzero constant (ordinary Euclidean `(div -7 2) = -4`);
+/// - `mod` by a NEGATIVE constant (`(mod -7 -2) = 1`);
+/// - the nesting orders `(mod (div ..))`, `(div (div ..))`, `(mod (mod ..))`;
+/// - the double-zero chain `(div (mod p 0) 0)` (any ops, `k2 == k == 0`);
+/// - a Flat `div` by `±1` (the `(div (2x) 1) = 1` non-integrality wrapper).
+///
+/// Regenerates the population without a solver and requires each shape at a
+/// floor about a quarter of what the mixed generator produces.
+#[test]
+fn the_generator_reaches_every_constant_divisor_shape() {
+    let mut terms = 0u64;
+    let mut div_by_positive = 0u64;
+    let mut mod_by_negative = 0u64;
+    let mut nested_mod_div = 0u64;
+    let mut nested_div_div = 0u64;
+    let mut nested_mod_mod = 0u64;
+    let mut nested_double_zero = 0u64;
+    let mut flat_div_by_unit = 0u64;
+
+    let mut visit = |t: &DTerm| {
+        terms += 1;
+        let tally = |op: DivMod, k: i64, div_pos: &mut u64, mod_neg: &mut u64| match op {
+            DivMod::Div if k > 0 => *div_pos += 1,
+            DivMod::Mod if k < 0 => *mod_neg += 1,
+            _ => {}
+        };
+        match *t {
+            DTerm::Flat { op, k, .. } => {
+                tally(op, k, &mut div_by_positive, &mut mod_by_negative);
+                if matches!(op, DivMod::Div) && k.abs() == 1 {
+                    flat_div_by_unit += 1;
+                }
+            }
+            DTerm::Nested { op, op2, k2, k, .. } => {
+                tally(op, k, &mut div_by_positive, &mut mod_by_negative);
+                tally(op2, k2, &mut div_by_positive, &mut mod_by_negative);
+                match (op, op2) {
+                    (DivMod::Mod, DivMod::Div) => nested_mod_div += 1,
+                    (DivMod::Div, DivMod::Div) => nested_div_div += 1,
+                    (DivMod::Mod, DivMod::Mod) => nested_mod_mod += 1,
+                    (DivMod::Div, DivMod::Mod) => {}
+                }
+                if k2 == 0 && k == 0 {
+                    nested_double_zero += 1;
+                }
+            }
+        }
+    };
+    for seed in 0..INSTANCES {
+        let mut rng = Lcg::new(seed ^ 0x5f3d_c0de_1234_9a7b);
+        let inst = Instance::generate(&mut rng);
+        for atom in &inst.atoms {
+            match atom {
+                GAtom::TermRel { t, .. } => visit(t),
+                GAtom::Rel { t1, t2, .. } => {
+                    visit(t1);
+                    visit(t2);
+                }
+                GAtom::Bound { .. } => {}
+            }
+        }
+    }
+
+    let counts = [
+        ("`div` by a POSITIVE constant", div_by_positive, 250),
+        ("`mod` by a NEGATIVE constant", mod_by_negative, 170),
+        ("nested (mod (div ..))", nested_mod_div, 100),
+        ("nested (div (div ..))", nested_div_div, 110),
+        ("nested (mod (mod ..))", nested_mod_mod, 110),
+        ("nested double-zero chain k2=k=0", nested_double_zero, 60),
+        ("Flat `div` by +-1", flat_div_by_unit, 60),
+    ];
+    eprintln!("  div/mod terms in the sweep: {terms}");
+    for (name, n, floor) in counts {
+        eprintln!("  {name:<34} {n:>5} (floor {floor})");
+    }
+    for (name, n, floor) in counts {
+        assert!(
+            n >= floor,
+            "{name}: {n} over {INSTANCES} seeds (floor {floor}) — measured 0 under the \
+             raw-state LCG; the op/divisor draws are parity-locked again"
+        );
+    }
 }

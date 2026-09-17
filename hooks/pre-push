@@ -237,7 +237,8 @@ for l0_gate in \
   "scripts/check-draw7-frozen-families.py --before ${L0_BEFORE:-HEAD~1}" \
   "scripts/check-suite-gating.py" \
   "scripts/tests/mutation_controls.py --check-anchors" \
-  "scripts/check-config-registry-staleness.py"
+  "scripts/check-config-registry-staleness.py" \
+  "scripts/check-lcg-raw-state.py"
 do
   l0_step_start=$(date +%s)
   # Word-splitting is intended: the entries above carry their own flags.

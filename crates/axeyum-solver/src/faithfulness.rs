@@ -119,7 +119,7 @@ pub fn check_qf_bv_faithfulness(
 
 /// The deterministic sample stream behind `seed`: a linear-congruential
 /// generator (so the check is exactly reproducible — `seed` is part of the
-/// certificate) whose OUTPUT is passed through SplitMix64's finalizer.
+/// certificate) whose OUTPUT is passed through `SplitMix64`'s finalizer.
 ///
 /// The raw state is never handed out. Bit `k` of an LCG modulo `2^64` has
 /// period `2^(k+1)`, so bit 0 alternates on every draw and, with two draws per

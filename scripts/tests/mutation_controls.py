@@ -12513,6 +12513,42 @@ SUITES["proptest-box-faithfulness-sampler"] = (
     ],
 )
 
+# The ratchet that stops the 72nd copy of the idiom: every raw-state return
+# site is pinned with its count, and the count can only go down. Each guard
+# below is deleted on its own and must kill exactly its own control.
+
+SUITES["lcg-raw-state"] = (
+    "scripts/check-lcg-raw-state.py",
+    "scripts.tests.test_check_lcg_raw_state",
+    [
+        (
+            "a raw-state site in an unpinned file is a finding",
+            "        if rel not in baseline:",
+            "        if False:",
+        ),
+        (
+            "a pinned file whose site count grew is a finding",
+            "        elif n > baseline[rel]:",
+            "        elif False:",
+        ),
+        (
+            "a baseline entry the tree no longer needs is a finding",
+            "        if n < baseline[rel]:",
+            "        if False:",
+        ),
+        (
+            "scanning zero Rust files is a wrong path, not a clean tree",
+            "    if scanned == 0:",
+            "    if False:",
+        ),
+        (
+            "the free-function shape `*state` is a site too",
+            r"|\*?state|\*?s|\*?st|\*?x|\*?seed|\*?rng)\s*$",
+            r"|state|\*?s|\*?st|\*?x|\*?seed|\*?rng)\s*$",
+        ),
+    ],
+)
+
 # `axeyum-ir/src/wide.rs`'s test generator advanced the LCG twice per 128-bit
 # draw and masked the LOW bits: at width 1 all 200 pairs were `(0, 0)`, at
 # width 2 all 200 were `(2, 0)`. The fix mixes the output and adds a seed
@@ -12540,6 +12576,29 @@ SUITES["proptest-box-wide-generator"] = (
     ],
 )
 
+# `inprocess_proof_path.rs`'s corpus doc named "an empty clause" among its
+# degenerate shapes for the corpus's whole life; the corpus had none (a unit
+# contradiction is two units). The member now exists and the probe derives
+# the shapes from the corpus rather than from a name list. The mutation keeps
+# the member UNSAT and level-zero-refutable (so the pinned refutation counts
+# and the self-refuting exclusion still hold) but removes the empty clause
+# itself, which only the probe can see.
+
+SUITES["proptest-box-inprocess-empty-clause"] = (
+    "crates/axeyum-cnf/tests/inprocess_proof_path.rs",
+    Cargo(
+        ("-p", "axeyum-cnf", "--test", "inprocess_proof_path"),
+        "proptest-box-cnf",
+    ),
+    [
+        (
+            "the corpus must carry an empty input clause, as its doc claims",
+            "            formula(2, vec![vec![pos(0), pos(1)], vec![], vec![neg(1)]]),",
+            "            formula(2, vec![vec![pos(0), pos(1)], vec![neg(0)], vec![neg(1)]]),",
+        ),
+    ],
+)
+
 SUITES["proptest-box-faithfulness-lsb-defect"] = (
     "crates/axeyum-bv/src/lib.rs",
     Cargo(
@@ -12554,6 +12613,455 @@ SUITES["proptest-box-faithfulness-lsb-defect"] = (
             "the carry out of bit 0 must be generated like every other carry",
             "            let carry_from_pair = self.aig.and(lhs, rhs);",
             "            let carry_from_pair = if index == 0 {\n                AigLit::FALSE\n            } else {\n                self.aig.and(lhs, rhs)\n            };",
+        ),
+    ],
+)
+
+
+# ---- helper g1: generator-mix reverts, one probe each ----
+
+# crates/axeyum-cnf/src/vivify.rs -- reverting the finalizer makes every random
+# clause single-polarity (no mixed-polarity / implication clause reachable).
+SUITES["proptest-box-cnf-vivify-lib"] = (
+    "crates/axeyum-cnf/src/vivify.rs",
+    Cargo(
+        ("-p", "axeyum-cnf", "--lib", "vivify::tests::the_generator_reaches"),
+        "proptest-box-cnf",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (*state ^ (*state >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        *state",
+        ),
+    ],
+)
+
+# crates/axeyum-cnf/tests/vivify.rs -- reverting the finalizer makes every random
+# clause single-polarity (no mixed-polarity / implication clause reachable).
+SUITES["proptest-box-cnf-vivify-suite"] = (
+    "crates/axeyum-cnf/tests/vivify.rs",
+    Cargo(
+        ("-p", "axeyum-cnf", "--test", "vivify", "the_generator_reaches"),
+        "proptest-box-cnf",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "    let z = (*state ^ (*state >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n    let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n    z ^ (z >> 31)",
+            "    *state",
+        ),
+    ],
+)
+
+# crates/axeyum-cnf/src/gf2.rs -- reverting the finalizer makes every row of a
+# random XOR system identical (no two-distinct-row system, no contradiction that
+# needs two rows combined).
+SUITES["proptest-box-cnf-gf2"] = (
+    "crates/axeyum-cnf/src/gf2.rs",
+    Cargo(
+        ("-p", "axeyum-cnf", "--lib", "gf2::tests::the_generator_reaches"),
+        "proptest-box-cnf",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (*state ^ (*state >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        *state",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/src/cdclt.rs (termination_tests::Lcg) -- reverting the
+# finalizer makes every literal of a clause / cube share one coin (no
+# mixed-polarity clause, no mixed-value forbidden cube reachable).
+SUITES["proptest-box-cdclt-generator"] = (
+    "crates/axeyum-solver/src/cdclt.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "z3",
+            "--lib",
+            "cdclt::termination_tests::the_generator_reaches",
+        ),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "            let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n            let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n            z ^ (z >> 31)",
+            "            self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/cdclt_lia_online.rs -- reverting the finalizer gives
+# both literals of a width-2 clause the same polarity (no Horn implication
+# `(a v not b)` reachable).
+SUITES["proptest-box-cdclt-lia-online"] = (
+    "crates/axeyum-solver/tests/cdclt_lia_online.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "cdclt_lia_online", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/cdclt_lra_online.rs -- reverting the finalizer gives
+# both literals of a width-2 clause the same polarity (no Horn implication
+# `(a v not b)` reachable).
+SUITES["proptest-box-cdclt-lra-online"] = (
+    "crates/axeyum-solver/tests/cdclt_lra_online.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "cdclt_lra_online", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/lia_online.rs -- reverting the finalizer locks
+# `below(4)` to a +3 mod 4 walk, so the push/pop/assert schedule never draws an
+# explicit pop at depth > 0 (no explicit pop, no pop to level 0, no re-solve after
+# a pop reachable).
+SUITES["proptest-box-lia-online-schedule"] = (
+    "crates/axeyum-solver/tests/lia_online.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "lia_online", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# ---- helper g2: generator-mix reverts, one probe each ----
+
+# crates/axeyum-solver/tests/qf_lia_differential_fuzz.rs — reverting the mix makes every
+# corner's inner flip()/below(4) arm parity-dead again: DivByConstZero neg=false (the
+# satisfiable `(div p 0) = c` shape), DivZeroCongruence a==b, ExtremeConstant's non-i64::MAX
+# variants, StrictTightening Gt / neg=false, DivByVar/ModByVar's other pin polarity.
+SUITES["proptest-box-qf-lia-differential-fuzz"] = (
+    "crates/axeyum-solver/tests/qf_lia_differential_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "qf_lia_differential_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/nia_differential_fuzz.rs — reverting the mix locks the div/mod
+# op draw to `Div` and the divisor sign to positive: no `mod` op and no negative divisor.
+SUITES["proptest-box-nia-differential-fuzz"] = (
+    "crates/axeyum-solver/tests/nia_differential_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "nia_differential_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/qf_lra_differential_fuzz.rs — reverting the mix makes `neg`
+# a function of the comparator index: `=`, `<`, `>` are never asserted positively and
+# `<=`, `>=`, `!=` are never negated (no equality, no strict inequality in the sweep).
+SUITES["proptest-box-qf-lra-differential-fuzz"] = (
+    "crates/axeyum-solver/tests/qf_lra_differential_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "qf_lra_differential_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/qf_nia_divmod_const_differential_fuzz.rs — reverting the mix
+# makes Flat terms always `mod` (k in {0,1,2,3}) and Nested always `(div (mod p k2) k)`:
+# no `div` by a positive constant, no `mod` by a negative one, no other nesting order,
+# no `(op (op2 p 0) 0)` double-zero chain, no Flat `div` by +-1.
+SUITES["proptest-box-qf-nia-divmod-const-differential-fuzz"] = (
+    "crates/axeyum-solver/tests/qf_nia_divmod_const_differential_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "qf_nia_divmod_const_differential_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/qf_nia_divmod_var_differential_fuzz.rs — reverting the mix
+# locks Lin atoms to {!=, <=, >=} (no linear equality, so no GCD-infeasible `2x+2y=1`)
+# and Quad/Bound atoms to {=, <, >}.
+SUITES["proptest-box-qf-nia-divmod-var-differential-fuzz"] = (
+    "crates/axeyum-solver/tests/qf_nia_divmod_var_differential_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "qf_nia_divmod_var_differential_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# ---- helper g3: generator-mix reverts, one probe each ----
+
+# crates/axeyum-solver/tests/quantified_bv_differential_fuzz.rs -- reverting the
+# SplitMix64 finalizer makes a universal body that mentions a bound variable
+# (0/600) and the `Shape::NotForall` wrapper (0/400) unreachable again.
+SUITES["proptest-box-quantified-bv"] = (
+    "crates/axeyum-solver/tests/quantified_bv_differential_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "quantified_bv_differential_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/qf_uf_differential_fuzz.rs -- reverting the
+# finalizer collapses the EUF term language back to four atom shapes: no bare
+# `x = y` (0/1500), no `f(f(t))` (0/1500), no `x = y ∧ f(s) != f(t)` (0/1500).
+SUITES["proptest-box-qf-uf"] = (
+    "crates/axeyum-solver/tests/qf_uf_differential_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "qf_uf_differential_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/qf_uflra_differential_fuzz.rs -- reverting the
+# finalizer pins every `Eq` atom to `x_i != x_j` between bare variables:
+# `f(x) (!)= f(y)` (0/1500) and any positive `Eq` (0/1500) become unreachable.
+SUITES["proptest-box-qf-uflra"] = (
+    "crates/axeyum-solver/tests/qf_uflra_differential_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "qf_uflra_differential_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/qf_ufnra_differential_fuzz.rs -- reverting the
+# finalizer pins every `Eq` atom to `g(x_i,x_j) = x_k` (never `!=`) and makes a
+# `Var` factor never follow a `Var`: `x*y` (0/700) and `x*y*z` (0/700) vanish.
+SUITES["proptest-box-qf-ufnra"] = (
+    "crates/axeyum-solver/tests/qf_ufnra_differential_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "qf_ufnra_differential_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/quantified_uf_fmf_differential_fuzz.rs -- reverting
+# the finalizer makes every generated quantifier body a single atom again: no
+# compound body (0/150) and no nested quantifier (0/150).
+SUITES["proptest-box-quantified-uf-fmf"] = (
+    "crates/axeyum-solver/tests/quantified_uf_fmf_differential_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "quantified_uf_fmf_differential_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/interpolant_fuzz.rs -- reverting the finalizer
+# makes the EUF `t != t` literal (0/800), a disjoint A/B vocabulary (0/800),
+# any odd QF_BV constant (0/300) and LRA `na = nb = 2` (0/400) unreachable.
+SUITES["proptest-box-interpolant"] = (
+    "crates/axeyum-solver/tests/interpolant_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "interpolant_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# ---- helper g4: generator-mix reverts, one probe each ----
+
+# crates/axeyum-solver/tests/qf_dt_differential_fuzz.rs -- reverting the
+# SplitMix64 finalizer makes positive `v_i = v_j` equalities and negated testers
+# `(not ((_ is c) v))` unreachable (kind flip and neg flip always disagree).
+SUITES["proptest-box-qf-dt"] = (
+    "crates/axeyum-solver/tests/qf_dt_differential_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "qf_dt_differential_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/abv_differential_fuzz.rs -- reverting the
+# SplitMix64 finalizer makes a nested store `store(store(a, i, v), j, w)`
+# unreachable (the Store draw is always followed by the Var draw).
+SUITES["proptest-box-abv"] = (
+    "crates/axeyum-solver/tests/abv_differential_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "abv_differential_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/word_equation_differential_fuzz.rs -- reverting the
+# SplitMix64 finalizer makes a literal with a repeated adjacent letter
+# ("aa" / "bb") unreachable (every literal strictly alternates abab...).
+SUITES["proptest-box-word-equation"] = (
+    "crates/axeyum-solver/tests/word_equation_differential_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "word_equation_differential_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/qf_s_online_differential_fuzz.rs -- reverting the
+# SplitMix64 finalizer makes a literal with a repeated adjacent letter
+# ("aa" / "bb") unreachable (every literal strictly alternates abab...).
+SUITES["proptest-box-qf-s-online"] = (
+    "crates/axeyum-solver/tests/qf_s_online_differential_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "qf_s_online_differential_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/online_string_front_door_fuzz.rs -- reverting the
+# SplitMix64 finalizer makes a literal with a repeated adjacent letter
+# ("aa" / "bb") unreachable (every literal strictly alternates abab...).
+SUITES["proptest-box-online-string-front-door"] = (
+    "crates/axeyum-solver/tests/online_string_front_door_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "online_string_front_door_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
+        ),
+    ],
+)
+
+# crates/axeyum-solver/tests/bounded_completeness_fuzz.rs -- reverting the
+# SplitMix64 finalizer makes the str.len bound exactly one past the cap
+# (`(<= (str.len s) 13)`) unreachable and collapses the above-cap arm to the
+# five bounds {15, 19, 23, 27, 31}.
+SUITES["proptest-box-bounded-completeness"] = (
+    "crates/axeyum-solver/tests/bounded_completeness_fuzz.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "z3", "--test", "bounded_completeness_fuzz", "the_generator_reaches"),
+        "proptest-box-z3",
+    ),
+    [
+        (
+            "the generator must mix the LCG state before handing it out",
+            "        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        self.0",
         ),
     ],
 )

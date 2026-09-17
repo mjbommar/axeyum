@@ -19,7 +19,7 @@
 //! 3. **Deadline** — a zero-duration budget must degrade to `Unknown`.
 #![cfg(feature = "full")]
 
-use axeyum_ir::{Assignment, Sort, TermArena, TermId, Value, eval};
+use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, eval};
 use axeyum_solver::{
     CheckResult, Model, SolverConfig, check_qf_lia_online, check_qf_lia_online_cdclt,
     check_with_lia_dpll, check_with_lia_simplex,
@@ -38,7 +38,16 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): a literal costs two draws (atom, polarity), so 0 of
+        // 3488 width-2 clauses mixed polarities (no Horn implication).
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
     fn below(&mut self, n: u64) -> u64 {
         self.next_u64() % n
@@ -281,6 +290,68 @@ fn cdclt_lia_vs_sibling_online_differential_fuzz() {
     );
     assert!(unsat_agree > 0, "fuzz produced no agreed UNSAT instances");
     assert!(sat_agree > 0, "fuzz produced no agreed SAT instances");
+}
+
+/// Coverage guard for `cdclt_lia_vs_sibling_online_differential_fuzz` (same seed
+/// derivation over `0..2500`, same `random_instance`; no solver is run).
+///
+/// Class: a MIXED-polarity clause `(a ∨ ¬b)` — a Horn implication in the Boolean
+/// skeleton, e.g. `(x0 <= 1) ∨ ¬(x0 >= 3)`. With the raw-state LCG both literals
+/// of a width-2 clause drew the same polarity: measured 2026-09-16, 0 of 3488
+/// width-2 clauses were mixed (lane ax-proptest,
+/// `bench-results/proptest-box-audit-20260916`).
+#[test]
+fn the_generator_reaches_mixed_polarity_clauses() {
+    const INSTANCES: u64 = 2500;
+    let mut width2 = 0u64;
+    let mut mixed = 0u64;
+    let mut instances_with_mixed = 0u64;
+    for seed in 0..INSTANCES {
+        let mut rng = Lcg::new(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1));
+        let mut arena = TermArena::new();
+        let assertions = random_instance(&mut arena, &mut rng);
+        let mut any = false;
+        for &clause in &assertions {
+            if let TermNode::App {
+                op: Op::BoolOr,
+                args,
+            } = arena.node(clause)
+            {
+                width2 += 1;
+                let negs = args
+                    .iter()
+                    .filter(|&&a| {
+                        matches!(
+                            arena.node(a),
+                            TermNode::App {
+                                op: Op::BoolNot,
+                                ..
+                            }
+                        )
+                    })
+                    .count();
+                if negs == 1 {
+                    mixed += 1;
+                    any = true;
+                }
+            }
+        }
+        if any {
+            instances_with_mixed += 1;
+        }
+    }
+    eprintln!(
+        "cdclt-lia generator coverage: mixed-polarity width-2 clauses {mixed}/{width2}, \
+         instances with one {instances_with_mixed}/{INSTANCES}"
+    );
+    assert!(
+        mixed >= 400,
+        "only {mixed}/{width2} width-2 clauses mix polarities (old generator: 0)"
+    );
+    assert!(
+        instances_with_mixed >= 300,
+        "only {instances_with_mixed}/{INSTANCES} instances carry a Horn clause (old generator: 0)"
+    );
 }
 
 /// A second differential over pure conjunctions, cross-checked against the trusted

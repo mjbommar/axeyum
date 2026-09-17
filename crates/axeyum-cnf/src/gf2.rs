@@ -691,34 +691,58 @@ mod tests {
         assert_eq!(fold_subset(&constraints, &subset), (vec![], true));
     }
 
+    /// Seed and population size shared by the reason-subset fuzz and its
+    /// coverage guard.
+    const FUZZ_SEED: u64 = 0x9E37_79B9_7F4A_7C15;
+    const FUZZ_SYSTEMS: usize = 4000;
+
+    /// Deterministic LCG step (no rand/clock; reproducible).
+    fn fuzz_next(state: &mut u64) -> u64 {
+        *state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): every row of a system was identical and the 4000
+        // iterations produced exactly three distinct systems, none needing
+        // two rows combined for its contradiction.
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (*state ^ (*state >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    }
+
+    /// One random small XOR system: `(num_vars, constraints)`, 1..=6 variables
+    /// and 1..=7 rows, each variable included in a row by a coin, rhs by a coin.
+    fn random_xor_system(state: &mut u64) -> (usize, Vec<Constraint>) {
+        let num_vars = 1 + (fuzz_next(state) % 6) as usize;
+        let num_rows = 1 + (fuzz_next(state) % 7) as usize;
+        let mut constraints: Vec<Constraint> = Vec::new();
+        for _ in 0..num_rows {
+            let mut vars: Vec<usize> = Vec::new();
+            for v in 0..num_vars {
+                if fuzz_next(state) & 1 == 1 {
+                    vars.push(v);
+                }
+            }
+            let rhs = fuzz_next(state) & 1 == 1;
+            constraints.push((vars, rhs));
+        }
+        (num_vars, constraints)
+    }
+
     #[test]
     fn reason_subset_soundness_fuzz_no_false_subset() {
         // Deterministic LCG over many random small XOR systems. Soundness
         // invariant: `unsat_reason_subset` is `Some` iff `solve` is `Unsat`, and
         // every returned subset genuinely sums to 0 = 1 (so a downstream DRAT
         // certificate over CNF(S) is always a real refutation — never a false one).
-        let mut state: u64 = 0x9E37_79B9_7F4A_7C15;
-        let mut next = || {
-            state = state
-                .wrapping_mul(6_364_136_223_846_793_005)
-                .wrapping_add(1_442_695_040_888_963_407);
-            state
-        };
+        let mut state: u64 = FUZZ_SEED;
         let mut unsat_seen = 0u32;
-        for _ in 0..4000 {
-            let num_vars = 1 + (next() % 6) as usize;
-            let num_rows = 1 + (next() % 7) as usize;
-            let mut constraints: Vec<Constraint> = Vec::new();
-            for _ in 0..num_rows {
-                let mut vars: Vec<usize> = Vec::new();
-                for v in 0..num_vars {
-                    if next() & 1 == 1 {
-                        vars.push(v);
-                    }
-                }
-                let rhs = next() & 1 == 1;
-                constraints.push((vars, rhs));
-            }
+        for _ in 0..FUZZ_SYSTEMS {
+            let (num_vars, constraints) = random_xor_system(&mut state);
             let sys = build(num_vars, &constraints);
             let is_unsat = matches!(sys.solve(), Gf2Outcome::Unsat);
             match sys.unsat_reason_subset() {
@@ -738,6 +762,65 @@ mod tests {
             }
         }
         assert!(unsat_seen > 0, "fuzz must exercise some UNSAT systems");
+    }
+
+    /// Coverage guard for `reason_subset_soundness_fuzz_no_false_subset`
+    /// (same seed, same count, same `random_xor_system`; the GF(2) solver is
+    /// never called — satisfiability is decided by brute force over at most
+    /// 2^6 assignments).
+    ///
+    /// Classes: (1) a system with at least two DISTINCT rows, and (2) an UNSAT
+    /// system whose contradiction needs two or more rows combined (no row is
+    /// literally `() = 1`) — the elimination and provenance bookkeeping the
+    /// reason subset exists for. With the raw-state LCG every row of a system
+    /// was identical and the sweep produced exactly three distinct systems, so
+    /// both classes measured 0 of 4000 on 2026-09-16 (lane ax-proptest,
+    /// `bench-results/proptest-box-audit-20260916`).
+    #[test]
+    fn the_generator_reaches_multi_row_systems_and_combined_contradictions() {
+        let mut state: u64 = FUZZ_SEED;
+        let mut distinct_rows = 0usize;
+        let mut unsat_by_combination = 0usize;
+        let mut unsat_total = 0usize;
+        for _ in 0..FUZZ_SYSTEMS {
+            let (num_vars, constraints) = random_xor_system(&mut state);
+            let mut rows: Vec<Constraint> = constraints.clone();
+            rows.sort();
+            rows.dedup();
+            if rows.len() >= 2 {
+                distinct_rows += 1;
+            }
+            let satisfiable = (0u64..(1u64 << num_vars)).any(|mask| {
+                constraints.iter().all(|(vars, rhs)| {
+                    let parity = vars
+                        .iter()
+                        .fold(false, |acc, &v| acc ^ ((mask >> v) & 1 == 1));
+                    parity == *rhs
+                })
+            });
+            if !satisfiable {
+                unsat_total += 1;
+                let has_literal_zero_eq_one = constraints
+                    .iter()
+                    .any(|(vars, rhs)| vars.is_empty() && *rhs);
+                if !has_literal_zero_eq_one {
+                    unsat_by_combination += 1;
+                }
+            }
+        }
+        eprintln!(
+            "systems with >=2 distinct rows {distinct_rows}/{FUZZ_SYSTEMS}, \
+             UNSAT {unsat_total}, UNSAT needing a row combination {unsat_by_combination}"
+        );
+        assert!(
+            distinct_rows >= 1500,
+            "only {distinct_rows}/{FUZZ_SYSTEMS} systems have two distinct rows (old generator: 0)"
+        );
+        assert!(
+            unsat_by_combination >= 200,
+            "only {unsat_by_combination}/{FUZZ_SYSTEMS} UNSAT systems need a row combination \
+             (old generator: 0)"
+        );
     }
 
     #[test]

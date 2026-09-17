@@ -1729,6 +1729,13 @@ step merge-hygiene-controls python3 -m unittest scripts.tests.test_check_merge_h
 step config-registry-staleness python3 scripts/check-config-registry-staleness.py
 step config-registry-staleness-controls ./scripts/tests/test-config-registry-staleness-control.sh
 step config-registry-ratchet-controls ./scripts/tests/test-config-registry-ratchet.sh
+# No test generator hands out a raw LCG state (bit k of an LCG mod 2^64 has
+# period 2^(k+1), so `flip()`/`below(2)` at a fixed draw offset is a CONSTANT).
+# 2026-09-16: 81 files carried the idiom; the P0 fuzz's div-by-zero corner was
+# asserted in one polarity for all 80 of its seeds and the quantified-BV fuzz
+# never produced a body with a bound variable. The baseline can only shrink.
+step lcg-raw-state-controls python3 -m unittest scripts.tests.test_check_lcg_raw_state
+step lcg-raw-state python3 scripts/check-lcg-raw-state.py
 step admission-limit-basis python3 scripts/check-admission-limit-basis.py
 step admission-limit-basis-controls ./scripts/tests/test-admission-limit-basis-control.sh
 step plan-authority python3 scripts/check-plan-authority.py
