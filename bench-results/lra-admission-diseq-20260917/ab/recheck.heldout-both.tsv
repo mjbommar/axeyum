@@ -1,0 +1,5 @@
+file	A1	A2	A3	B1	B2	B3	verdict	status
+QF_LRA/sc/sc-10.induction2.cvc.smt2	unknown/0	unknown/0	unknown/0	sat/0	sat/0	sat/0	STABLE-GAIN	sat
+QF_LRA/sc/sc-15.induction2.cvc.smt2	unknown/0	unknown/0	unknown/0	sat/0	sat/0	sat/0	STABLE-GAIN	sat
+QF_LRA/sc/sc-18.induction.cvc.smt2	unknown/0	unknown/0	unknown/0	sat/0	sat/0	sat/0	STABLE-GAIN	sat
+QF_LRA/uart/uart-8.base.cvc.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN	unsat

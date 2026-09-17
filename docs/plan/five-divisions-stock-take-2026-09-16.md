@@ -128,12 +128,28 @@ merge (one stale fuzz premise sat red on main for 40 minutes).
    failed and the lever stays OFF. The four pinned gains are one benchmark
    family (`meti-tarski/atan/problem/2`); the held-out draw does not contain
    the shape.
-2. **QF_LRA admission currency** (27 files): admit the online tableau on
-   nonzeros, the currency the cube decider already uses (`lra_online.rs:2144`),
-   not dense cells. Then **the disequality split lemma** (11 files): turn the
-   replay-gate detection at `lra_theory.rs:498` into `(or (<= x y) (>= x y))`
-   the way cvc5 does. Both mechanism-named, both small, both with the five
-   LRA/DL/LIA z3 fuzzes mandatory.
+2. ~~**QF_LRA admission currency** (27 files) … **the disequality split
+   lemma** (11 files)~~ Done 2026-09-17, lane a13-lra
+   (`bench-results/lra-admission-diseq-20260917/`, ADR-2146, ADR-2147).
+   **The split ships ON** (ADR-2147 accepted): pinned `QF_LRA` 107 → 113
+   with 5 STABLE-GAIN + 1 UNSTABLE after 3× recheck (`sc-7 … sc-17`, all
+   `unsat` = `:status`), held-out 93 → 97 (4, all stable), `QF_UFLRA`
+   148 → 150 (2 stable), `QF_IDL`/`QF_RDL` unmoved, 0 losses / flips /
+   disagreements / aborts. The other 5 of the census's 11 (`sc-19 … sc-25`,
+   `pursuit-safety-16`) trade the wall for a search that does not finish in
+   24 s. **The admission currency stays OFF** (ADR-2146 proposed): every one
+   of the 27 has more than the 1,024 atoms the shipped screen admits, so the
+   lever is inert at the shipped screen by arithmetic (107/107, 93/93,
+   148/148, wall identical); under `AXEYUM_LRA_ATOM_SCREEN=16` it turns the
+   screen's 8 rc-134 aborts into clean `unknown`s, decides none of the 27
+   (the witness wall goes, the search behind it runs the whole budget), and
+   costs one STABLE-LOSS by routing (`ecoliMILP…`, decided by a later rung
+   after a millisecond FM decline the tableau now replaces with 24 s). Two
+   defects found on the way: the ADR-1704 artifact constructor panicked on a
+   lemma over a fresh variable, and the shipped route could not refute
+   `x ≠ y ∧ x ≤ y ∧ x ≥ y`. The next `QF_LRA` lever is budget hand-back
+   from a non-converging online search (the `ecoliMILP` shape) and the
+   larger `sc` files' search cost, not admission.
 3. **QF_NIA lemmas versus budget**: separate "emit the two lemma classes" from
    "widen `RefinementSetup::refine`'s slice"; the three losing files score it
    directly. On 0 stable losses, arm `AXEYUM_NIA_ORDER_LEMMAS`.

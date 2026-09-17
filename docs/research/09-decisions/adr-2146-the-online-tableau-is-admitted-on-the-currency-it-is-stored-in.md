@@ -1,7 +1,7 @@
 # ADR-2146: the online engine's tableau is admitted on the currency it is stored in
 
 Status: proposed
-Index-summary: The LRA-MODEL-REPLAY census's largest bucket -- **27 of 47** undecided `QF_LRA` rows at the census screen -- had NO warm tableau: `LraTheory::try_new_with_budget` admits the online CDCL(T) engine's tableau on `TableauAdmission::DenseCells`, `m x (nvars+m)` against `MAX_TABLEAU_CELLS`, a count over storage ADR-2111 made sparse, so the witness fell to `solve_values` (a full Fourier-Motzkin elimination keeping a clone of the whole system per variable) and declined with the clock still available. ADR-2125 already asks the nonzero question for the offline cube decider; the online route's own doc said it does not. Sized at head: 27 / 27 still stop there at 16x -- and **27 / 27 stop at the ATOM SCREEN at the shipped multiplier**, because every one has more than the 1,024 atoms `AXEYUM_LRA_ATOM_SCREEN=1` admits (`sc-27` at 1,036 is the smallest), so at the shipped screen this lever can touch none of the census population and its own A/B measures the files under the screen whose dense count crosses the cap. `AXEYUM_LRA_ADMIT_NONZEROS=1` routes construction through `Incremental::with_online_admission`: entry nonzeros against `MAX_ONLINE_TABLEAU_NONZEROS` (400,000, ADR-2125's figure, deliberately the same), rows against `MAX_ONLINE_TABLEAU_ROWS` (65,536; the dense cap bounded rows implicitly at 2,000 and a nonzero count does not), and -- the half an entry count cannot supply -- a RUN-TIME fill-in cap `MAX_TABLEAU_FILL_NONZEROS` (4,000,000, the dense number in the sparse currency) that `Tableau::run` checks BEFORE a pivot whose worst-case fill-in (`col_nnz[entering] x nnz(pivot row)`) would cross it, because ADR-2132 measured fill-in growing a warm tableau 21x. `Tableau::fill_cap` is `None` for every other constructor, so the OFF arm runs the identical pivot loop. Smoke at 16x with the lever: `Gcd_havoc` and `_sanfoundry_10_ground` go from a model decline at the FIRST complete check to 445 and 100 complete checks in the budget -- the wall is removed and the search does not finish. A/B and decision: see the tables.
+Index-summary: The LRA-MODEL-REPLAY census's largest bucket -- **27 of 47** undecided `QF_LRA` rows at the census screen -- had NO warm tableau: `LraTheory::try_new_with_budget` admits the online CDCL(T) engine's tableau on `TableauAdmission::DenseCells`, `m x (nvars+m)` against `MAX_TABLEAU_CELLS`, a count over storage ADR-2111 made sparse, so the witness fell to `solve_values` (a full Fourier-Motzkin elimination keeping a clone of the whole system per variable) and declined with the clock still available. ADR-2125 already asks the nonzero question for the offline cube decider; the online route's own doc said it does not. Sized at head: 27 / 27 still stop there at 16x -- and **27 / 27 stop at the ATOM SCREEN at the shipped multiplier**, because every one has more than the 1,024 atoms `AXEYUM_LRA_ATOM_SCREEN=1` admits (`sc-27` at 1,036 is the smallest), so at the shipped screen this lever can touch none of the census population and its own A/B measures the files under the screen whose dense count crosses the cap. `AXEYUM_LRA_ADMIT_NONZEROS=1` routes construction through `Incremental::with_online_admission`: entry nonzeros against `MAX_ONLINE_TABLEAU_NONZEROS` (400,000, ADR-2125's figure, deliberately the same), rows against `MAX_ONLINE_TABLEAU_ROWS` (65,536; the dense cap bounded rows implicitly at 2,000 and a nonzero count does not), and -- the half an entry count cannot supply -- a RUN-TIME fill-in cap `MAX_TABLEAU_FILL_NONZEROS` (4,000,000, the dense number in the sparse currency) that `Tableau::run` checks BEFORE a pivot whose worst-case fill-in (`col_nnz[entering] x nnz(pivot row)`) would cross it, because ADR-2132 measured fill-in growing a warm tableau 21x. `Tableau::fill_cap` is `None` for every other constructor, so the OFF arm runs the identical pivot loop. Smoke at 16x with the lever: `Gcd_havoc` and `_sanfoundry_10_ground` go from a model decline at the FIRST complete check to 445 and 100 complete checks in the budget -- the wall is removed and the search does not finish. A/B: **inert at the shipped screen** -- pinned 107 -> 107, held-out 93 -> 93, QF_UFLRA 148 -> 148, wall identical -- so it stays OFF. The composition at 16x: the 8 rc-134 aborts the screen alone produces become 0, none of the 27 decides (the wall is gone and the search behind it runs the whole budget), and one STABLE-LOSS is routing (`ecoliMILP…` was decided by a later rung after a millisecond FM decline that the tableau now replaces with a 24 s search).
 Index-status: proposed
 Date: 2026-09-17
 
@@ -150,18 +150,85 @@ suite.
 
 ## The measurement
 
-<!-- A/B tables: filled in from bench-results/lra-admission-diseq-20260917 -->
+The same A/B as ADR-2147 (one binary, four env arms interleaved per file,
+s5/s6, `bench-results/lra-admission-diseq-20260917/ab/`); this lever is the
+`nz` arm, and `both` is `nz` + the split.
 
-_Pending: the A/B tables (QF_LRA pinned 200, QF_UFLRA pinned 200 — the
-`uflra_online` route constructs the same theory through `new_with_deadline`,
-so this lever reaches it; QF_RDL and QF_IDL controls; QF_LRA held-out 200),
-the composition with `AXEYUM_LRA_ATOM_SCREEN=16` on the pinned 200, the 3×
-rechecks, and the ship decision are appended when the sweeps on s5/s6
-complete._
+| population | base | `nz` | gains | losses | flips | `:status` disagreements | rc-134 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `QF_LRA` pinned 200 | 107 | **107** | 0 | 0 | 0 | 0 | 0 |
+| `QF_LRA` held-out 200 | 93 | **93** | 0 | 0 | 0 | 0 | 0 |
+| `QF_UFLRA` pinned 200 | 148 | **148** | 0 | 0 | 0 | 0 | 0 |
+| `QF_IDL` / `QF_RDL` (as `both`) | 112 / 150 | 112 / 150 | 0 | 0 | 0 | 0 | 0 |
+
+Wall identical to the millisecond on the pinned sets (2,281 vs 2,281 s;
+1,856 vs 1,853 s). **The lever is inert at the shipped screen, as the sizing
+predicted from the atom counts**: no file at or under the screen on these
+draws has a dense count over the cap, and every file whose dense count does
+exceed it is refused by the screen first. `both` reproduces `sp` row for
+row. The ship criterion's gain clause fails on every population; **the lever
+stays OFF** and this ADR stays `proposed`.
+
+### The composition the census population exists under
+
+`QF_LRA` pinned 200, `s16` (`AXEYUM_LRA_ATOM_SCREEN=16`, ADR-2111's
+multiplier at which the 27 are admitted) against `s16both` (the screen plus
+both levers), two arms interleaved per file, s6:
+
+| arm | decided | gains | losses | flips | `:status` disagreements | **rc-134 aborts** |
+|---|---:|---:|---:|---:|---:|---:|
+| `s16` | 107 | — | — | — | 0 | **8** |
+| `s16both` | 112 | 6 (`sc-7 … sc-17`, ADR-2147's) | 1 (`latendresse/ecoliMILPglycerolYices3-50000`, `sat` → `unknown`) | 0 | 0 | **0** |
+
+3× recheck: 6 STABLE-GAIN, **1 STABLE-LOSS**. Three readings, each of which
+this lever owns:
+
+1. **The 8 aborts are gone.** At 16× the screen alone aborts 8 LassoRanker
+   rows (exit 134, no verdict) — the census recorded the same 8 — and every
+   one of them is `unknown` with exit 0 under the nonzero admission. Those
+   allocations were the Fourier–Motzkin witness extraction's, reached
+   BECAUSE the tableau was refused; with the engine present they are never
+   made. Smoked with `--trace` on `Canberra.bpl_Iteration1_Lasso_6`: rc 134
+   at 9.9 s under the screen alone, `unknown` at 24 s with 43 complete
+   checks and `fill_cap_declines=0` under the composition — the cap did not
+   have to fire to keep the bytes out; the engine's existence did.
+2. **None of the 27 decides.** Every one goes from a model decline at the
+   first complete check to a search that runs the whole budget
+   (`Gcd_havoc`: 445 complete checks; `_sanfoundry_10_ground`: 100). The
+   witness wall is removed; the search behind it does not finish in 24 s.
+   The prize the census sized at 27 is, measured, 0 at this budget.
+3. **One stable loss, and it is routing, not soundness.**
+   `ecoliMILPglycerolYices3-50000` (4,699 atoms, 52 equality atoms false)
+   was `unknown` from the online route in milliseconds — the FM decline —
+   and then decided `sat` by a later rung (`decided_by nra` in the census).
+   With a tableau the online route keeps the budget and the later rung never
+   runs. That is ADR-2045's shape one level up: a cheap decline was
+   load-bearing for the ladder. A screen-16 composition that ships would
+   need the online route to hand back the budget on a search that is not
+   converging, which is a different lever.
+
+So at 16× the composition is +6 (all ADR-2147's) − 1 = +5, with 8 aborts
+turned into clean `unknown`s; the census's 27 contribute the aborts and the
+loss, and no gains. `AXEYUM_LRA_ATOM_SCREEN` stays at 1.
 
 ## Gates run
 
-_Pending: filled in with counts._
+As ADR-2147's list (the two levers share every gate), with this lever's own:
+`the_nonzero_admission_builds_the_tableau_the_dense_cap_refuses`,
+`the_two_admissions_agree_on_a_satisfiable_and_an_infeasible_system`,
+`the_admission_arms_agree_through_the_route_on_a_query_the_dense_cap_refuses`,
+`the_online_admission_refuses_on_rows_alone`,
+`the_online_admission_refuses_on_nonzeros_alone`,
+`the_fill_cap_declines_before_the_pivot_that_would_cross_it`,
+`the_live_nonzero_count_matches_the_recount_after_every_pivot`, all green;
+`boundary_tableaux_agree_with_z3` and `the_boundary_seeds_cross_the_dense_cap`
+green in every env arm; the five mutation suites each `killed 1`.
+
+One test-isolation finding: the two agreement tests decide their DENSE arm
+by Fourier–Motzkin, whose every step polls the process-global memory
+watchdog, and under the 4-thread lib sweep a concurrent watchdog test tripped
+it (2 of 1,680 failed; both pass alone). They now hold `WATCHDOG_LOCK` and
+`PROBE_LOCK` like every watchdog-touching test in `lra.rs`.
 
 ## Consequences
 

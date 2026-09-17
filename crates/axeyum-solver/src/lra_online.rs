@@ -3301,9 +3301,22 @@ pub struct LraOnlineLevers {
 }
 
 impl LraOnlineLevers {
-    /// Both levers OFF: the shipped route, byte for byte.
+    /// The SHIPPED arms: the split ON (ADR-2147 accepted it on 5 + 4 stable
+    /// gains against 0 losses over the pinned and held-out `QF_LRA` draws), the
+    /// nonzero admission OFF (ADR-2146: inert at the shipped atom screen).
     #[must_use]
     pub const fn shipped() -> Self {
+        Self {
+            admit_nonzeros: false,
+            diseq_split: true,
+        }
+    }
+
+    /// Both levers OFF: the route as it was before ADR-2146 / ADR-2147 — the
+    /// arm every A/B in those ADRs is a difference against, and the one whose
+    /// `unknown` at the replay gate the soundness fixtures assert.
+    #[must_use]
+    pub const fn off() -> Self {
         Self {
             admit_nonzeros: false,
             diseq_split: false,
@@ -3321,15 +3334,28 @@ impl LraOnlineLevers {
     }
 }
 
-/// The lever spellings: `1` and `on` (case-insensitive, trimmed) arm a lever;
-/// **everything else, the empty string included, is OFF.** A lever is the only
-/// difference between two arms of an A/B, so a typo must produce the shipped
-/// route and not a third behaviour — the ADR-2125 rule, kept here verbatim.
+/// The spellings of a lever that SHIPS OFF: `1` and `on` (case-insensitive,
+/// trimmed) arm it; **everything else, the empty string included, is OFF.** A
+/// lever is the only difference between two arms of an A/B, so a typo must
+/// produce the shipped route and not a third behaviour — the ADR-2125 rule,
+/// kept here verbatim.
 #[must_use]
 pub(crate) fn parse_lever(value: Option<&str>) -> bool {
     matches!(
         value.map(|v| v.trim().to_ascii_lowercase()).as_deref(),
         Some("1" | "on")
+    )
+}
+
+/// The spellings of a lever that SHIPS ON: `0` and `off` disarm it;
+/// **everything else, unset and the empty string included, is ON** — the same
+/// rule as [`parse_lever`] with the shipped route on the other side, so a typo
+/// in an A/B still measures the shipped route and not a third behaviour.
+#[must_use]
+pub(crate) fn parse_lever_default_on(value: Option<&str>) -> bool {
+    !matches!(
+        value.map(|v| v.trim().to_ascii_lowercase()).as_deref(),
+        Some("0" | "off")
     )
 }
 
@@ -3352,7 +3378,10 @@ fn admit_nonzeros_lever() -> bool {
 
 /// Lever (`AXEYUM_LRA_DISEQ_SPLIT`, ADR-2147): turn a disequality the
 /// candidate model violates into a case split the SAT search does, instead of
-/// an `unknown`. Read once, as above.
+/// an `unknown`. Read once, as above. **Ships ON** (`0` | `off` disarms it):
+/// the A/B was 5 stable gains on the pinned `QF_LRA` 200, 4 on the held-out
+/// 200 and 2 on `QF_UFLRA`, against 0 losses, 0 flips, 0 `:status`
+/// disagreements and 0 aborts, with `QF_IDL` / `QF_RDL` unmoved.
 fn diseq_split_lever() -> bool {
     /// The lever's environment variable, and the `config_registry` entry's name.
     const AXEYUM_LRA_DISEQ_SPLIT: &str = "AXEYUM_LRA_DISEQ_SPLIT";
@@ -3361,7 +3390,7 @@ fn diseq_split_lever() -> bool {
         crate::config_registry::note_consulted(
             "crates/axeyum-solver/src/lra_online.rs::AXEYUM_LRA_DISEQ_SPLIT",
         );
-        parse_lever(std::env::var(AXEYUM_LRA_DISEQ_SPLIT).ok().as_deref())
+        parse_lever_default_on(std::env::var(AXEYUM_LRA_DISEQ_SPLIT).ok().as_deref())
     })
 }
 
@@ -9049,7 +9078,7 @@ mod tests {
             &atoms,
             None,
             budget,
-            LraOnlineLevers::shipped(),
+            LraOnlineLevers::off(),
         )
         .expect("built");
         assert!(

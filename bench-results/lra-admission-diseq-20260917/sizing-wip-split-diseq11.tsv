@@ -1,0 +1,12 @@
+file	verdict	rc	ms	online_probe	probe_sites	equalities	eq_false	diseq_violated	splits	split_conflicts	simplex_rows	diseq_splits_trace	fill_cap_declines	status
+QF_LRA/sal/pursuit/pursuit-safety-16.smt2	unknown	0	24032	n/a	lra_theory:no-model-reconstructed=1;simplex-declined=1;	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-11.base.cvc.smt2	unsat	0	2512	n/a	none	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-13.base.cvc.smt2	unsat	0	7310	n/a	none	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-15.base.cvc.smt2	unsat	0	15315	n/a	none	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-17.base.cvc.smt2	unsat	0	20920	n/a	none	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-19.base.cvc.smt2	unknown	0	24021	n/a	lra_theory:no-model-reconstructed=1;simplex-declined=1;	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-21.base.cvc.smt2	unknown	0	24023	n/a	lra_theory:no-model-reconstructed=1;simplex-declined=1;	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-23.base.cvc.smt2	unknown	0	24023	n/a	lra_theory:no-model-reconstructed=1;simplex-declined=1;	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-25.base.cvc.smt2	unknown	0	24022	n/a	lra_theory:no-model-reconstructed=1;simplex-declined=1;	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-7.base.cvc.smt2	unsat	0	606	n/a	none	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-9.base.cvc.smt2	unsat	0	1506	n/a	none	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	unsat

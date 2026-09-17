@@ -1,0 +1,12 @@
+file	verdict	rc	ms	online_probe	probe_sites	equalities	eq_false	diseq_violated	splits	split_conflicts	simplex_rows	diseq_splits_trace	fill_cap_declines	status
+QF_LRA/sal/pursuit/pursuit-safety-16.smt2	unknown	0	24131	n/a	lra_theory:model-built-but-does-not-replay=1;	650	392	69	0	0	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-11.base.cvc.smt2	unknown	0	24123	n/a	lra_theory:model-built-but-does-not-replay=1;	342	162	3	0	0	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-13.base.cvc.smt2	unknown	0	24121	n/a	lra_theory:model-built-but-does-not-replay=1;	404	192	12	0	0	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-15.base.cvc.smt2	unknown	0	24124	n/a	lra_theory:model-built-but-does-not-replay=1;	466	224	8	0	0	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-17.base.cvc.smt2	unknown	0	24033	n/a	lra_theory:model-built-but-does-not-replay=1;	528	254	11	0	0	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-19.base.cvc.smt2	unknown	0	24124	n/a	lra_theory:model-built-but-does-not-replay=1;	590	282	9	0	0	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-21.base.cvc.smt2	unknown	0	24023	n/a	lra_theory:model-built-but-does-not-replay=1;	652	308	9	0	0	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-23.base.cvc.smt2	unknown	0	24132	n/a	lra_theory:model-built-but-does-not-replay=1;	714	341	16	0	0	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-25.base.cvc.smt2	unknown	0	24134	n/a	lra_theory:model-built-but-does-not-replay=1;	776	371	8	0	0	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-7.base.cvc.smt2	unknown	0	24131	n/a	lra_theory:model-built-but-does-not-replay=1;	218	103	9	0	0	n/a	n/a	n/a	unsat
+QF_LRA/sc/sc-9.base.cvc.smt2	unknown	0	24034	n/a	lra_theory:model-built-but-does-not-replay=1;	280	135	4	0	0	n/a	n/a	n/a	unsat

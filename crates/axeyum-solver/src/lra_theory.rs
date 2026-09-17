@@ -1150,13 +1150,9 @@ mod tests {
         let eq = arena.eq(x, y).expect("x=y");
         let neq = arena.not(eq).expect("x!=y");
         let config = SolverConfig::default();
-        let shipped = check_qf_lra_online_cdclt_with_levers(
-            &arena,
-            &[neq],
-            &config,
-            LraOnlineLevers::shipped(),
-        )
-        .expect("result");
+        let shipped =
+            check_qf_lra_online_cdclt_with_levers(&arena, &[neq], &config, LraOnlineLevers::off())
+                .expect("result");
         let CheckResult::Unknown(reason) = shipped else {
             panic!("the shipped arm must not decide a bare disequality: {shipped:?}");
         };
@@ -1196,7 +1192,7 @@ mod tests {
             &arena,
             &[neq, le, ge],
             &config,
-            LraOnlineLevers::shipped(),
+            LraOnlineLevers::off(),
         )
         .expect("result");
         assert!(
@@ -1249,7 +1245,7 @@ mod tests {
             &arena,
             &assertions,
             &config,
-            LraOnlineLevers::shipped(),
+            LraOnlineLevers::off(),
         )
         .expect("result");
         assert!(
@@ -1341,12 +1337,14 @@ mod tests {
         );
     }
 
-    /// The shipped arm is the ENVIRONMENT's arm when nothing is set, and the
-    /// spellings are what the registry says: `1` and `on` arm a lever, and
-    /// anything else — a typo, the empty string — is OFF.
+    /// The shipped arms are the ENVIRONMENT's arms when nothing is set, and the
+    /// spellings are what the registry says: for the OFF-shipping nonzero
+    /// admission `1` and `on` arm it and anything else is OFF; for the
+    /// ON-shipping split `0` and `off` disarm it and anything else is ON. In
+    /// both directions a typo measures the shipped route.
     #[test]
-    fn the_lever_spellings_and_the_default_are_off() {
-        use crate::lra_online::parse_lever;
+    fn the_lever_spellings_and_the_shipped_defaults() {
+        use crate::lra_online::{parse_lever, parse_lever_default_on};
         assert!(parse_lever(Some("1")));
         assert!(parse_lever(Some("on")));
         assert!(parse_lever(Some(" ON ")));
@@ -1356,6 +1354,22 @@ mod tests {
         assert!(!parse_lever(Some("yes")));
         assert!(!parse_lever(Some("true")));
         assert!(!parse_lever(None));
+        assert!(parse_lever_default_on(None));
+        assert!(parse_lever_default_on(Some("")));
+        assert!(parse_lever_default_on(Some("1")));
+        assert!(parse_lever_default_on(Some("on")));
+        assert!(parse_lever_default_on(Some("nonsense")));
+        assert!(!parse_lever_default_on(Some("0")));
+        assert!(!parse_lever_default_on(Some("off")));
+        assert!(!parse_lever_default_on(Some(" OFF ")));
+        assert_eq!(
+            LraOnlineLevers::shipped(),
+            LraOnlineLevers {
+                admit_nonzeros: false,
+                diseq_split: true,
+            },
+            "ADR-2147 ships the split ON and ADR-2146 ships the admission OFF"
+        );
         if std::env::var_os("AXEYUM_LRA_ADMIT_NONZEROS").is_none()
             && std::env::var_os("AXEYUM_LRA_DISEQ_SPLIT").is_none()
         {
@@ -1365,6 +1379,29 @@ mod tests {
                 "with both variables unset the route must be the shipped one"
             );
         }
+    }
+
+    /// The default-carrying test, ADR-2140's shape: exactly this dies on a
+    /// moved default. `x ≠ y` alone through the PRODUCTION entry point, with
+    /// no lever named, is `sat` — the replay wall is gone from the shipped
+    /// route. Skipped by name when the variable is set, because a test that
+    /// passes only under an ambient value is a gate on one shell.
+    #[test]
+    fn the_shipped_route_decides_a_bare_disequality() {
+        if std::env::var_os("AXEYUM_LRA_DISEQ_SPLIT").is_some() {
+            return;
+        }
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let eq = arena.eq(x, y).expect("x=y");
+        let neq = arena.not(eq).expect("x!=y");
+        let verdict =
+            check_qf_lra_online_cdclt(&arena, &[neq], &SolverConfig::default()).expect("result");
+        let CheckResult::Sat(model) = verdict else {
+            panic!("the shipped route must decide x ≠ y: {verdict:?}");
+        };
+        assert!(replays(&arena, &[neq], &model));
     }
 
     // ------------------------------------------------------------------
@@ -1413,7 +1450,7 @@ mod tests {
             &assertions,
             None,
             DEFAULT_ONLINE_LRA_BUDGET_BYTES,
-            LraOnlineLevers::shipped(),
+            LraOnlineLevers::off(),
         )
         .expect("built");
         assert!(
@@ -1437,7 +1474,7 @@ mod tests {
         );
         let config = SolverConfig::default();
         for levers in [
-            LraOnlineLevers::shipped(),
+            LraOnlineLevers::off(),
             LraOnlineLevers {
                 admit_nonzeros: true,
                 diseq_split: false,
@@ -1460,7 +1497,7 @@ mod tests {
         let mut infeasible = assertions.clone();
         infeasible.push(arena.real_gt(e0, zero).expect("e0>0"));
         for levers in [
-            LraOnlineLevers::shipped(),
+            LraOnlineLevers::off(),
             LraOnlineLevers {
                 admit_nonzeros: true,
                 diseq_split: false,

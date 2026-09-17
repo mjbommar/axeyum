@@ -1,8 +1,8 @@
 # ADR-2147: a disequality the candidate model violates is a case split, not an `unknown`
 
-Status: proposed
-Index-summary: The LRA-MODEL-REPLAY census found 11 pinned `QF_LRA` files losing their verdict to ONE dropped case -- `LraTheory::assert` turns an equality atom asserted FALSE into nothing (`lra_online.rs`, `(AtomKind::Equality { .. }, false) => Vec::new()`) under a comment that said the driver never sets one; true of the offline driver it named, false of the CDCL(T) driver, whose `is_lra_atom` admits every real `Op::Eq`. Sized at head with the shipped route's own probe: `sc-25` has **371 of 776** equality atoms false at the moment the witness is read out (the census's number exactly), 8 of them violated by the point. The repair is cvc5's shape (`splitDisequalities`, `theory_arith_private.cpp:4251-4286`): at a FEASIBLE complete check, evaluate each false equality at the point and, for one on its hyperplane, register `e < c` and `e > c` as fresh atoms -- once per equality, ever -- riding the equality's OWN two tableau rows at the strict relation, so no row is added mid-search and none is ever bounded twice; the three trichotomy edges `{eq,lt}`, `{eq,gt}`, `{lt,gt}` fall out of the existing form-bound crossing at `assert`, and `{~eq,~lt,~gt}` is the one new conflict, at the next complete check. The native core polls `take_new_atoms` once more after a `Sat` final check, because the point exists only there. TWO defects found on the way: the ADR-1704 artifact constructor PANICKED on a lemma over a fresh variable (`TheoryRefutation::from_cnf_and_lemmas`, widened), and the shipped route cannot refute `x != y, x <= y, x >= y` at all (`unknown`, not `unsat`). Smoke on the census family: `sc-7` unknown@24 s -> **unsat in 0.6 s** (23 splits, 15 trichotomy conflicts), `sc-9/11/13/15/17` all `unsat` under 21 s, `sc-19..25` and `pursuit-safety-16` still `unknown` -- the split turns a wall into a search that does not finish. A/B and decision: see the tables.
-Index-status: proposed
+Status: accepted
+Index-summary: The LRA-MODEL-REPLAY census found 11 pinned `QF_LRA` files losing their verdict to ONE dropped case -- `LraTheory::assert` turns an equality atom asserted FALSE into nothing (`lra_online.rs`, `(AtomKind::Equality { .. }, false) => Vec::new()`) under a comment that said the driver never sets one; true of the offline driver it named, false of the CDCL(T) driver, whose `is_lra_atom` admits every real `Op::Eq`. Sized at head with the shipped route's own probe: `sc-25` has **371 of 776** equality atoms false at the moment the witness is read out (the census's number exactly), 8 of them violated by the point. The repair is cvc5's shape (`splitDisequalities`, `theory_arith_private.cpp:4251-4286`): at a FEASIBLE complete check, evaluate each false equality at the point and, for one on its hyperplane, register `e < c` and `e > c` as fresh atoms -- once per equality, ever -- riding the equality's OWN two tableau rows at the strict relation, so no row is added mid-search and none is ever bounded twice; the three trichotomy edges `{eq,lt}`, `{eq,gt}`, `{lt,gt}` fall out of the existing form-bound crossing at `assert`, and `{~eq,~lt,~gt}` is the one new conflict, at the next complete check. The native core polls `take_new_atoms` once more after a `Sat` final check, because the point exists only there. TWO defects found on the way: the ADR-1704 artifact constructor PANICKED on a lemma over a fresh variable (`TheoryRefutation::from_cnf_and_lemmas`, widened), and the shipped route cannot refute `x != y, x <= y, x >= y` at all (`unknown`, not `unsat`). Smoke on the census family: `sc-7` unknown@24 s -> **unsat in 0.6 s** (23 splits, 15 trichotomy conflicts), `sc-9/11/13/15/17` all `unsat` under 21 s, `sc-19..25` and `pursuit-safety-16` still `unknown` -- the split turns a wall into a search that does not finish. A/B: pinned 107 -> 113 (5 STABLE-GAIN + 1 UNSTABLE after 3x recheck), held-out 93 -> 97, QF_UFLRA 148 -> 150 (2 stable), QF_IDL/QF_RDL unmoved, 0 losses, 0 flips, 0 `:status` disagreements, 0 aborts. **SHIPS ON.**
+Index-status: accepted
 Date: 2026-09-17
 
 ## Context
@@ -249,15 +249,91 @@ re-poll), `lra-diseq-split-keeps-eq` (the core drops `eq`),
 
 ## The measurement
 
-<!-- A/B tables: filled in from bench-results/lra-admission-diseq-20260917 -->
+One binary (`smtcomp_cli`, `--release --features full`, sha256
+`8079669575dc…`), env arms interleaved per file on the same pinned core with
+the arm order rotating per file, 24 s / 8 GiB `ulimit -v`, `$EPOCHREALTIME`
+timing (200 ms self-check 203–204 ms), hosts s5 and s6 idle at launch
+(`bench-results/lra-admission-diseq-20260917/`, `ab/` for every row).
+Four arms: `base` (nothing set), `nz` (ADR-2146), `sp` (this lever), `both`.
 
-_Pending: the A/B tables (QF_LRA pinned 200, QF_UFLRA pinned 200, QF_RDL and
-QF_IDL controls, QF_LRA held-out 200), the 3× rechecks, and the ship decision
-are appended when the sweeps on s5/s6 complete._
+| population | base | `sp` | `both` | gains | losses | flips | `:status` disagreements | rc-134 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `QF_LRA` pinned 200 | **107** | **113** | 113 | 6 (`sc-7/9/11/13/15/17`, all `unsat` = `:status`) | 0 | 0 | 0 | 0 in every arm |
+| `QF_LRA` held-out 200 (ADR-2132's draw, disjoint) | **93** | **97** | 97 | 4 (`uart-8.base` unsat; `sc-10.induction2`, `sc-15.induction2`, `sc-18.induction` sat) | 0 | 0 | 0 | 0 |
+| `QF_UFLRA` pinned 200 | **148** | **150** | 150 | 2 (`cpachecker-induction … minepump_spec{3,4}`, unsat) | 0 | 0 | 0 | 0 |
+| `QF_IDL` pinned 200 (control, `base` / `both`) | 112 | — | 112 | 0 | 0 | 0 | 0 | 0 |
+| `QF_RDL` pinned 200 (control, `base` / `both`) | 150 | — | 150 | 0 | 0 | 0 | 0 | 0 |
+
+`base` re-derives the board's 107 exactly. Wall on the pinned 200 fell
+2,281 → 2,173 s (the six files that used to burn 24 s each now decide in
+0.5–20 s). The `sc` gains carry `diseq_splits` in the trace (sc-7: 23 splits,
+15 trichotomy conflicts, 0.6 s).
+
+**3× rechecks** (`recheck-movers-env.sh`, three passes per arm, arms
+alternating within the passes, one binary, `-` against
+`AXEYUM_LRA_DISEQ_SPLIT=1`):
+
+| population | STABLE-GAIN | STABLE-LOSS | UNSTABLE |
+|---|---:|---:|---:|
+| `QF_LRA` pinned | **5** (`sc-7/9/11/13/15`) | 0 | 1 (`sc-17`: `unsat` 2/3, decided at 19–20 s of 24) |
+| `QF_LRA` held-out | **4** (`uart-8.base`, `sc-10.induction2`, `sc-15.induction2`, `sc-18.induction`) | 0 | 0 |
+| `QF_UFLRA` pinned | **2** | 0 | 0 |
+
+The same rows rechecked `-` against `both` classify identically (the nonzero
+admission is inert at the shipped screen, ADR-2146).
+
+**Ship criterion** (0 stable losses, 0 flips, 0 `:status` disagreements,
+≥ 1 stable gain on pinned AND held-out, no new abort): **met** — 5 stable
+pinned gains, 4 stable held-out gains, 2 stable `QF_UFLRA` gains,
+0 losses of any kind, 0 flips, 0 disagreements over every decided row, 0
+aborts in any arm, both DL controls unmoved. **The split ships ON**:
+`AXEYUM_LRA_DISEQ_SPLIT` is read with `parse_lever_default_on` (`0` | `off`
+disarms it, anything else is ON), `LraOnlineLevers::shipped()` carries it,
+`LraOnlineLevers::off()` is the pre-ADR route every fixture compares against,
+and `the_shipped_route_decides_a_bare_disequality` is the default-carrying
+test (ADR-2140's shape: exactly it dies on a moved default).
+
+What the split does NOT buy, measured: the larger `sc-19 … sc-25` and
+`pursuit-safety-16` (the other 5 of the census's 11) still time out — the
+wall is gone and the search that replaces it does not finish in 24 s. Under
+`AXEYUM_LRA_ATOM_SCREEN=16` (ADR-2146's composition table) the same six
+`sc` files are the only gains.
 
 ## Gates run
 
-_Pending: filled in with counts._
+Every count nonzero, read from the `test result:` line
+(`/data0/axeyum-lane-scratch/a13-lra/gates*/`):
+
+* the five z3 differential fuzzes — `qf_lra_differential_fuzz` (8),
+  `simplex_lra_fallback_differential` (1), `qf_uflra_differential_fuzz` (2),
+  `difference_logic_differential_fuzz` (4), `qf_lia_differential_fuzz` (5) —
+  in all four env arms before the flip (20 runs, exit 0) and again after it
+  (unset = ON, `off`, `nz`, `nz`+`off`): 20 runs, exit 0, the same counts; the QF_LRA fuzz with `--nocapture` reads **1,500 / 1,500 agree, 0 unknown, 0 disagree** and the boundary class **12 / 12 agree** in both admission arms;
+* `corpus_regression --features full`: 2 passed (before and after the flip);
+* `--lib --features full lra`: 162 passed, in three arms; `simplex`: 43;
+* the full solver lib sweep the push hook runs (`--skip reconstruct::`,
+  4 threads): 1,679 / 1,680 with the one red
+  (`euf_egraph::…_is_bounded_by_timeout`) load-sensitive — it failed twice
+  under other lanes' load of 55–105 and passed alone at load 1.4 (292 s);
+  every other theory's `take_new_atoms` is 0, so the re-poll is a no-op on
+  that route; post-flip, quiet box: **1,681 passed, 0 failed**;
+* `axeyum-cnf --lib`: 645 passed;
+* `lia_online` (9), `lra_online` (9, in three arms), `cdclt_lra_online` (10),
+  `cdclt_lia_online` (10), `lra_warm_screen_2132` (3), `lra` (20),
+  post-flip also `uflra_online` (21) and `uflia_online` (33: 32 + `opaque_app_interface_overflow_declines_without_enumerative_fallback`, which fails identically with the split OFF and fails the same way at the merge base `43f1e0f90` in a `lane-snapshot.sh` tree: pre-existing on main, not this diff);
+* workspace `clippy --all-targets --all-features -D warnings`: exit 0;
+  `cargo check --workspace --all-targets`: clean; `cargo fmt --all --check`:
+  clean; `check-config-registry-staleness.py`: 0 unexplained;
+  `check-suite-gating.py`: PASS; `check-lcg-raw-state.py`: PASS;
+  `check-merge-hygiene.sh`: PASS; `check-links.sh`: all links ok;
+* mutation controls: nine suites, every mutation `killed 1` naming its one
+  test, `--check-anchors` stale=0 — after ONE finding: the first sat-side
+  fixture SURVIVED the eq-dropping mutation (the search decided `eq` true
+  first and never split), and was replaced by one whose first branch is the
+  split (§controls);
+* `progress_frontier --features full -- --test-threads=1` on `taskset -c 0-7`,
+  box at load 3: **12 passed, 0 REGRESSION** (baselines re-calibrated by the
+  run and restored, not committed).
 
 ## Consequences
 
