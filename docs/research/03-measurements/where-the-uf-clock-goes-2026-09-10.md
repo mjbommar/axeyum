@@ -415,7 +415,7 @@ never measured here.
 
 ```sh
 scripts/cargo-serialized.sh build --release -p axeyum-bench --example smtcomp_cli \
-  --features axeyum-solver/full
+  --features full
 AXEYUM_QTRACE=1 AXEYUM_QPROBE=1 taskset -c 0-7 \
   ./target/release/examples/smtcomp_cli <file> --timeout-ms 24000 --trace
 ```

@@ -318,7 +318,7 @@ this isolated worktree, never in the shared checkout.
 
 ```sh
 scripts/cargo-serialized.sh build --release -p axeyum-bench \
-    --example axeyum_cli --features axeyum-solver/full
+    --example axeyum_cli --features full
 
 # the arm this note measured. THE SHIPPED DEFAULT IS 0, so an unset variable
 # is the OFF arm and reproduces the unpatched binary.

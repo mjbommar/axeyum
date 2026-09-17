@@ -403,7 +403,7 @@ warning that having the term is not sufficient.
 
 ```sh
 scripts/cargo-serialized.sh build --release -p axeyum-bench \
-    --example axeyum_cli --features axeyum-solver/full
+    --example axeyum_cli --features full
 AXEYUM_QGROUNDDUMP=/tmp/f29.dump ./target/release/examples/axeyum_cli \
     /nas3/.../UF/sledgehammer/Hoare/uf.966336.smt2 --timeout-ms 24000
 

@@ -4,7 +4,10 @@
 For every function cindergraph can parse in every ``*.c`` under ``--samples``:
 
 1. :mod:`lift` turns the AST into one QF_BV query per (path, sink).
-2. ``axeyum_cli`` answers each query; a ``sat`` carries a model.
+2. ``axeyum.smt.solve`` (the native Python bindings) answers each query; a
+   ``sat`` carries a model. ``--cli`` switches to shelling out to the
+   ``axeyum_cli`` example binary instead, for a checkout that has not built
+   the extension.
 3. The model becomes a C ``main`` that calls the function with exactly those
    arguments; it is compiled with AddressSanitizer and UBSan and run. The
    sanitizer's first report line is the evidence — a witness that does not
@@ -34,6 +37,7 @@ from lift import CType, Lifted, Query, lift_source  # noqa: E402
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 DEFAULT_CLI = REPO / "target" / "release" / "examples" / "axeyum_cli"
+CLI_BUILD_LINE = "cargo build --release -p axeyum-bench --example axeyum_cli --features full"
 COMMON = ["-fno-sanitize-recover=all", "-fno-omit-frame-pointer", "-O0", "-g", "-w"]
 # The sanitizer that can observe each finding kind — and only that one, so the
 # replay's report is evidence for THIS finding rather than for whichever
@@ -54,23 +58,65 @@ _FRAME_RE = re.compile(r"#\d+ .*?/samples/[^:\s]+:(\d+)")
 BOUNDS = (1, 16, 256, 4096)  # smallest witness first: it is the one a reader can check by hand
 
 
-def run_cli(cli: Path, smtlib: str, timeout_ms: int) -> tuple[str, dict[str, int]]:
-    proc = subprocess.run(
-        [str(cli), "-", "--timeout-ms", str(timeout_ms)],
-        input=smtlib,
-        text=True,
-        capture_output=True,
-        timeout=timeout_ms / 1000 + 30,
-    )
-    lines = [line for line in proc.stdout.splitlines() if line.strip()]
-    verdict = lines[0].strip() if lines else "no-output"
-    values: dict[str, int] = {}
-    if verdict == "sat" and len(lines) > 1:
-        for name, lit, dec in _VALUE_RE.findall(lines[1]):
-            values[name] = (
-                int(dec) if dec else int(lit[2:], 2) if lit.startswith("#b") else int(lit[2:], 16)
-            )
-    return verdict, values
+class Backend:
+    """Decides one SMT-LIB script and returns ``(verdict, {name: unsigned int})``."""
+
+    def run(self, smtlib: str, timeout_ms: int) -> tuple[str, dict[str, int]]:
+        raise NotImplementedError
+
+
+class NativeBackend(Backend):
+    """Calls straight into the compiled extension: no subprocess, no text parsing.
+
+    ``axeyum.smt.solve`` already returns the satisfying assignment as
+    ``{declared name: value}`` (``Outcome.model``), replay-checked in Rust
+    before it crosses the language boundary — the same values the ``(get-value
+    ...)`` command at the end of every lifted query would have asked for, so
+    the query need not even carry that command for this backend to read them.
+    """
+
+    def __init__(self) -> None:
+        from axeyum import smt as _smt
+
+        self._solve = _smt.solve
+
+    def run(self, smtlib: str, timeout_ms: int) -> tuple[str, dict[str, int]]:
+        outcome = self._solve(smtlib, timeout_ms=timeout_ms)
+        values = (
+            {name: int(value) for name, value in outcome.model.items()}
+            if outcome.status == "sat"
+            else {}
+        )
+        return outcome.status, values
+
+
+class CliBackend(Backend):
+    """Explicit ``--cli`` fallback: shells out to the ``axeyum_cli`` example binary."""
+
+    def __init__(self, cli: Path) -> None:
+        self.cli = cli
+
+    def run(self, smtlib: str, timeout_ms: int) -> tuple[str, dict[str, int]]:
+        proc = subprocess.run(
+            [str(self.cli), "-", "--timeout-ms", str(timeout_ms)],
+            input=smtlib,
+            text=True,
+            capture_output=True,
+            timeout=timeout_ms / 1000 + 30,
+        )
+        lines = [line for line in proc.stdout.splitlines() if line.strip()]
+        verdict = lines[0].strip() if lines else "no-output"
+        values: dict[str, int] = {}
+        if verdict == "sat" and len(lines) > 1:
+            for name, lit, dec in _VALUE_RE.findall(lines[1]):
+                values[name] = (
+                    int(dec)
+                    if dec
+                    else int(lit[2:], 2)
+                    if lit.startswith("#b")
+                    else int(lit[2:], 16)
+                )
+        return verdict, values
 
 
 def bounded(query: Query, bound: int) -> str:
@@ -87,13 +133,13 @@ def bounded(query: Query, bound: int) -> str:
     return query.smtlib.replace("(check-sat)", "\n".join(extra) + "\n(check-sat)", 1)
 
 
-def solve(cli: Path, query: Query, timeout_ms: int) -> tuple[str, dict[str, int]]:
+def solve(backend: Backend, query: Query, timeout_ms: int) -> tuple[str, dict[str, int]]:
     """Verdict and model; a ``sat`` is re-solved under growing bounds and the smallest witness wins."""
-    verdict, values = run_cli(cli, query.smtlib, timeout_ms)
+    verdict, values = backend.run(query.smtlib, timeout_ms)
     if verdict != "sat":
         return verdict, values
     for bound in BOUNDS:
-        small_verdict, small_values = run_cli(cli, bounded(query, bound), timeout_ms)
+        small_verdict, small_values = backend.run(bounded(query, bound), timeout_ms)
         if small_verdict == "sat":
             return verdict, small_values
     return verdict, values
@@ -180,16 +226,42 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--samples", type=Path, default=HERE / "samples")
     ap.add_argument("--out", type=Path, default=Path("/tmp/cindergraph-defects"))
-    ap.add_argument("--cli", type=Path, default=DEFAULT_CLI)
+    ap.add_argument(
+        "--cli",
+        action="store_true",
+        help="shell out to the axeyum_cli example binary instead of the native "
+        "axeyum.smt bindings; fallback for a checkout that has not built the extension "
+        "(uv run --no-sync maturin develop)",
+    )
+    ap.add_argument(
+        "--cli-path",
+        type=Path,
+        default=DEFAULT_CLI,
+        help="axeyum_cli binary path, only used with --cli",
+    )
     ap.add_argument("--cc", default="clang" if shutil.which("clang") else "cc")
     ap.add_argument("--timeout-ms", type=int, default=10000)
     args = ap.parse_args()
-    if not args.cli.exists():
-        print(
-            f"axeyum_cli not found at {args.cli}; build it: cargo build --release -p axeyum-bench --example axeyum_cli --features axeyum-solver/full",
-            file=sys.stderr,
-        )
-        return 2
+    backend: Backend
+    if args.cli:
+        if not args.cli_path.exists():
+            print(
+                f"axeyum_cli not found at {args.cli_path}; build it: {CLI_BUILD_LINE}",
+                file=sys.stderr,
+            )
+            return 2
+        backend = CliBackend(args.cli_path)
+    else:
+        try:
+            backend = NativeBackend()
+        except ImportError:
+            print(
+                "axeyum native module not importable; build it with "
+                "'uv run --no-sync maturin develop', or pass --cli to shell out to "
+                f"axeyum_cli instead (build it: {CLI_BUILD_LINE})",
+                file=sys.stderr,
+            )
+            return 2
     args.out.mkdir(parents=True, exist_ok=True)
     rows: list[tuple[str, ...]] = []
     failures = 0
@@ -209,7 +281,7 @@ def main() -> int:
             findings: list[tuple[str, ...]] = []
             for k, q in enumerate(lifted.queries):
                 ob = q.obligation
-                verdict, values = solve(args.cli, q, args.timeout_ms)
+                verdict, values = solve(backend, q, args.timeout_ms)
                 (args.out / f"{sample.stem}.{lifted.function}.{k}.smt2").write_text(q.smtlib)
                 if ob.kind == "dead-branch":
                     # The query asks "is this edge reachable"; unsat means dead.

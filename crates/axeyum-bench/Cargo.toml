@@ -27,6 +27,13 @@ z3 = { workspace = true, optional = true }
 
 [features]
 default = []
+# `axeyum-solver`'s `full` is already a mandatory dependency feature above (a
+# CLI example needs the whole SMT-LIB front door unconditionally), so this
+# flag is a no-op in practice -- but `--features full` on THIS package is the
+# guess every doc line and every reader reaches for, and without a same-named
+# feature Cargo refuses it: "error: none of the selected packages contains
+# these features: full". Improvement list 2026-09-16, item 3.
+full = ["axeyum-solver/full"]
 z3 = ["axeyum-solver/z3", "dep:z3"]
 z3-static = ["axeyum-solver/z3-static"]
 

@@ -206,7 +206,7 @@ and it is untouched here.
 
 ```sh
 scripts/cargo-serialized.sh build --release -p axeyum-bench \
-  --example smtcomp_cli --features axeyum-solver/full
+  --example smtcomp_cli --features full
 # per file, 4-wide, pinned:
 AXEYUM_TRACE=1 taskset -c 0-7 target/release/examples/smtcomp_cli \
   "$f" --timeout-ms 24000 --trace

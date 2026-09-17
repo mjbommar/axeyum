@@ -57,6 +57,28 @@ With `axeyum-solver/full`:
 These helpers parse a complete input string and return Rust data. They do not
 emit an ordered SMT-LIB stdout transcript.
 
+## Bit-vector overflow-detection predicates
+
+The parser accepts the SMT-LIB 2.6 fixed-size-bitvector overflow predicates
+(`crates/axeyum-smtlib/src/parse.rs`), each a direct `TermArena` builder rather
+than a double-width sign-extended shadow computation a caller would otherwise
+hand-roll:
+
+| Operator | Arity | `Bool` iff |
+|---|---|---|
+| `bvuaddo` | `(_ BitVec w) (_ BitVec w) -> Bool` | unsigned `a + b` overflows `w` bits |
+| `bvsaddo` | `(_ BitVec w) (_ BitVec w) -> Bool` | signed `a + b` overflows `w` bits |
+| `bvusubo` | `(_ BitVec w) (_ BitVec w) -> Bool` | unsigned `a - b` borrows (`a < b`) |
+| `bvssubo` | `(_ BitVec w) (_ BitVec w) -> Bool` | signed `a - b` overflows `w` bits |
+| `bvumulo` | `(_ BitVec w) (_ BitVec w) -> Bool` | unsigned `a * b` overflows `w` bits |
+| `bvsmulo` | `(_ BitVec w) (_ BitVec w) -> Bool` | signed `a * b` overflows `w` bits |
+| `bvnego`  | `(_ BitVec w) -> Bool` | `a` is the signed minimum (`-2^(w-1)`), the one value negation cannot represent |
+
+`(not (bvsaddo x y))` states a no-overflow safety obligation at the operand
+width directly; [`python/examples/cindergraph_defects/lift.py`](../../python/examples/cindergraph_defects/lift.py)
+uses these instead of a `2w`-bit `sign_extend`/`bvadd`/compare encoding for
+the same obligation.
+
 ## Important current boundaries
 
 - `set-logic` is recorded metadata; dispatch follows term shape.
