@@ -6358,16 +6358,16 @@ pub static REGISTRY: &[ConfigEntry] = &[
     ConfigEntry {
         name: "NIA_ORDER_LEMMAS_ARMED",
         module: "crates/axeyum-solver/src/nia_linearize.rs",
-        value: "0",
-        unit: "armed (1) or disarmed (0)",
+        value: "4",
+        unit: "mode: 0 off, 1 both classes, 2 order only, 3 monotonicity only, 4 iterate with tangents only",
         protects: Protects::Completeness,
         on_exceed: OnExceed::Truncate,
         signal: Signal::NotApplicable,
         guarded_by: "",
         env_override: Some("AXEYUM_NIA_ORDER_LEMMAS"),
         justification: dated(
-            "ADR-2136",
-            "2026-09-16",
+            "ADR-2148",
+            "2026-09-17",
             None,
             &[
                 sym(
@@ -6384,12 +6384,50 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 ),
             ],
             &[
+                adr("ADR-2148"),
                 adr("ADR-2136"),
                 adr("ADR-2112"),
+                doc("bench-results/nia-refine-share-20260917/README.md"),
                 doc("bench-results/nia-order-lemmas-20260916/README.md"),
             ],
         ),
-        note: "SHIPPED DISARMED, and 0 leaves the refinement round byte for byte: `solve_with_refinement` never builds the shared-factor index, so `timed_refine` cannot reach the pass. Armed, the loop also emits ADR-2112 Part E's two ABSENT lemma classes -- z3's `nla_order_lemmas.cpp:286-310` (four sign cases coupling two products that share a factor) and `nla_monotone_lemmas.cpp:61-90` (magnitude cuts at the current assignment) -- both model-driven, both capped per round. WHAT IT IS WORTH, said before the change: applicability is near-total but that is not decidability. The sizing census measured the order lemma applicable on 111 of 116 undecided QF_NIA T1 rows and monotonicity on 115, while ADR-2112 Part D's ablation measured z3's OWN order class load-bearing on 3 of the 75 files z3 decides and its tangent class on 3. SOUNDNESS is not in the lever: every lemma is a consequence of `r = a*b` alone, so it is valid in every integer model of the original query and can only shrink the relaxation; `order_lemma_covers_all_four_sign_cases_and_each_is_discriminated`, `monotone_lemmas_are_valid_in_every_quadrant_in_both_directions` and `a_negative_shared_factor_must_not_cut_away_a_satisfiable_systems_models` assert that rather than assume it. ARMING ALSO WIDENS `refine`: the entailed-bound passes produce nothing on this population (the census measured `unbounded_products == products` at every quantile), so without the second disjunct at the `RefinementSetup` construction the loop does one round and the pass is unreachable.",
+        note: "SHIPS AT 4 SINCE ADR-2148 (accepted 2026-09-17): the loop iterates past a spurious model on every product-bearing query with tangent planes only and neither lemma class -- the arm that keeps 8 of ADR-2136's 10 gains and none of its 3 losses; two four-population A/Bs against 0 (800 files each, 0 disagreements, 0 `:status` contradictions, 0 stable losses) plus the disjoint UFNIA held-out draw. THE REST OF THIS NOTE DESCRIBES THE VALUES 0 AND 1. 0 leaves the pre-ADR-2148 refinement round byte for byte: `solve_with_refinement` never builds the shared-factor index, so `timed_refine` cannot reach the pass. Armed, the loop also emits ADR-2112 Part E's two ABSENT lemma classes -- z3's `nla_order_lemmas.cpp:286-310` (four sign cases coupling two products that share a factor) and `nla_monotone_lemmas.cpp:61-90` (magnitude cuts at the current assignment) -- both model-driven, both capped per round. WHAT IT IS WORTH, said before the change: applicability is near-total but that is not decidability. The sizing census measured the order lemma applicable on 111 of 116 undecided QF_NIA T1 rows and monotonicity on 115, while ADR-2112 Part D's ablation measured z3's OWN order class load-bearing on 3 of the 75 files z3 decides and its tangent class on 3. SOUNDNESS is not in the lever: every lemma is a consequence of `r = a*b` alone, so it is valid in every integer model of the original query and can only shrink the relaxation; `order_lemma_covers_all_four_sign_cases_and_each_is_discriminated`, `monotone_lemmas_are_valid_in_every_quadrant_in_both_directions` and `a_negative_shared_factor_must_not_cut_away_a_satisfiable_systems_models` assert that rather than assume it. ARMING ALSO WIDENS `refine`: the entailed-bound passes produce nothing on this population (the census measured `unbounded_products == products` at every quantile), so without the second disjunct in `refinement_setup` the loop does one round and the pass is unreachable. SINCE ADR-2148 THAT IS ALL IT WIDENS: `refine` decides ITERATION only, and the budget SLICE on a product-only query is `NIA_REFINE_SHARE`'s decision; `the_slice_grant_does_not_read_the_lemma_lever` pins the separation. ADR-2148 ALSO SPLIT THE ARM BY CLASS (`OrderLemmas`): 2 = order only, 3 = monotonicity only, 4 = NEITHER class, the loop merely iterating past a spurious model with tangent planes. Measured on ADR-2136's own 13 moved files: all three losses are the CLASSES reshaping the relaxation on `splits > 0` files the tangent loop refutes alone in 1-4 rounds (not a starved later route -- those files already had the wide slice), while 8 of the 10 gains are decided by mode 4 with no class lemma at all; only `305`/`39` need the order class.",
+    },
+    ConfigEntry {
+        name: "NIA_REFINE_SHARE",
+        module: "crates/axeyum-solver/src/nia_linearize.rs",
+        value: "3",
+        unit: "divisor of the remaining budget (0 = keep the hang guard)",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: Some("AXEYUM_NIA_REFINE_SHARE"),
+        justification: dated(
+            "ADR-2148",
+            "2026-09-17",
+            None,
+            &[
+                sym("crates/axeyum-solver/src/nia_linearize.rs", "slice_grant"),
+                sym(
+                    "crates/axeyum-solver/src/nia_linearize.rs",
+                    "refinement_setup",
+                ),
+            ],
+            &[
+                adr("ADR-2148"),
+                adr("ADR-2136"),
+                live(
+                    "the_slice_grant_does_not_read_the_lemma_lever",
+                    "crates/axeyum-solver/src/nia_linearize.rs",
+                ),
+                live(
+                    "the_iteration_gate_does_not_read_the_share_lever",
+                    "crates/axeyum-solver/src/nia_linearize.rs",
+                ),
+            ],
+        ),
+        note: "THE SECOND HALF OF WHAT ADR-2136'S LEVER USED TO DO. On a product-bearing query whose entailed bounds produced nothing (`mccormick + splits == 0`, which the sizing census measured is the whole undecided QF_NIA population), the refinement loop's slice was the 600 ms hang guard -- until `NIA_ORDER_LEMMAS_ARMED` widened `refine`, and `refine` selected the slice as well as the iteration, so arming the lemmas bought the loop `remaining / NIA_MCCORMICK_BUDGET_SHARE` on every such query. ADR-2136 measured 10 stable gains and 3 stable losses from the pair; all three losses were `unsat -> unknown`, a later ladder route starved of that slice. This lever is the slice on its own: `0` keeps the hang guard, `N` grants `remaining / N` with the lever's OWN denominator (`the_share_lever_draws_its_own_slice`), and `3` with the lemmas armed is byte for byte ADR-2136's B arm. It does not touch iteration (`the_iteration_gate_does_not_read_the_share_lever`) and the lemma lever does not touch it (`the_slice_grant_does_not_read_the_lemma_lever`). SHIPS AT 3 SINCE ADR-2148 (accepted 2026-09-17): the 2x2 on the 13 scoring files showed the share is the mechanism of two gains (`t3_rw25`, `Larraz...`) and of no loss, and the four-population A/B of mode 4 with share 3 against the shipped default measured 8 stable gains, 0 stable losses, 0 flips over 800 files, with the disjoint UFNIA held-out draw agreeing.",
     },
     ConfigEntry {
         name: "NIA_SLICE_MS",

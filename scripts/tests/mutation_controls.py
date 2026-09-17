@@ -2104,6 +2104,58 @@ SUITES["nia-order-lemmas"] = (
 
 
 # --------------------------------------------------------------------------
+# `nia-refine-share` — ADR-2148: "emit the lemmas" and "widen the slice" are
+# two levers, not one.
+#
+# ADR-2136's single lever widened `RefinementSetup::refine`, and `refine`
+# decided BOTH whether the refinement loop iterates past a spurious model AND
+# how much of the caller's remaining budget it may spend. Arming the lemma
+# pass, which needs the first, silently bought the second, and the three
+# `unsat -> unknown` losses in that A/B were a later ladder route starved of
+# the slice. `refinement_setup` now computes the two independently, and each
+# of the three couplings that would quietly re-fuse them is a mutation here:
+#
+#   * the grant reading the lemma lever again -- the ADR-2136 coupling,
+#     restored verbatim;
+#   * the share lever buying iteration -- the opposite coupling, which would
+#     make a wider slice on a query with nothing to cut a pure budget tax;
+#   * the share lever falling through to the hang guard -- an inert lever,
+#     whose A/B would report a perfect zero that reads like "no effect".
+#
+# Each is expected to kill its own named test and not the others'. The
+# lemma-count test (`the_lemma_count_is_unchanged_by_the_share`) is expected
+# to SURVIVE the first mutation: on a query that decides inside the hang
+# guard the wider slice changes nothing observable, which is exactly why the
+# grant test asserts the setup and not the verdict.
+# --------------------------------------------------------------------------
+
+SUITES["nia-refine-share"] = (
+    "crates/axeyum-solver/src/nia_linearize.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "nia_linearize"),
+        "nia-refine-share",
+    ),
+    [
+        (
+            "the slice grant must not read the lemma lever (ADR-2136's coupling, restored)",
+            "        grant: slice_grant(has_envelopes, has_products, arms.refine_share),",
+            "        grant: slice_grant(\n            has_envelopes || (arms.order_lemmas.armed() && has_products),\n            has_products,\n            arms.refine_share,\n        ),",
+        ),
+        (
+            "the share lever must not buy iteration",
+            "        refine: has_envelopes || (arms.order_lemmas.armed() && has_products),",
+            "        refine: has_envelopes || (arms.order_lemmas.armed() && has_products) || arms.refine_share > 0,",
+        ),
+        (
+            "the share lever must draw a real slice, not fall through to the hang guard",
+            "            SliceGrant::ProductShare(share) => Some(share),",
+            "            SliceGrant::ProductShare(_) => None,",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
 # `array-bv-abstraction-walk` — the SIXTH time a term-DAG walk here recursed as
 # a tree.
 #

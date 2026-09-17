@@ -1,0 +1,3 @@
+[nia] products=52 mccormick=0 splits=0 relaxed=313 timeout=Some(20.002476951s) policy=off order_lemmas=false refine=false grant=HangGuard
+[nia] round 0: Ok("sat") (relaxed=313, 599.997305ms left)
+unknown

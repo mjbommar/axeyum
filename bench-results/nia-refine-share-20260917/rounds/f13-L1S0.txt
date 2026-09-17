@@ -1,0 +1,6 @@
+[nia] products=52 mccormick=0 splits=0 relaxed=313 timeout=Some(19.987729716s) policy=off order_lemmas=true refine=true grant=HangGuard
+[nia] round 0: Ok("sat") (relaxed=313, 599.997225ms left)
+[nia] order/monotone: built=72 new=72
+[nia] round 0: refined with 104 tangent lemmas
+[nia] round 1: Ok("unknown") (relaxed=417, 91.349093ms left)
+unknown
