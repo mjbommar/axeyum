@@ -1326,14 +1326,75 @@ fn slice_grant(has_envelopes: bool, has_products: bool, refine_share: u32) -> Sl
     }
 }
 
+/// When ADR-2136's order/monotonicity pass runs inside a refinement round —
+/// the value of [`NIA_ORDER_LEMMAS_ARMED`] / `AXEYUM_NIA_ORDER_LEMMAS`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum OrderLemmas {
+    /// `0`, the shipped arm: the shared-factor index is never built and the
+    /// round is byte for byte the round it was before ADR-2136.
+    Off,
+    /// `1`, ADR-2136's arm: BOTH classes after the tangent pass, every
+    /// round. Measured there at 10 stable gains and 3 stable losses over 800
+    /// files; ADR-2148 traced all three losses to the extra lemmas making the
+    /// per-round relaxation harder for the lazy LIA driver to refute on a
+    /// file the tangent loop alone refutes in 1–4 rounds.
+    Both,
+    /// `2`: the ORDER class alone (`nla_order_lemmas.cpp`), every round.
+    OrderOnly,
+    /// `3`: the MONOTONICITY class alone (`nla_monotone_lemmas.cpp`), every
+    /// round.
+    MonotoneOnly,
+    /// `4`: NEITHER class — the loop iterates on a product-bearing query
+    /// exactly as the armed arms do, cutting spurious models with tangent
+    /// planes only. The control that separates "the two classes are worth
+    /// N files" from "iterating past the first spurious model is worth N
+    /// files", which ADR-2136 §C introduced in the same lever and never
+    /// measured apart.
+    TangentsOnly,
+}
+
+impl OrderLemmas {
+    /// The lever's value as a mode. Anything but an exact `1`–`4` is the
+    /// shipped arm, so a typo cannot select an arm nobody chose.
+    #[must_use]
+    pub(crate) const fn from_lever(value: u32) -> Self {
+        match value {
+            1 => Self::Both,
+            2 => Self::OrderOnly,
+            3 => Self::MonotoneOnly,
+            4 => Self::TangentsOnly,
+            _ => Self::Off,
+        }
+    }
+
+    /// Whether the pass can run at all — the index is built and, on a
+    /// product-bearing query, the loop iterates so the pass is reachable.
+    #[must_use]
+    pub(crate) const fn armed(self) -> bool {
+        !matches!(self, Self::Off)
+    }
+
+    /// Whether the order class is emitted.
+    #[must_use]
+    pub(crate) const fn order(self) -> bool {
+        matches!(self, Self::Both | Self::OrderOnly)
+    }
+
+    /// Whether the monotonicity class is emitted.
+    #[must_use]
+    pub(crate) const fn monotone(self) -> bool {
+        matches!(self, Self::Both | Self::MonotoneOnly)
+    }
+}
+
 /// The two ADR-2136/ADR-2148 levers, read ONCE at [`check_with_nia`] and
-/// carried explicitly, so a test can select any of the four arms of the 2×2
-/// without touching a process-lifetime `OnceLock`.
+/// carried explicitly, so a test can select any arm of the design without
+/// touching a process-lifetime `OnceLock`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct NiaArms {
     /// ADR-2136: emit the order/monotonicity classes, and let the loop
     /// iterate on a product-bearing query so they are reachable.
-    pub(crate) order_lemmas: bool,
+    pub(crate) order_lemmas: OrderLemmas,
     /// ADR-2148: the budget share on a product-bearing query without
     /// envelopes; `0` keeps the hang guard. See [`NIA_REFINE_SHARE`].
     pub(crate) refine_share: u32,
@@ -1370,7 +1431,7 @@ fn refinement_setup(
 ) -> RefinementSetup {
     RefinementSetup {
         policy,
-        refine: has_envelopes || (arms.order_lemmas && has_products),
+        refine: has_envelopes || (arms.order_lemmas.armed() && has_products),
         grant: slice_grant(has_envelopes, has_products, arms.refine_share),
         // ADR-2136, SHIPPED DISARMED (the caller reads the lever).
         order_lemmas: arms.order_lemmas,
@@ -1398,13 +1459,13 @@ struct RefinementSetup {
     refine: bool,
     /// Which budget the slice is drawn from — see [`SliceGrant`].
     grant: SliceGrant,
-    /// ADR-2136's order/monotonicity pass. Read from the lever ONCE, at the
-    /// call site, and carried here rather than consulted inside the loop: the
-    /// lever is a process-lifetime `OnceLock` (determinism is a public API
-    /// promise), so a test that wanted to exercise the armed arm could not
-    /// otherwise reach it, and an arm no test can reach is an arm no test
-    /// guards.
-    order_lemmas: bool,
+    /// ADR-2136's order/monotonicity pass, and WHEN it runs in a round. Read
+    /// from the lever ONCE, at the call site, and carried here rather than
+    /// consulted inside the loop: the lever is a process-lifetime `OnceLock`
+    /// (determinism is a public API promise), so a test that wanted to
+    /// exercise the armed arm could not otherwise reach it, and an arm no
+    /// test can reach is an arm no test guards.
+    order_lemmas: OrderLemmas,
 }
 
 /// The refinement policy in force, read once from `AXEYUM_NIA_REFINEMENT`.
@@ -1468,7 +1529,7 @@ pub(crate) fn check_with_nia(
         config,
         why,
         NiaArms {
-            order_lemmas: nia_order_lemmas_enabled() == 1,
+            order_lemmas: OrderLemmas::from_lever(nia_order_lemmas_enabled()),
             refine_share: nia_refine_share(),
         },
     )
@@ -1612,7 +1673,7 @@ fn check_with_nia_armed(
     if std::env::var_os("AXEYUM_NIA_DEBUG").is_some() {
         eprintln!(
             "[nia] products={} mccormick={} splits={} relaxed={} timeout={:?} policy={} \
-             order_lemmas={} refine={} grant={:?}",
+             order_lemmas={:?} refine={} grant={:?}",
             rewritten_triples.len(),
             mccormick,
             splits,
@@ -1723,6 +1784,7 @@ fn timed_refine(
     arena: &mut TermArena,
     triples: &[(TermId, TermId, TermId)],
     order_index: Option<&BTreeMap<TermId, Vec<usize>>>,
+    mode: OrderLemmas,
     model: &Model,
     emitted: &mut BTreeSet<TermId>,
     relaxed: &mut Vec<TermId>,
@@ -1734,9 +1796,11 @@ fn timed_refine(
     // for byte the round it is today. The order/monotonicity lemmas run AFTER
     // the tangents rather than instead of them — they are an addition to the
     // portfolio, and ADR-2112 §D2's finding is that redundancy is what a
-    // portfolio is for.
+    // portfolio is for. ADR-2148's `mode` selects which of the two classes
+    // the pass emits.
     if let Some(index) = order_index {
-        added += refine_with_order_and_monotone(arena, triples, index, model, emitted, relaxed)?;
+        added +=
+            refine_with_order_and_monotone(arena, triples, index, mode, model, emitted, relaxed)?;
     }
     if let Some(started) = started {
         crate::lazy_smt_counters::record_blocking(added as u64, started.elapsed());
@@ -1768,7 +1832,8 @@ fn solve_with_refinement(
     } = setup;
     // ADR-2136's shared-factor index, built once per call (the triple list is
     // fixed across rounds; only the model moves). `None` is the shipped arm.
-    let order_index = order_lemmas.then(|| shared_factor_index(triples));
+    let order_index =
+        (order_lemmas.order() || order_lemmas.monotone()).then(|| shared_factor_index(triples));
     let mut relaxed = base.to_vec();
     let slice_deadline = std::time::Instant::now() + capped.timeout.unwrap_or_default();
     let debug = std::env::var_os("AXEYUM_NIA_DEBUG").is_some();
@@ -1823,6 +1888,7 @@ fn solve_with_refinement(
                     arena,
                     triples,
                     order_index.as_ref(),
+                    order_lemmas,
                     &model,
                     &mut emitted,
                     &mut relaxed,
@@ -2039,8 +2105,11 @@ fn refine_with_tangents(
 /// ADR-2136's order/monotonicity lemma pass, SHIPPED DISARMED.
 ///
 /// `0` is the shipped arm and leaves the refinement loop byte-identical;
-/// `AXEYUM_NIA_ORDER_LEMMAS=1` arms it. Anything but an exact `1` is the
-/// shipped arm, so a typo cannot select an arm nobody chose.
+/// `AXEYUM_NIA_ORDER_LEMMAS=1` arms both classes (ADR-2136's arm), `2` the
+/// order class alone, `3` the monotonicity class alone and `4` neither —
+/// iteration with tangent planes only, the control (ADR-2148) — see
+/// [`OrderLemmas`]. Anything else is the shipped arm, so a typo cannot select
+/// an arm nobody chose.
 const NIA_ORDER_LEMMAS_ARMED: u32 = 0;
 
 axeyum_ir::cap_lever! {
@@ -2468,6 +2537,7 @@ fn order_and_monotone_lemmas(
     arena: &mut TermArena,
     triples: &[(TermId, TermId, TermId)],
     index: &BTreeMap<TermId, Vec<usize>>,
+    mode: OrderLemmas,
     model: &Model,
 ) -> Result<Vec<CheckedLemma>, SolverError> {
     let assignment = model.to_assignment();
@@ -2501,8 +2571,12 @@ fn order_and_monotone_lemmas(
         })
         .collect();
 
-    append_monotone_lemmas(arena, triples, &values, zero, &mut out)?;
-    append_order_lemmas(arena, triples, index, &values, zero, &mut out)?;
+    if mode.monotone() {
+        append_monotone_lemmas(arena, triples, &values, zero, &mut out)?;
+    }
+    if mode.order() {
+        append_order_lemmas(arena, triples, index, &values, zero, &mut out)?;
+    }
 
     // Every lemma this pass emits claims to be valid in every integer model of
     // the original query. In a debug build, CHECK that rather than assert it.
@@ -2625,11 +2699,12 @@ fn refine_with_order_and_monotone(
     arena: &mut TermArena,
     triples: &[(TermId, TermId, TermId)],
     index: &BTreeMap<TermId, Vec<usize>>,
+    mode: OrderLemmas,
     model: &Model,
     emitted: &mut BTreeSet<TermId>,
     relaxed: &mut Vec<TermId>,
 ) -> Result<usize, SolverError> {
-    let built = order_and_monotone_lemmas(arena, triples, index, model)?;
+    let built = order_and_monotone_lemmas(arena, triples, index, mode, model)?;
     let considered = built.len();
     let mut added = 0usize;
     for cl in built {
@@ -3663,7 +3738,9 @@ mod tests {
             model.set(sc, Value::Int(cv));
             model.set(sac, Value::Int(rac_v));
             model.set(sbc, Value::Int(rbc_v));
-            let lemmas = order_and_monotone_lemmas(&mut arena, &triples, &index, &model).unwrap();
+            let lemmas =
+                order_and_monotone_lemmas(&mut arena, &triples, &index, OrderLemmas::Both, &model)
+                    .unwrap();
             for cl in &lemmas {
                 assert!(
                     holds(&arena, cl.lemma, &witness),
@@ -3776,7 +3853,11 @@ mod tests {
                 let mut why = None;
                 let mut work = arena.clone();
                 let arms = NiaArms {
-                    order_lemmas: armed,
+                    order_lemmas: if armed {
+                        OrderLemmas::Both
+                    } else {
+                        OrderLemmas::Off
+                    },
                     refine_share: NIA_REFINE_SHARE,
                 };
                 let got = check_with_nia_armed(&mut work, &assertions, &config, &mut why, arms)
@@ -3872,7 +3953,7 @@ mod tests {
             let mut why = None;
             let mut work = arena.clone();
             let arms = NiaArms {
-                order_lemmas: true,
+                order_lemmas: OrderLemmas::Both,
                 refine_share: NIA_REFINE_SHARE,
             };
             let got = check_with_nia_armed(&mut work, &assertions, &config, &mut why, arms)
@@ -3922,25 +4003,30 @@ mod tests {
         for has_envelopes in [false, true] {
             for has_products in [false, true] {
                 for refine_share in [0_u32, 1, 3, 7] {
-                    let grants: Vec<SliceGrant> = [false, true]
-                        .into_iter()
-                        .map(|order_lemmas| {
-                            refinement_setup(
-                                NiaRefinementPolicy::OFF,
-                                has_envelopes,
-                                has_products,
-                                NiaArms {
-                                    order_lemmas,
-                                    refine_share,
-                                },
-                            )
-                            .grant
-                        })
-                        .collect();
-                    assert_eq!(
-                        grants[0], grants[1],
+                    let grants: Vec<SliceGrant> = [
+                        OrderLemmas::Off,
+                        OrderLemmas::Both,
+                        OrderLemmas::OrderOnly,
+                        OrderLemmas::MonotoneOnly,
+                    ]
+                    .into_iter()
+                    .map(|order_lemmas| {
+                        refinement_setup(
+                            NiaRefinementPolicy::OFF,
+                            has_envelopes,
+                            has_products,
+                            NiaArms {
+                                order_lemmas,
+                                refine_share,
+                            },
+                        )
+                        .grant
+                    })
+                    .collect();
+                    assert!(
+                        grants.iter().all(|&g| g == grants[0]),
                         "envelopes={has_envelopes} products={has_products} \
-                         share={refine_share}: the lemma lever moved the grant"
+                         share={refine_share}: the lemma lever moved the grant: {grants:?}"
                     );
                     // The expectation, written out rather than recomputed
                     // through `slice_grant`.
@@ -3977,7 +4063,12 @@ mod tests {
     fn the_iteration_gate_does_not_read_the_share_lever() {
         for has_envelopes in [false, true] {
             for has_products in [false, true] {
-                for order_lemmas in [false, true] {
+                for order_lemmas in [
+                    OrderLemmas::Off,
+                    OrderLemmas::Both,
+                    OrderLemmas::OrderOnly,
+                    OrderLemmas::MonotoneOnly,
+                ] {
                     let refines: Vec<bool> = [0_u32, 1, 3, 7]
                         .into_iter()
                         .map(|refine_share| {
@@ -3996,14 +4087,14 @@ mod tests {
                     assert!(
                         refines.iter().all(|&r| r == refines[0]),
                         "envelopes={has_envelopes} products={has_products} \
-                         lemmas={order_lemmas}: the share lever moved `refine`: \
+                         lemmas={order_lemmas:?}: the share lever moved `refine`: \
                          {refines:?}"
                     );
                     assert_eq!(
                         refines[0],
-                        has_envelopes || (order_lemmas && has_products),
+                        has_envelopes || (order_lemmas.armed() && has_products),
                         "envelopes={has_envelopes} products={has_products} \
-                         lemmas={order_lemmas}"
+                         lemmas={order_lemmas:?}"
                     );
                 }
             }
@@ -4092,7 +4183,7 @@ mod tests {
             let mut why = None;
             let mut work = arena.clone();
             let arms = NiaArms {
-                order_lemmas: true,
+                order_lemmas: OrderLemmas::Both,
                 refine_share,
             };
             let got = check_with_nia_armed(&mut work, &assertions, &config, &mut why, arms)
@@ -4128,6 +4219,77 @@ mod tests {
             NIA_REFINE_SHARE, 0,
             "ADR-2148: the product-only slice stays the hang guard until the \
              interleaved A/B moves it"
+        );
+    }
+
+    /// The lever's values map to the four modes, and every other value is
+    /// the shipped arm — a typo cannot select an arm nobody chose. Each
+    /// single-class mode emits exactly its own class: on a model that
+    /// violates BOTH classes' conclusions, `Both` builds the union and the
+    /// two single-class modes build disjoint, nonempty halves of it.
+    #[test]
+    fn the_lemma_lever_selects_the_classes_it_names() {
+        assert_eq!(OrderLemmas::from_lever(0), OrderLemmas::Off);
+        assert_eq!(OrderLemmas::from_lever(1), OrderLemmas::Both);
+        assert_eq!(OrderLemmas::from_lever(2), OrderLemmas::OrderOnly);
+        assert_eq!(OrderLemmas::from_lever(3), OrderLemmas::MonotoneOnly);
+        assert_eq!(OrderLemmas::from_lever(4), OrderLemmas::TangentsOnly);
+        for other in [5_u32, 10, 100, u32::MAX] {
+            assert_eq!(OrderLemmas::from_lever(other), OrderLemmas::Off, "{other}");
+        }
+        assert!(!OrderLemmas::Off.armed());
+        for mode in [
+            OrderLemmas::Both,
+            OrderLemmas::OrderOnly,
+            OrderLemmas::MonotoneOnly,
+            OrderLemmas::TangentsOnly,
+        ] {
+            assert!(mode.armed(), "{mode:?}");
+        }
+        assert!(!OrderLemmas::TangentsOnly.order() && !OrderLemmas::TangentsOnly.monotone());
+
+        // `ac = a·c`, `bc = b·c` with a model that is spurious for both
+        // products and orders them against `c`'s sign.
+        let mut arena = TermArena::new();
+        let sa = arena.declare("a", Sort::Int).unwrap();
+        let sb = arena.declare("b", Sort::Int).unwrap();
+        let sc = arena.declare("c", Sort::Int).unwrap();
+        let sac = arena.declare("ac", Sort::Int).unwrap();
+        let sbc = arena.declare("bc", Sort::Int).unwrap();
+        let (a, b, c) = (arena.var(sa), arena.var(sb), arena.var(sc));
+        let (ac, bc) = (arena.var(sac), arena.var(sbc));
+        let triples = vec![(a, c, ac), (b, c, bc)];
+        let index = shared_factor_index(&triples);
+        let mut model = Model::default();
+        // a=2, b=5, c=3: faithful products would be 6 and 15; the model says
+        // ac=1 (too small) and bc=40 (too large), and ac < bc while a < b, so
+        // the order lemma's conclusion `a ≥ b` is violated only in the
+        // equality/ordering cases the pass checks at the model.
+        model.set(sa, Value::Int(2));
+        model.set(sb, Value::Int(5));
+        model.set(sc, Value::Int(3));
+        model.set(sac, Value::Int(40));
+        model.set(sbc, Value::Int(1));
+        let count = |mode: OrderLemmas, arena: &mut TermArena| {
+            order_and_monotone_lemmas(arena, &triples, &index, mode, &model)
+                .unwrap()
+                .len()
+        };
+        let both = count(OrderLemmas::Both, &mut arena);
+        let order = count(OrderLemmas::OrderOnly, &mut arena);
+        let monotone = count(OrderLemmas::MonotoneOnly, &mut arena);
+        assert!(
+            order > 0,
+            "the order class built nothing on a violating model"
+        );
+        assert!(
+            monotone > 0,
+            "the monotonicity class built nothing on a spurious model"
+        );
+        assert_eq!(
+            both,
+            order + monotone,
+            "`Both` must be exactly the union of the two single-class modes"
         );
     }
 }

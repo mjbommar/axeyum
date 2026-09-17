@@ -2139,12 +2139,12 @@ SUITES["nia-refine-share"] = (
         (
             "the slice grant must not read the lemma lever (ADR-2136's coupling, restored)",
             "        grant: slice_grant(has_envelopes, has_products, arms.refine_share),",
-            "        grant: slice_grant(\n            has_envelopes || (arms.order_lemmas && has_products),\n            has_products,\n            arms.refine_share,\n        ),",
+            "        grant: slice_grant(\n            has_envelopes || (arms.order_lemmas.armed() && has_products),\n            has_products,\n            arms.refine_share,\n        ),",
         ),
         (
             "the share lever must not buy iteration",
-            "        refine: has_envelopes || (arms.order_lemmas && has_products),",
-            "        refine: has_envelopes || (arms.order_lemmas && has_products) || arms.refine_share > 0,",
+            "        refine: has_envelopes || (arms.order_lemmas.armed() && has_products),",
+            "        refine: has_envelopes || (arms.order_lemmas.armed() && has_products) || arms.refine_share > 0,",
         ),
         (
             "the share lever must draw a real slice, not fall through to the hang guard",
