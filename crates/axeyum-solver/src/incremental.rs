@@ -597,7 +597,7 @@ struct CanonicalConstraintCache {
 /// How many subset-model candidates one check may replay before it gives up
 /// and solves fresh. Each candidate costs one evaluator pass over the live
 /// set, and on an `unsat` live set every candidate fails, so this bounds the
-/// miss path's cost. Measured on the DptfDevGen owner-1 replay (ADR-2144):
+/// miss path's cost. Measured on the `DptfDevGen` owner-1 replay (ADR-2144):
 /// four candidates gave 174 model-reuse hits for 2,432 failed replays, one
 /// candidate 171 hits for 614 -- the first candidate (the entry under the
 /// live set's largest member) is the one that fits.

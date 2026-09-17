@@ -86,8 +86,11 @@ fn abc() -> (TermArena, SymbolId, TermId, TermId, TermId) {
 #[test]
 fn the_lever_ships_off_and_the_explicit_config_turns_it_on() {
     require_lever_unset();
+    // Read through a binding so the assertion is about the registered
+    // default's value rather than a constant predicate clippy folds away.
+    let shipped: bool = DEFAULT_CANONICAL_CACHE;
     assert!(
-        !DEFAULT_CANONICAL_CACHE,
+        !shipped,
         "the shipped default must be off -- a moved default is an ADR, not a diff"
     );
     assert!(!SolverConfig::default().canonical_constraint_cache);

@@ -357,7 +357,7 @@ pub struct SolverConfig {
 /// Whether a warm solver keeps the canonical constraint cache (ADR-2144) when
 /// nothing chose: **`false` as shipped**. The cache is a consumer-facing
 /// feature for repeated checks over one retained session, and turning it on
-/// process-wide is a decision the QF_BV pinned-list A/B (ADR-2144) prices.
+/// process-wide is a decision the `QF_BV` pinned-list A/B (ADR-2144) prices.
 /// `AXEYUM_CANONICAL_CACHE=on` turns it on for a process.
 pub const DEFAULT_CANONICAL_CACHE: bool = false;
 
