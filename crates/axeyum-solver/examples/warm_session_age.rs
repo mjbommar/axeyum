@@ -2,7 +2,7 @@
 //!
 //! Glaurung's six-cell campaign (2026-09-17, Axeyum pin `8df853252`) found
 //! that the warm session's per-check latency grows with the number of checks
-//! it has served: on DptfDevGen the p90 per check was 0.1 ms in the session's
+//! it has served: on `DptfDevGen` the p90 per check was 0.1 ms in the session's
 //! first 50 checks and 178 ms past 500, on queries that solve cold in about
 //! 2 ms. This example is the standalone oracle for that finding: it drives ONE
 //! retained solver through a long push/assert/check/pop stream, records the
@@ -18,7 +18,7 @@
 //!   it (`warm_paths.rs::transition_and_check`): pop to the longest common
 //!   prefix with the previous check's persistent stack, push+assert the
 //!   suffix one scope per assertion, then `check` (no temporaries) or
-//!   `check_assuming` (temporaries). The stream for DptfDevGen owner 1 is
+//!   `check_assuming` (temporaries). The stream for `DptfDevGen` owner 1 is
 //!   extracted from the campaign trace with the lane's `extract_owner.py`.
 //! * `--synthetic [checks]` (default 1,200) builds a driver-shaped stream in
 //!   process: a depth-first walk over a path-condition tree of 64-bit
@@ -301,35 +301,29 @@ impl Synthetic {
                 expected: None,
             });
         }
-        match last {
-            Some(false) => {
-                // Infeasible branch: try the sibling polarity if untried,
-                // else abandon this level and try the sibling one up.
-                loop {
-                    let Some((step, untried)) = self.frames.pop() else {
-                        break;
-                    };
+        if last == Some(false) {
+            // Infeasible branch: try the sibling polarity if untried, else
+            // abandon this level and try the sibling one up.
+            while let Some((step, untried)) = self.frames.pop() {
+                self.stack.pop();
+                if untried {
+                    self.push_constraint(arena, assertions, step, false, false);
+                    break;
+                }
+            }
+        } else {
+            if self.stack.len() >= DEPTH {
+                // Path finished: fork a sibling a few levels up.
+                let back = 1 + (self.step % 5) as usize;
+                for _ in 0..back {
+                    self.frames.pop();
                     self.stack.pop();
-                    if untried {
-                        self.push_constraint(arena, assertions, step, false, false);
-                        break;
-                    }
                 }
             }
-            _ => {
-                if self.stack.len() >= DEPTH {
-                    // Path finished: fork a sibling a few levels up.
-                    let back = 1 + (self.step % 5) as usize;
-                    for _ in 0..back {
-                        self.frames.pop();
-                        self.stack.pop();
-                    }
-                }
-                let step = self.step;
-                self.step += 1;
-                self.push_constraint(arena, assertions, step, true, true);
-                self.probe_pending = step % 3 == 0;
-            }
+            let step = self.step;
+            self.step += 1;
+            self.push_constraint(arena, assertions, step, true, true);
+            self.probe_pending = step.is_multiple_of(3);
         }
         Some(Op {
             persistent: self.stack.clone(),
@@ -346,14 +340,23 @@ fn replays(arena: &TermArena, model: &Model, terms: &[TermId]) -> bool {
         .all(|&t| matches!(eval(arena, t, &assignment), Ok(Value::Bool(true))))
 }
 
+/// Nearest-rank percentile of an ascending slice; `p` in `[0, 1]`.
+#[allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
 fn percentile(sorted: &[f64], p: f64) -> f64 {
     if sorted.is_empty() {
         return 0.0;
     }
-    let idx = ((sorted.len() as f64 - 1.0) * p).round() as usize;
+    let idx = ((sorted.len() as f64 - 1.0) * p.clamp(0.0, 1.0)).round() as usize;
     sorted[idx.min(sorted.len() - 1)]
 }
 
+// One driver loop, read top to bottom as the measurement it is; splitting
+// it would scatter the per-check bookkeeping the bands are computed from.
+#[allow(clippy::too_many_lines)]
 fn main() {
     let opts = match parse_args() {
         Ok(o) => o,
@@ -362,21 +365,22 @@ fn main() {
             std::process::exit(2);
         }
     };
-    let (mut arena, mut assertions, replay_ops, mut synthetic, source) = match &opts.replay {
-        Some(prefix) => match load_replay(prefix) {
-            Ok(s) => (
-                s.arena,
-                s.assertions,
-                Some(s.ops),
-                None,
-                format!("replay {prefix}"),
-            ),
-            Err(e) => {
-                eprintln!("warm_session_age: {e}");
-                std::process::exit(2);
+    let (mut arena, mut assertions, replay_ops, mut synthetic, source) =
+        if let Some(prefix) = &opts.replay {
+            match load_replay(prefix) {
+                Ok(s) => (
+                    s.arena,
+                    s.assertions,
+                    Some(s.ops),
+                    None,
+                    format!("replay {prefix}"),
+                ),
+                Err(e) => {
+                    eprintln!("warm_session_age: {e}");
+                    std::process::exit(2);
+                }
             }
-        },
-        None => {
+        } else {
             let mut arena = TermArena::new();
             let synthetic = Synthetic::new(&mut arena, opts.synthetic);
             (
@@ -386,8 +390,7 @@ fn main() {
                 Some(synthetic),
                 format!("synthetic {} checks", opts.synthetic),
             )
-        }
-    };
+        };
     let planned = replay_ops.as_ref().map_or(opts.synthetic, Vec::len);
     println!("source: {source}; checks {planned}");
 
