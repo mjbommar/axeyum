@@ -363,6 +363,55 @@ fn draw_schedule_step(rng: &mut Lcg, natoms: usize, depth: u32) -> ScheduleStep 
     }
 }
 
+/// Declares `count` integer variables `y0..y{count}`.
+fn int_vars(arena: &mut TermArena, count: usize) -> Vec<TermId> {
+    (0..count)
+        .map(|i| {
+            let s = arena
+                .declare(&format!("y{i}"), Sort::Int)
+                .expect("declare int");
+            arena.var(s)
+        })
+        .collect()
+}
+
+/// Driver discipline: backtrack past the assertion just made (its wrapping
+/// `push`), in the theory and in the mirror.
+fn backtrack(
+    theory: &mut LiaTheory,
+    marks: &mut Vec<usize>,
+    log: &mut Vec<(usize, bool)>,
+    depth: &mut u32,
+) {
+    theory.pop();
+    let mark = marks.pop().expect("just pushed a mark");
+    log.truncate(mark);
+    *depth -= 1;
+}
+
+/// A conflict core is a lemma `¬⋀core`, so every literal it names must be
+/// ASSERTED at that polarity: the mirrored live value, or the trigger literal
+/// itself. A core naming the other polarity is a false lemma — the shape a
+/// stale marker produces (ADR-2143).
+fn assert_core_is_asserted(
+    seed: u64,
+    log: &[(usize, bool)],
+    natoms: usize,
+    trigger: (usize, bool),
+    core: &[axeyum_solver::TheoryLit],
+) {
+    for lit in core {
+        let asserted = effective(log, lit.atom) == Some(lit.value)
+            || (lit.atom == trigger.0 && lit.value == trigger.1);
+        assert!(
+            asserted,
+            "DISAGREEMENT seed {seed}: core literal {lit:?} is not asserted \
+             (live={:?}, trigger={trigger:?})",
+            effective_set(log, natoms)
+        );
+    }
+}
+
 #[test]
 fn differential_fuzz_push_pop_assert_sequences_agree() {
     let mut conflict_steps = 0_u32;
@@ -374,15 +423,7 @@ fn differential_fuzz_push_pop_assert_sequences_agree() {
         let mut rng = schedule_rng(seed);
         let mut arena = TermArena::new();
         let nvars = 1 + usize::try_from(rng.below(2)).expect("fits"); // 1..=2 vars
-        let vars: Vec<TermId> = (0..nvars)
-            .map(|i| {
-                let s = arena
-                    .declare(&format!("y{i}"), Sort::Int)
-                    .expect("declare int");
-                arena.var(s)
-            })
-            .collect();
-
+        let vars = int_vars(&mut arena, nvars);
         let natoms = 3 + usize::try_from(rng.below(4)).expect("fits"); // 3..=6 atoms
         let atoms: Vec<TermId> = (0..natoms)
             .map(|_| random_atom(&mut arena, &vars, &mut rng))
@@ -426,23 +467,8 @@ fn differential_fuzz_push_pop_assert_sequences_agree() {
 
                     let result = theory.assert(atom, value);
                     let current = effective(&log, atom);
-                    // A conflict core is a lemma `¬⋀core`, so every literal it
-                    // names must be ASSERTED at that polarity: the mirrored live
-                    // value, or the trigger literal itself. A core naming the
-                    // other polarity is a false lemma — the shape a stale
-                    // marker produces (ADR-2143, `rows_to_core`'s
-                    // `unwrap_or(true)`).
                     if let Err(core) = &result {
-                        for lit in core {
-                            let asserted = effective(&log, lit.atom) == Some(lit.value)
-                                || (lit.atom == atom && lit.value == value);
-                            assert!(
-                                asserted,
-                                "DISAGREEMENT seed {seed}: core literal {lit:?} is not asserted \
-                                 (live={:?}, trigger=({atom}, {value}))",
-                                effective_set(&log, natoms)
-                            );
-                        }
+                        assert_core_is_asserted(seed, &log, natoms, (atom, value), core);
                     }
                     // ADR-2143: an atom whose OPPOSITE polarity is live at this
                     // or an enclosing level is a conflict — `a ∧ ¬a` — and the
@@ -460,10 +486,7 @@ fn differential_fuzz_push_pop_assert_sequences_agree() {
                             effective_set(&log, natoms)
                         );
                         polarity_conflicts += 1;
-                        theory.pop();
-                        let mark = marks.pop().expect("just pushed a mark");
-                        log.truncate(mark);
-                        depth -= 1;
+                        backtrack(&mut theory, &mut marks, &mut log, &mut depth);
                         continue;
                     }
                     // The theory logs a (possibly-changed) assignment only when the
@@ -504,10 +527,7 @@ fn differential_fuzz_push_pop_assert_sequences_agree() {
                     // On a conflict, backtrack past this assertion (driver
                     // discipline) so the next step starts from a consistent state.
                     if result.is_err() {
-                        theory.pop();
-                        let mark = marks.pop().expect("just pushed a mark");
-                        log.truncate(mark);
-                        depth -= 1;
+                        backtrack(&mut theory, &mut marks, &mut log, &mut depth);
                     }
                 }
             }
