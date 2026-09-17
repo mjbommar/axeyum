@@ -89,3 +89,18 @@ names the measurement or the round trip that produced it.
 16. **Wire `check.py` into a gate** once cindergraph is a pinned dependency
     (its `__version__` is item 8 on its list). Until then it is a runnable
     example with an exit status, not a check anyone runs.
+
+    **Done 2026-09-17 (lane AX-GATE, see `docs/plan/status/ax-gate.md` for the
+    commit).** `cindergraph` is pinned in `pyproject.toml`'s dev group at
+    `8bd20512158d19d4cf632caba4bbed629271a3e5` (`uv.lock` updated; `uv sync
+    --dev` installs it, `__version__` 0.1.0) and `check.py`'s first line
+    prints version, installed commit and pinned commit.
+    `scripts/check-cindergraph-defects.sh` is a step of `just py-check` and of
+    `scripts/check.sh`'s Python block: it refuses without the native module or
+    cindergraph, skips loudly without `clang`, and re-derives the verdict from
+    `results.tsv` through `scripts/check-cindergraph-defects.py` —
+    `CINDERGRAPH_DEFECTS|rows=33|replayed=18|dead=2|clean=13|bounded=0|no_oracle=0|failures=0|PASS`.
+    Three subject mutations (`mutation_controls.py cindergraph-defects`) each
+    kill exactly one test. The lifter now reads cindergraph's `line`, `facts`
+    (capacity / strlen / unroll) and `loop_kind` with its old readings as the
+    fallback; 356 queries and 18 harnesses byte-identical at the pin.

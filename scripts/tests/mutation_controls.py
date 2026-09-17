@@ -13339,5 +13339,63 @@ SUITES["warm-keep-trail-2145-session-fuzz"] = (
     ],
 )
 
+# --------------------------------------------------------------------------
+# `cindergraph-defects` -- the C-defect example as a gate (improvement-list
+# item 16).  Unlike the suites above, these mutate the SUBJECT the gate
+# measures rather than the gate's own guards: a sample, the lifter, the replay.
+# Each must kill exactly ONE test of the control module -- the test that
+# watches the failure class the gate files it under -- because a gate whose
+# diagnosis lumps "the C changed", "the lifter's C is wrong" and "the replay
+# stopped looking" together is a gate that says FAIL and nothing else.
+# Measured 2026-09-17 on the pinned cindergraph (8bd20512): expectation only,
+# replay only, control only.
+#
+# The control module's second half runs the real sweep (needs `.venv` with the
+# native module and cindergraph, and clang); the scratch copy carries `.venv`
+# (149 MB) and its `axeyum.pth` still points at the ORIGINAL tree's `python/`,
+# which is what makes the unmutated native module reachable from the copy while
+# `check.py`, `lift.py` and the samples come from the copy.
+# --------------------------------------------------------------------------
+
+SUITES["cindergraph-defects"] = (
+    "python/examples/cindergraph_defects/check.py",
+    "scripts.tests.test_check_cindergraph_defects",
+    [
+        (
+            # The fixed twin of sample 02 loses its bounds check. Its witness is
+            # REAL (it replays under ASan at line 25), so the only thing wrong
+            # is that a function the sample calls clean has a finding: the
+            # `expectation` class, and the `clean` count moves with it.
+            "a sample's bounds check deleted",
+            "    if (len < 0 || len > 256) return -1;\n",
+            "",
+            "python/examples/cindergraph_defects/samples/02_signed_length.c",
+        ),
+        (
+            # C17 §6.3.1.8: `int` against `size_t` is an unsigned 64-bit
+            # comparison. The mutant keeps same-width mixes unsigned but resolves
+            # a wider unsigned type to the SIGNED one, so `((size_t)count - 1)`
+            # in sample 11 gains a signed-overflow obligation C does not have.
+            # The witness cannot reproduce (unsigned arithmetic does not trap):
+            # `DID NOT REPLAY`, the `replay` class, and every expectation still
+            # met because `pack_bug` keeps its real findings.
+            "the usual-arithmetic rule for int against size_t",
+            "    if unsigned.width >= signed.width:",
+            "    if unsigned.width == signed.width:",
+            "python/examples/cindergraph_defects/lift.py",
+        ),
+        (
+            # `replay()` keeps reading the sanitizer's report but stops
+            # believing its verdict. Every real witness still reads REPLAYED
+            # at its own line, so the table is untouched; what catches it is
+            # the driver's control -- the first harness judged at the line
+            # AFTER its finding must be refused -- which is the `control` class.
+            "replay() accepts every sanitizer report",
+            "        ok, report = sanitizer_report(run.stderr, sample_name, kind, line)",
+            "        ok, report = True, sanitizer_report(run.stderr, sample_name, kind, line)[1]",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))

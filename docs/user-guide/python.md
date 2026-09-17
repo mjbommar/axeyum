@@ -115,17 +115,40 @@ negative control that must fail when a guard is deleted.
 just py-check
 ```
 
-Seven steps: `maturin develop`, `pytest python/tests -q`, the stub name/arity
+Ten steps: `maturin develop`, `pytest python/tests -q`, the stub name/arity
 drift check, the stub type ratchet, `stubtest`, `ty`, `ruff check`,
-`ruff format --check`. **Read the counts, not the exit status** — each prints
-one:
+`ruff format --check`, then the C-defect example's controls and the C-defect
+gate itself (`scripts/check-cindergraph-defects.sh`, below). **Read the
+counts, not the exit status** — each prints one:
 
 ```
 PYTEST|collected=N
 STUBS|modules=M|symbols=S|aliases=A|synthesised_dunders=D
 STUB_TYPES|params=P|typed=T|any=A|allowlisted=L|return_any=R
 TYPES|target=python/axeyum|diagnostics=N|budget=B|control=C
+CINDERGRAPH_DEFECTS|rows=N|replayed=N|dead=N|clean=N|bounded=N|no_oracle=N|failures=N|PASS
 ```
+
+The last one is the example under
+[`python/examples/cindergraph_defects/`](../../python/examples/cindergraph_defects/README.md)
+run as a gate: twelve C samples through [cindergraph](https://github.com/mjbommar/cindergraph)
+— installed by `uv sync --dev` at the commit `pyproject.toml`'s dev group pins,
+and the run's first line says which commit it ran (`cindergraph|version=…|commit=…|pinned=…|match=yes`)
+— into QF_BV, every `sat` witness replayed under a sanitizer. The gate does
+not trust the driver's exit status: `scripts/check-cindergraph-defects.py`
+re-reads `results.tsv` and asserts that every function has an `// expect:`
+line and meets it, that the clean/finding counts equal the counts of those
+lines, that no witness `DID NOT REPLAY`, that every replayed witness replayed
+at **its own** line, that the driver's own control (the first harness judged
+at the line after its finding) was refused, and that the cindergraph that ran
+is the pinned one. It **refuses** (exit 2) when `axeyum._native` or
+`cindergraph` is not importable, and **skips** loudly — `CINDERGRAPH_DEFECTS|SKIPPED|reason=…`,
+never `PASS` — on a host without `clang` (`AXEYUM_REQUIRE_CINDERGRAPH_DEFECTS=1`
+makes that a failure). Its three subject mutations — a sample's bounds check
+deleted, the lifter's `int`-against-`size_t` rule broken, `replay()` saying
+yes to everything — each kill exactly one test of
+`scripts/tests/test_check_cindergraph_defects.py`
+(`python3 scripts/tests/mutation_controls.py cindergraph-defects`).
 
 Both fail on zero. A pytest run that collects nothing exits 5 and prints "no
 tests ran", and a drift check pointed at an empty directory would otherwise
@@ -200,9 +223,11 @@ Three surfaces from ADR-2140 (items 6, 7 and 9 of the 2026-09-16 list):
 ## See also: C defects through cindergraph
 
 [`python/examples/cindergraph_defects/`](../../python/examples/cindergraph_defects/README.md)
-lifts scalar, loop-free C functions from cindergraph's typed AST into QF_BV
-queries, has `axeyum_cli` find a witness per sink (buffer length, array index,
-divisor, shift amount, signed overflow, narrowing store, dead branch), and
-replays every witness under AddressSanitizer or UBSan at the finding's line.
-Eight textbook defect/fix pairs ship with it; the run's exit status depends on
-every witness reproducing.
+lifts scalar C functions (loops unrolled to a stated bound) from cindergraph's
+typed AST into QF_BV queries, has `axeyum.smt.solve` find a witness per sink
+(buffer length, array index, divisor, shift amount, signed overflow, narrowing
+store, allocation-size wrap, uninitialised read, dead branch), and replays
+every witness under AddressSanitizer, UBSan or MemorySanitizer at the finding's
+line. Twelve textbook defect/fix pairs ship with it, and since 2026-09-17 it is
+a gate of `just py-check` (above), not an example that runs when someone
+remembers.

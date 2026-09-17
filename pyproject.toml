@@ -122,6 +122,15 @@ include = [
 # `maturin` binary. The dev group is what puts one on PATH for
 # `uv run maturin develop`.
 dev = [
+    # cindergraph is the C front end of `python/examples/cindergraph_defects`
+    # and of `scripts/check-cindergraph-defects.sh`, the gate that replays that
+    # example's witnesses under a sanitizer. Pinned to a COMMIT, not a branch:
+    # the gate asserts row counts and replay lines that depend on the parser's
+    # AST shape (`op`, `line`, `column`, `facts`, the loop metadata), and
+    # `check.py` prints the SHA it ran against next to `cindergraph.__version__`
+    # so a run says what it measured. Move the pin deliberately, with the
+    # sample sweep re-run, never by following `@main`.
+    "cindergraph @ git+https://github.com/mjbommar/cindergraph.git@8bd20512158d19d4cf632caba4bbed629271a3e5",
     "hypothesis>=6.165.10",
     "maturin>=1.15,<2",
     # `mypy` is here for ONE thing: `python -m mypy.stubtest`, which imports the
