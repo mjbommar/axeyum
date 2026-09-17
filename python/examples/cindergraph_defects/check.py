@@ -38,7 +38,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from lift import DEFAULT_UNROLL, CType, Lifted, Query, lift_source  # noqa: E402
+from lift import DEFAULT_UNROLL, CType, Lifted, Query, lift_source
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
@@ -149,19 +149,16 @@ class CliBackend(Backend):
             text=True,
             capture_output=True,
             timeout=timeout_ms / 1000 + 30,
+            check=False,
         )
         lines = [line for line in proc.stdout.splitlines() if line.strip()]
         verdict = lines[0].strip() if lines else "no-output"
         values: dict[str, int] = {}
         if verdict == "sat" and len(lines) > 1:
             for name, lit, dec in _VALUE_RE.findall(lines[1]):
-                values[name] = (
-                    int(dec)
-                    if dec
-                    else int(lit[2:], 2)
-                    if lit.startswith("#b")
-                    else int(lit[2:], 16)
-                )
+                # `#b…` and `#x…` are Python's own `0b…`/`0x…` spellings with the
+                # sigil swapped; base 0 reads the prefix itself.
+                values[name] = int(dec) if dec else int("0" + lit[1:], 0)
         return verdict, values
 
 
@@ -258,9 +255,12 @@ def uninit_oracle(cc: str) -> str | None:
             [cc, "-fsanitize=memory", "-O0", str(probe), "-o", str(exe)],
             capture_output=True,
             text=True,
+            check=False,
         )
         if comp.returncode == 0:
-            run = subprocess.run([str(exe)], capture_output=True, text=True, timeout=60)
+            run = subprocess.run(
+                [str(exe)], capture_output=True, text=True, timeout=60, check=False
+            )
             if run.returncode == 0:
                 oracle = "-fsanitize=memory"
     if oracle is None and shutil.which("valgrind"):
@@ -329,7 +329,10 @@ def replay(
         return None, f"{NO_ORACLE}: {kind} needs clang's {san}"
     flags = [] if san == "valgrind" else [san]
     comp = subprocess.run(
-        [cc, *flags, *COMMON, str(source), "-o", str(exe)], capture_output=True, text=True
+        [cc, *flags, *COMMON, str(source), "-o", str(exe)],
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if comp.returncode != 0:
         last = comp.stderr.strip().splitlines()[-1][:160]
@@ -342,6 +345,7 @@ def replay(
             input=source.read_text().split("\nint main(void)", 1)[0],
             capture_output=True,
             text=True,
+            check=False,
         )
         if alone.returncode != 0:
             return None, f"{NO_ORACLE}: the input does not compile as C ({last})"
@@ -357,10 +361,11 @@ def replay(
             capture_output=True,
             text=True,
             timeout=300,
+            check=False,
         )
         ok, report = valgrind_report(run.stderr, sample_name, line)
     else:
-        run = subprocess.run([str(exe)], capture_output=True, text=True, timeout=60)
+        run = subprocess.run([str(exe)], capture_output=True, text=True, timeout=60, check=False)
         ok, report = sanitizer_report(run.stderr, sample_name, kind, line)
     if report:
         return ok, report

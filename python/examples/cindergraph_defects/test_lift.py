@@ -26,7 +26,7 @@ from lift import (
     parse_ctype,
     promote,
     usual_arithmetic,
-)  # noqa: E402
+)
 
 
 class Conversions(unittest.TestCase):

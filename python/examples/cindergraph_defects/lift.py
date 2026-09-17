@@ -55,6 +55,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
+from itertools import pairwise
 
 try:  # cindergraph is an optional, git-installed dependency of this example.
     import cindergraph as _cg
@@ -379,7 +380,7 @@ class _Ast:
             return ops
         if ops is not None and len(ops) == 1 and len(kids) > 2:
             return ops * (len(kids) - 1)
-        return [self.gap(a, b) for a, b in zip(kids, kids[1:])]
+        return [self.gap(a, b) for a, b in pairwise(kids)]
 
     def prefix_op(self, i: int, child: int) -> str:
         ops = self.ops(i)
