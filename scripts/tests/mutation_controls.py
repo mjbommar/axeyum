@@ -11886,18 +11886,21 @@ SUITES["qinst-nested-activation"] = (
             "                        }",
         ),
         (
-            # Level 1's scope rule. Skipping EVERYTHING in a staged replacement
-            # loses the one class discovery exists for.
-            "level 1 keeps the universals inside the replaced subtree",
-            "            if scope.is_some_and(|scope| !context.path.starts_with(scope)) {",
-            "            if scope.is_some() {",
+            # Level 1's redundancy test, one way: calling EVERY instance-exposed
+            # universal redundant skips the ones whose static registration only
+            # promotes -- the loss measured on TokenQueue.576.
+            "an instance-exposed universal is redundant only if the static "
+            "registration binds every outer binder",
+            "        used_prefix(arena, body, &binders).len() == binders.len()",
+            "        true",
         ),
         (
-            # Level 1's dispatch. Without it the raised level scans every
-            # instance exactly as the shipped one does.
-            "level 1 does not scan admitted instances",
-            "    let mut found = if nested_activation_level() >= 1 {",
-            "    let mut found = if false {",
+            # And the other way: calling NONE redundant makes level 1 scan
+            # exactly as level 0 does, and the subset is no longer strict.
+            "an instance-exposed universal whose static registration is ground "
+            "is skipped",
+            "        used_prefix(arena, body, &binders).len() == binders.len()",
+            "        false",
         ),
         (
             # Level 1's budget rule. Counting a re-derived conclusion again

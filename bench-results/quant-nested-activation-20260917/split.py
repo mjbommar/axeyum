@@ -38,7 +38,7 @@ DISCOVERY_RE = re.compile(
     r"^QPROBE nested-discovery exit=(?P<exit>\S+) registered=(?P<registered>\d+) "
     r"uncompiled=(?P<uncompiled>\d+) rebuilds=(?P<rebuilds>\d+) positive=(?P<positive>\d+) "
     r"staged=(?P<staged>\d+) promoted=(?P<promoted>\d+) rejected=(?P<rejected>\d+) "
-    r"rejected_checker=(?P<rejected_checker>\d+)(?: outside_scope=(?P<outside_scope>\d+) unscanned=(?P<unscanned>\d+))?\s*$",
+    r"rejected_checker=(?P<rejected_checker>\d+)(?: redundant=(?P<redundant>\d+))?\s*$",
     re.M,
 )
 DISCOVERY_NONE_RE = re.compile(r"^QPROBE nested-discovery exit=\S+ none\s*$", re.M)
@@ -56,8 +56,7 @@ COLUMNS = [
     "joined_inactive", "handoff", "poscap",
     "nocontext", "nocontext_crossed", "nocontext_negative", "nocontext_untracked",
     "disc_registered", "disc_uncompiled", "disc_rebuilds", "disc_positive", "disc_staged",
-    "disc_promoted", "disc_rejected", "disc_rejected_checker", "disc_outside_scope",
-    "disc_unscanned",
+    "disc_promoted", "disc_rejected", "disc_rejected_checker", "disc_redundant",
     "cap_registrations_hit", "cap_rebuilds_hit", "cap_positive_hit",
 ]
 
@@ -101,8 +100,7 @@ def parse_err(text):
         row["disc_promoted"] += int(m.group("promoted"))
         row["disc_rejected"] += int(m.group("rejected"))
         row["disc_rejected_checker"] += int(m.group("rejected_checker"))
-        row["disc_outside_scope"] += int(m.group("outside_scope") or 0)
-        row["disc_unscanned"] += int(m.group("unscanned") or 0)
+        row["disc_redundant"] += int(m.group("redundant") or 0)
         if registered >= MAX_DISCOVERED_REGISTRATIONS:
             row["cap_registrations_hit"] += 1
         if rebuilds >= MAX_DISCOVERY_REBUILDS:

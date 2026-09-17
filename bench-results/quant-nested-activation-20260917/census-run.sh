@@ -11,8 +11,9 @@
 # byte; an explicit `=0` takes a different path through `cap_lever!`) or
 # `on` (AXEYUM_QINST_POSITIVE_PATH=1, ADR-2120's level 1) or `composed`
 # (level 1 + AXEYUM_QINST_GROUND_SESSION=2, ADR-2130's session lever, the
-# composition QUANT-COMPOSE sized) or `nested` (AXEYUM_QINST_NESTED_ACTIVATION=1
-# alone) or `nested-composed` (all three).
+# composition QUANT-COMPOSE sized), or
+# `nested1`/`nested2` (AXEYUM_QINST_NESTED_ACTIVATION at that level, alone),
+# `nested2-on` (level 2 + ADR-2120's level 1) or `nested2-composed` (all three).
 #
 # Budget 24 s / 8 GiB, the envelope ADR-2120 s7 / ADR-2133 / QUANT-REACH-DIFF
 # used on the same cores. Timing is `$EPOCHREALTIME`, never `date +%N`: on
@@ -28,9 +29,10 @@ case "$ARM" in
   off) ARMENV=() ;;
   on) ARMENV=(AXEYUM_QINST_POSITIVE_PATH=1) ;;
   composed) ARMENV=(AXEYUM_QINST_POSITIVE_PATH=1 AXEYUM_QINST_GROUND_SESSION=2) ;;
-  nested) ARMENV=(AXEYUM_QINST_NESTED_ACTIVATION=1) ;;
-  nested-on) ARMENV=(AXEYUM_QINST_NESTED_ACTIVATION=1 AXEYUM_QINST_POSITIVE_PATH=1) ;;
-  nested-composed) ARMENV=(AXEYUM_QINST_NESTED_ACTIVATION=1 AXEYUM_QINST_POSITIVE_PATH=1 AXEYUM_QINST_GROUND_SESSION=2) ;;
+  nested1) ARMENV=(AXEYUM_QINST_NESTED_ACTIVATION=1) ;;
+  nested2) ARMENV=(AXEYUM_QINST_NESTED_ACTIVATION=2) ;;
+  nested2-on) ARMENV=(AXEYUM_QINST_NESTED_ACTIVATION=2 AXEYUM_QINST_POSITIVE_PATH=1) ;;
+  nested2-composed) ARMENV=(AXEYUM_QINST_NESTED_ACTIVATION=2 AXEYUM_QINST_POSITIVE_PATH=1 AXEYUM_QINST_GROUND_SESSION=2) ;;
   *) echo "ABORT: unknown arm $ARM"; exit 2 ;;
 esac
 mkdir -p "$OUT/raw"

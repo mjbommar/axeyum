@@ -608,10 +608,10 @@ fn a_nested_refutation_carries_a_checked_replacement_chain() {
 // The lever: `AXEYUM_QINST_NESTED_ACTIVATION` / `NestedActivationLevelGuard`.
 //
 // Level 0 is the shipped discovery. Level 1 stops spending discovery's
-// budgets on DUPLICATES: an admitted instance is not scanned (its universals
-// are the assertion's own, already registered by the static walk), a staged
-// replacement is scanned only inside its replaced subtree, and a re-derived
-// conclusion does not spend `MAX_POSITIVE_INSTANCES` again. Level 2 adds the
+// budgets on DUPLICATES: a universal a plain instance exposes is not
+// registered when the static registration of the same position already
+// yields a ground conclusion (it binds every binder of the assertion), and a
+// re-derived conclusion does not spend `MAX_POSITIVE_INSTANCES` again. Level 2 adds the
 // reference solvers' ingestion rule: a quantifier inside a ground formula is
 // ONE opaque leaf of the e-graph and its body is never walked, so a
 // registration's trigger can no longer match its own body inside an admitted
@@ -653,7 +653,11 @@ fn crossed_after_duplicates(n: usize, unsat: bool) -> String {
         "(assert (not (R d c)))\n"
     });
     for i in 0..n {
-        text.push_str(&format!("(declare-const a{i} U)\n(assert (P a{i}))\n"));
+        text.push_str("(declare-const a");
+        text.push_str(&i.to_string());
+        text.push_str(" U)\n(assert (P a");
+        text.push_str(&i.to_string());
+        text.push_str("))\n");
     }
     text.push_str("(check-sat)\n");
     text
@@ -738,8 +742,8 @@ fn level_1_stops_spending_the_budgets_on_duplicates_but_the_flood_remains() {
     let text = crossed_after_duplicates(DUPLICATES, true);
     let (_, stats) = at_level(0, || at_nested_level(1, || ematch(&text)));
     assert!(
-        stats.instances_unscanned >= DUPLICATES,
-        "level 1 scanned the admitted instances ({stats:?})"
+        stats.instances_redundant >= DUPLICATES,
+        "level 1 did not recognise the duplicate exposures ({stats:?})"
     );
     assert!(
         stats.discovered < 256,
@@ -802,9 +806,9 @@ fn a_satisfiable_nested_shape_is_not_refuted_at_any_nested_activation_level() {
 
 /// Level 1 registers a strict SUBSET of level 0's registrations: on the
 /// crossed shape it skips the outer instance's exposure of the middle
-/// universal (a duplicate of the static registration) and keeps the one
-/// crossed universal. This is the test a mutation that makes level 1 behave
-/// like level 0 has to fail.
+/// universal (whose static registration binds `x` and `u`, so its conclusion
+/// is ground — a duplicate) and keeps the one crossed universal. This is the
+/// test a mutation that makes level 1 behave like level 0 has to fail.
 #[test]
 fn level_1_registers_a_strict_subset_and_counts_what_it_skipped() {
     let (_, shipped) = at_level(0, || at_nested_level(0, || ematch(CROSSED_BINDER_OR_UNSAT)));
@@ -814,9 +818,8 @@ fn level_1_registers_a_strict_subset_and_counts_what_it_skipped() {
         "level 1 lost the refutation"
     );
     assert_eq!(
-        shipped.instances_unscanned + shipped.discovered_outside_scope,
-        0,
-        "level 0 skipped something; it has no scope rule ({shipped:?})"
+        shipped.instances_redundant, 0,
+        "level 0 skipped something; it has no redundancy rule ({shipped:?})"
     );
     assert!(
         raised.discovered < shipped.discovered,
@@ -828,9 +831,54 @@ fn level_1_registers_a_strict_subset_and_counts_what_it_skipped() {
          discovered registration ({raised:?})"
     );
     assert!(
-        raised.instances_unscanned >= 1,
-        "level 1 registered fewer but scanned every instance, so the difference \
+        raised.instances_redundant >= 1,
+        "level 1 registered fewer but recognised no duplicate, so the difference \
          is not the rule under test ({raised:?})"
+    );
+}
+
+/// The redundancy test's other half. `forall y. Q(y)` inside
+/// `forall x. (¬P(x) ∨ forall y. Q(y))` does NOT use `x`, so its static
+/// registration binds `y` alone and its conclusion `forall x. (¬P(x) ∨ Q(b))`
+/// is a PROMOTED universal that still has to be instantiated; the registration
+/// the instance `¬P(a) ∨ forall y. Q(y)` exposes yields `¬P(a) ∨ Q(b)` in one
+/// step. Level 1 must keep it. Measured: skipping it lost
+/// `simplify_javafe.parser.TokenQueue.576`, a core the shipped arm decides in
+/// 2.2 s.
+const OUTER_BINDER_UNUSED_UNSAT: &str = r"
+    (set-logic UF)
+    (declare-sort U 0)
+    (declare-fun P (U) Bool)
+    (declare-fun Q (U) Bool)
+    (declare-const a U)
+    (declare-const b U)
+    (assert (forall ((x U)) (or (not (P x)) (forall ((y U)) (Q y)))))
+    (assert (P a))
+    (assert (not (Q b)))
+    (check-sat)
+";
+
+#[test]
+fn a_universal_that_does_not_use_the_outer_binder_is_not_treated_as_redundant() {
+    let (_, shipped) = at_level(0, || {
+        at_nested_level(0, || ematch(OUTER_BINDER_UNUSED_UNSAT))
+    });
+    let (verdict, raised) = at_level(0, || {
+        at_nested_level(1, || ematch(OUTER_BINDER_UNUSED_UNSAT))
+    });
+    assert!(
+        matches!(verdict, CheckResult::Unsat),
+        "level 1 lost the refutation"
+    );
+    assert_eq!(
+        raised.instances_redundant, 0,
+        "level 1 called the instance's registration redundant, but the static \
+         registration's conclusion keeps `x` bound ({raised:?})"
+    );
+    assert!(
+        shipped.discovered >= 1 && raised.discovered == shipped.discovered,
+        "level 1 registered a different set from level 0 on a shape with no \
+         duplicate ({raised:?} vs {shipped:?})"
     );
 }
 
