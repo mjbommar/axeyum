@@ -106,3 +106,14 @@ scalar and `Duration` types. `backend.rs` is not in `GOVERNED_FILES`
 | 7 ladder | `smtlib.rs` (+1 pub fn), `axeyum-py/src/smt.rs` (+1 pyfunction) | ~120 lines | the two defect shapes; bound reported; fallback to unbounded |
 | 9 stats | `axeyum-py/src/solver/core.rs` (typed class), `axeyum-py/src/smt.rs` (re-export), stubs | ~80 lines | Python: fields present, monotone across two checks |
 | A/B | script under `bench-results/` | — | 200 files, 2 arms, movers ×3 |
+
+## Postscript (2026-09-17, after the build)
+
+Finding 3 held mechanically and failed empirically: the forced phase reaches
+both cores and is observable at the CNF level, but on bit-blasted `QF_BV` it
+moved **0 of 15** corpus models (the search decides Tseitin gate variables,
+whose `false` propagates `1`s into inputs through negated AIG edges) and cost
++27 % wall on the pinned list. `PreferZero` therefore finishes on the lifted
+model instead, and the SAT-core half ships off behind
+`AXEYUM_MODEL_PREFERENCE_PHASE=on`. The record is
+[ADR-2140](../09-decisions/adr-2140-which-model-a-sat-returns-is-a-policy-and-the-shipped-policy-is-todays-search.md).

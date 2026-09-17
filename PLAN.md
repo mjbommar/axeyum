@@ -146,6 +146,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-17 | ax-policy | ADR-2140: `ModelPreference` on `SolverConfig` (SAT-core forced phase + replay-checked shrink), `solve_smtlib_least_witness`, `:model-preference` option, `AXEYUM_MODEL_PREFERENCE` lever, `smt.least_witness`, typed `IncrementalStats`; `tests/model_preference_2140.rs` (identity, non-vacuity, determinism, replay) + mutation controls; three model-choice seeds in `corpus/regression/qf_bv/`. |
 | 2026-09-16 | dt-array-element | **Sizing first, and it is the finding.** The sort `register_datatype` refuses is `(Array Int <datatype>)` on **142/142**, **112/112**, **86/86** and **112/112** of four measured populations — the premise is exactly right, and **zero** refused sorts are an array with an uninterpreted domain or range (a different site, `auto.rs`, 4 of 81 `AUFDTLIRA` rows). But the refusal is the TERMINAL reason on only **2 of 81** undecided `AUFDTLIRA` rows, **0 of 56** `UFDTLIRA` and **0 of 29** `QF_DT`; the 12 `AUFDTLIRA` files that declare a refused datatype mostly die at `quant:ematching` or the ADR-2103 quant-route decline instead. Ceiling **6 of 800** across the four A/B divisions. Built anyway, behind an OFF lever, as the narrow SOUND slice: `field_is_opaque` — one predicate for the three sites ADR-1920 requires to agree — admits an array-of-datatype FIELD as an opaque container with no expansion variable, so the exactness predicate and the relaxed `build_dt_eq` regime are untouched and traversal is refused twice over. 12 tests, 2 mutations killing exactly one named fixture each, `--check-anchors` stale=0. The traversing half — SPARK's actual shape — needs the array's sort-abstraction route (ADR-2065's `OpaqueReals`), because the residual otherwise re-enters `datatype_native` through its own `solve` call and that is the ADR-1920 stack-overflow cycle; ADR-2135 |
 | 2026-09-16 | `09d03cc2e` | `expansion-reach.py` + the seven-population reach census, with three committed controls (fires on ADR-2114's own `ground.smt2`, not on either negative). |
 | 2026-09-16 | `cb60fb9ba` | ADR-2128: nested datatype field expansion behind `AXEYUM_DT_NESTED_FIELD_DEPTH` (default 0 = OFF); depth-aware exactness, cyclic-closure detector, demand-seeded materialiser, 16 tests, a new pre-push-gated suite. |
@@ -46710,6 +46711,23 @@ crate, untouched by this lane, out of scope.
 regenerate the manifest, reconcile the fact ledger. This lane deliberately
 did not touch that file or `artifacts/autogenesis/` — it enabled a draw,
 it did not author one.
+
+**AX-POLICY (`WIP`, ax-policy, 2026-09-17).** `ModelPreference { Any, PreferZero,
+LeastUnsigned }` on `SolverConfig`, reaching the one-shot and warm SAT cores as a
+forced decision polarity and finishing the model with a replay-checked shrink;
+`solve_smtlib_least_witness` (the 1/16/256/4096 magnitude ladder) behind
+`(set-option :model-preference …)`, `AXEYUM_MODEL_PREFERENCE` and
+`axeyum.smt.least_witness`; typed `IncrementalStats` with a `profiled` field in
+the Python bindings. **`Any` ships; no default moved.** The sizing finding that
+shaped the design: the Boolean core already decides `false` first, and the forced
+phase alone moved 0 of 15 corpus models (gate variables, not input bits, are what
+the search decides) while costing +25-27 % wall on the QF_BV pinned list with one
+stable gain against one stable loss; so `PreferZero` finishes on the lifted model
+(replay-checked shrink, +12 %, no movers, 0 `:status` disagreements) and the
+SAT-core phase ships off behind `AXEYUM_MODEL_PREFERENCE_PHASE=on`. Next: the
+defects example (`check.py`) can drop its `BOUNDS` loop for `smt.least_witness`
+once item 1 (call the library, not the subprocess) lands; Glaurung's
+concretization sweep is now a one-variable experiment.
 
 **`WIP`, bench-boolean-core, 2026-09-07.** The native core's per-conflict cost is
 now instrumented and decomposed, closing the gap the

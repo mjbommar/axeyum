@@ -1838,12 +1838,13 @@ SUITES["dt-array-element-2135"] = (
 #    nothing else -- every other test in the suite sets its policy explicitly,
 #    so a default that moved is visible to exactly the test that measures it;
 #  * removing the forced-phase read at the SAT core's decision site must kill
-#    `prefer_zero_reaches_the_one_shot_backend` and nothing else -- the one test
-#    that observes the SAT-core half directly. The corpus non-vacuity test
-#    SURVIVES this mutation by design: `PreferZero`'s finishing shrink moves the
-#    three-witness fixture whether or not the core's phase was forced, which is
-#    exactly the finding ADR-2140 records (the forced phase alone moved 0 of 15
-#    corpus models). Measured 2026-09-17: killed 1 / killed 1.
+#    `the_forced_phase_reaches_the_one_shot_backend_when_on` and nothing else --
+#    the one test that observes the SAT-core half directly (in a child process
+#    with the lever on, because that half ships OFF). The corpus non-vacuity
+#    test SURVIVES this mutation by design: `PreferZero`'s finishing shrink
+#    moves the three-witness fixture without the core's phase, which is exactly
+#    the finding ADR-2140 records (the forced phase alone moved 0 of 15 corpus
+#    models and cost search time). Measured 2026-09-17: killed 1 / killed 1.
 # --------------------------------------------------------------------------
 
 SUITES["model-preference-2140"] = (

@@ -347,11 +347,11 @@ pub struct SolverConfig {
 /// satisfying assignment under every variant, and a consumer that needs a
 /// property of the witness checks the witness. What each variant does:
 ///
-/// | variant | SAT core | front door |
+/// | variant | search | after a `sat` |
 /// | --- | --- | --- |
-/// | `Any` | phase saving as shipped | nothing |
-/// | `PreferZero` | every decision is `false` (z3 `phase=always_false`) | nothing |
-/// | `LeastUnsigned` | as `PreferZero` | after a `sat`, re-solve under `x ∈ [-b, b]` for `b ∈ {1, 16, 256, 4096}` and return the first bounded model, else the unbounded one ([`crate::solve_smtlib_least_witness`]) |
+/// | `Any` | as shipped | nothing |
+/// | `PreferZero` | as shipped (the SAT-core forced phase is off by default, [`DEFAULT_MODEL_PREFERENCE_PHASE`]) | a replay-checked greedy bit-clearing pass over the model, bounded by what the solve spent |
+/// | `LeastUnsigned` | as `PreferZero` | re-solve under `x ∈ [-b, b]` for `b ∈ {1, 16, 256, 4096}`, return the first bounded model (shrunk within its rung), else the unbounded one shrunk ([`crate::solve_smtlib_least_witness`]) |
 ///
 /// The two consumers this exists for: a symbolic-execution client that
 /// concretizes on the model and wants backends to concretize alike (Glaurung
@@ -364,9 +364,13 @@ pub enum ModelPreference {
     /// Whatever the search finds first. The shipped default.
     #[default]
     Any,
-    /// Decide every SAT variable `false` first, so every input bit the search
-    /// DECIDED (rather than propagated) is `0`. Costs whatever the changed
-    /// trajectory costs; ADR-2140 records the measured price on `QF_BV`.
+    /// Finish a `sat` with a replay-checked greedy bit-clearing pass over the
+    /// declared constants, so the returned witness is a local minimum in the
+    /// unsigned order reachable from the search's own model. With
+    /// `AXEYUM_MODEL_PREFERENCE_PHASE=on` the SAT core also decides every
+    /// variable `false` first (z3 `phase=always_false`) -- measured to move no
+    /// model on its own and to cost search time, which is why it is off
+    /// (ADR-2140 records the prices).
     PreferZero,
     /// [`Self::PreferZero`] plus, in the SMT-LIB front door, the bounded
     /// re-solve ladder that returns the smallest-magnitude witness within
@@ -401,14 +405,56 @@ impl ModelPreference {
     }
 
     /// The decision polarity the SAT core is told to force: `None` under
-    /// [`Self::Any`], `Some(false)` otherwise.
+    /// [`Self::Any`], and under the other two `Some(false)` only when the
+    /// process has `AXEYUM_MODEL_PREFERENCE_PHASE=on` (the SAT-core half of a
+    /// preference, off as shipped -- [`DEFAULT_MODEL_PREFERENCE_PHASE`]).
     #[must_use]
-    pub const fn forced_phase(self) -> Option<bool> {
+    pub fn forced_phase(self) -> Option<bool> {
         match self {
             Self::Any => None,
-            Self::PreferZero | Self::LeastUnsigned => Some(false),
+            Self::PreferZero | Self::LeastUnsigned => {
+                if process_model_preference_phase() {
+                    Some(false)
+                } else {
+                    None
+                }
+            }
         }
     }
+
+    /// Whether this preference finishes a `sat` model (the replay-checked
+    /// shrink, and the ladder under [`Self::LeastUnsigned`]).
+    #[must_use]
+    pub const fn finishes_model(self) -> bool {
+        !matches!(self, Self::Any)
+    }
+}
+
+/// Whether a preference other than `Any` also forces the SAT core's decision
+/// polarity to `false` (ADR-2140). **`false` as shipped**, by measurement: on
+/// the `QF_BV` pinned list the forced phase moved no model that the shrink did
+/// not already move, cost 27 % more wall on the both-decided files against 12 %
+/// for the shrink alone, and traded one stable gain for one stable loss.
+/// `AXEYUM_MODEL_PREFERENCE_PHASE=on` turns it on for a process, which is how
+/// that measurement is repeated. Not consulted under `Any`.
+pub const DEFAULT_MODEL_PREFERENCE_PHASE: bool = false;
+
+/// [`DEFAULT_MODEL_PREFERENCE_PHASE`] unless `AXEYUM_MODEL_PREFERENCE_PHASE`
+/// is set to `on` or `off`; read once, a malformed value refuses.
+fn process_model_preference_phase() -> bool {
+    use std::sync::OnceLock;
+    static PHASE: OnceLock<bool> = OnceLock::new();
+    *PHASE.get_or_init(|| match std::env::var("AXEYUM_MODEL_PREFERENCE_PHASE") {
+        Ok(text) => match text.trim() {
+            "on" => true,
+            "off" => false,
+            _ => panic!(
+                "AXEYUM_MODEL_PREFERENCE_PHASE={text:?} is not `on` or `off`; refusing to run \
+                 the default arm under a lever that was set"
+            ),
+        },
+        Err(_) => DEFAULT_MODEL_PREFERENCE_PHASE,
+    })
 }
 
 /// The model preference a [`SolverConfig`] carries when nothing chose one:

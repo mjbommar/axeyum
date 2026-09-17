@@ -2000,6 +2000,7 @@ pub fn solve_smtlib_with_model(
     // One deadline for the WHOLE front door, taken before the first attempt: the
     // ladder below must share `config.timeout` with the default rung, never start a
     // fresh full budget of its own.
+    let started = std::time::Instant::now();
     let deadline = config
         .timeout
         .and_then(|t| std::time::Instant::now().checked_add(t));
@@ -2009,13 +2010,14 @@ pub fn solve_smtlib_with_model(
     // magnitude ladder under `LeastUnsigned`, the replay-checked shrink under
     // both. Over every declared constant, because the config has no way to
     // name a subset; `solve_smtlib_least_witness` is the entry that takes one.
-    apply_model_preference(&mut solved, config, deadline);
+    apply_model_preference(&mut solved, config, deadline, started);
     Ok(solved)
 }
 
-/// The evaluator-call budget of the replay-checked model shrink (ADR-2140);
-/// one constant for both the warm engine and this front door.
-pub use crate::incremental::MODEL_SHRINK_EVALUATIONS;
+/// The budgets of the replay-checked model shrink (ADR-2140); the same
+/// constants and the same deadline rule for the warm engine and this front
+/// door.
+pub use crate::incremental::{MODEL_SHRINK_EVALUATIONS, MODEL_SHRINK_MIN_BUDGET, shrink_deadline};
 
 /// Finishes a decided query's model according to `config.model_preference`
 /// (ADR-2140): nothing under `Any`; the replay-checked shrink under
@@ -2024,10 +2026,15 @@ pub use crate::incremental::MODEL_SHRINK_EVALUATIONS;
 ///
 /// Only the MODEL can change. A verdict other than `sat`, or a `sat` from a
 /// route that never built the flat view, passes through untouched.
+///
+/// `started` is when the query began: the shrink's own time budget is what
+/// the solve spent ([`shrink_deadline`]), so a preference at most doubles a
+/// query and never crosses its deadline.
 fn apply_model_preference(
     solved: &mut SmtLibSolved,
     config: &SolverConfig,
     deadline: Option<std::time::Instant>,
+    started: std::time::Instant,
 ) {
     match config.model_preference {
         ModelPreference::Any => {}
@@ -2045,14 +2052,14 @@ fn apply_model_preference(
                 &solved.assertions,
                 &symbols,
                 &mut model,
-                deadline,
+                shrink_deadline(deadline, started.elapsed()),
             );
             solved.outcome.result = CheckResult::Sat(model.clone());
             solved.model = Some(model);
         }
         ModelPreference::LeastUnsigned => {
             let symbols = default_least_witness_symbols(&solved.script);
-            apply_least_witness(solved, &symbols, config, deadline);
+            apply_least_witness(solved, &symbols, config, deadline, started);
         }
     }
 }
@@ -2235,6 +2242,7 @@ pub fn solve_smtlib_least_witness(
     } else {
         config.clone()
     };
+    let started = std::time::Instant::now();
     let mut solved = solve_smtlib_with_model(input, &inner)?;
     let chosen: Vec<SymbolId> = if symbols.is_empty() {
         default_least_witness_symbols(&solved.script)
@@ -2244,7 +2252,7 @@ pub fn solve_smtlib_least_witness(
             .filter(|&s| symbols.contains(&solved.script.arena.symbol(s).0))
             .collect()
     };
-    let bound = apply_least_witness(&mut solved, &chosen, config, deadline);
+    let bound = apply_least_witness(&mut solved, &chosen, config, deadline, started);
     Ok(LeastWitness { solved, bound })
 }
 
@@ -2269,6 +2277,7 @@ fn apply_least_witness(
     symbols: &[SymbolId],
     config: &SolverConfig,
     deadline: Option<std::time::Instant>,
+    started: std::time::Instant,
 ) -> Option<u128> {
     if !matches!(solved.outcome.result, CheckResult::Sat(_)) || solved.assertions.is_empty() {
         // Not `sat`, or decided by a route that never built the flat view
@@ -2276,9 +2285,14 @@ fn apply_least_witness(
         return None;
     }
     let assertions = solved.assertions.clone();
-    if let Some((model, bound)) =
-        least_witness_ladder(&mut solved.script, &assertions, symbols, config, deadline)
-    {
+    if let Some((model, bound)) = least_witness_ladder(
+        &mut solved.script,
+        &assertions,
+        symbols,
+        config,
+        deadline,
+        started,
+    ) {
         solved.outcome.result = CheckResult::Sat(model.clone());
         solved.model = Some(model);
         return Some(bound);
@@ -2293,7 +2307,7 @@ fn apply_least_witness(
             &assertions,
             &shrinkable,
             &mut model,
-            deadline,
+            shrink_deadline(deadline, started.elapsed()),
         );
         solved.outcome.result = CheckResult::Sat(model.clone());
         solved.model = Some(model);
@@ -2312,6 +2326,7 @@ fn least_witness_ladder(
     symbols: &[SymbolId],
     config: &SolverConfig,
     deadline: Option<std::time::Instant>,
+    started: std::time::Instant,
 ) -> Option<(Model, u128)> {
     // The rungs themselves solve under `PreferZero`: a rung is a search for a
     // small witness, and `LeastUnsigned` here would recurse into nothing (the
@@ -2379,7 +2394,7 @@ fn least_witness_ladder(
                     &extended,
                     &shrinkable,
                     &mut model,
-                    deadline,
+                    shrink_deadline(deadline, started.elapsed()),
                 );
                 if crate::check_model(&script.arena, assertions, &model).unwrap_or(false) {
                     return Some((model, bound));
@@ -4172,11 +4187,12 @@ fn run_session(
                 stack_dirty_since_check = true;
             }
             ScriptCommand::CheckSat => {
+                let started = std::time::Instant::now();
                 let result = solve(&mut script.arena, &stack, &effective)?;
                 let result = gate.confirm(&mut script.arena, &stack, &effective, result)?;
                 let proof_eligible = !gate.active || matches!(result, CheckResult::Unsat);
                 let result = apply_word_route(script, &effective, result);
-                let result = session_model_preference(script, &stack, &effective, result);
+                let result = session_model_preference(script, &stack, &effective, result, started);
                 last = Some(DecidedQuery {
                     result: result.clone(),
                     assertions: stack.clone(),
@@ -4191,6 +4207,7 @@ fn run_session(
                 // do not retain them: solve a temporary stack, then discard.
                 let mut with = stack.clone();
                 with.extend_from_slice(assumptions);
+                let started = std::time::Instant::now();
                 let result = solve(&mut script.arena, &with, &effective)?;
                 let result = gate.confirm(&mut script.arena, &with, &effective, result)?;
                 let proof_eligible = !gate.active || matches!(result, CheckResult::Unsat);
@@ -4198,7 +4215,7 @@ fn run_session(
                 // uses `check-sat-assuming` (see `build_word_problem`), so this is
                 // a plain pass-through here; kept uniform with the other queries.
                 let result = apply_word_route(script, &effective, result);
-                let result = session_model_preference(script, &with, &effective, result);
+                let result = session_model_preference(script, &with, &effective, result, started);
                 let mut with_names = names.clone();
                 with_names.resize(with.len(), None);
                 last = Some(DecidedQuery {
@@ -4400,10 +4417,13 @@ fn session_model_preference(
     assertions: &[TermId],
     config: &SolverConfig,
     result: CheckResult,
+    started: std::time::Instant,
 ) -> CheckResult {
     let CheckResult::Sat(mut model) = result else {
         return result;
     };
+    // `started` is when THIS query's solve began, so the shrink's budget is
+    // what that solve spent.
     let deadline = config
         .timeout
         .and_then(|t| std::time::Instant::now().checked_add(t));
@@ -4411,18 +4431,30 @@ fn session_model_preference(
         ModelPreference::Any => CheckResult::Sat(model),
         ModelPreference::PreferZero => {
             let symbols = preference_symbols(script);
-            shrink_model_toward_zero(&script.arena, assertions, &symbols, &mut model, deadline);
+            shrink_model_toward_zero(
+                &script.arena,
+                assertions,
+                &symbols,
+                &mut model,
+                shrink_deadline(deadline, started.elapsed()),
+            );
             CheckResult::Sat(model)
         }
         ModelPreference::LeastUnsigned => {
             let symbols = default_least_witness_symbols(script);
             if let Some((bounded, _bound)) =
-                least_witness_ladder(script, assertions, &symbols, config, deadline)
+                least_witness_ladder(script, assertions, &symbols, config, deadline, started)
             {
                 return CheckResult::Sat(bounded);
             }
             let shrinkable = preference_symbols(script);
-            shrink_model_toward_zero(&script.arena, assertions, &shrinkable, &mut model, deadline);
+            shrink_model_toward_zero(
+                &script.arena,
+                assertions,
+                &shrinkable,
+                &mut model,
+                shrink_deadline(deadline, started.elapsed()),
+            );
             CheckResult::Sat(model)
         }
     }

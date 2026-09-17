@@ -9,6 +9,8 @@
 //!    every model is compared. `the_identity_is_not_vacuous` proves the
 //!    comparison can fail: `PreferZero` moves at least one of those models, so
 //!    flipping `DEFAULT_MODEL_PREFERENCE` kills the identity and nothing else.
+//!    (`PreferZero` moves models through its replay-checked shrink; the SAT-core
+//!    forced phase ships off and is exercised here only through its lever.)
 //! 2. **A preference never changes a verdict**, and every `sat` under every
 //!    preference still replays against the original assertions.
 //! 3. **Same input, same policy, same model** -- asserted by running twice.
@@ -110,11 +112,13 @@ fn config(preference: ModelPreference) -> SolverConfig {
 /// in the environment `SolverConfig::default()` IS the zero arm, and the
 /// identity below would be measuring the lever rather than the default.
 fn require_lever_unset() {
-    if let Ok(value) = std::env::var("AXEYUM_MODEL_PREFERENCE") {
-        panic!(
-            "AXEYUM_MODEL_PREFERENCE={value:?} is set; this suite measures the SHIPPED default \
-             and must run with the lever unset (`env -u AXEYUM_MODEL_PREFERENCE`)"
-        );
+    for var in ["AXEYUM_MODEL_PREFERENCE", "AXEYUM_MODEL_PREFERENCE_PHASE"] {
+        if let Ok(value) = std::env::var(var) {
+            panic!(
+                "{var}={value:?} is set; this suite measures the SHIPPED default and must run \
+                 with the lever unset (`env -u {var}`)"
+            );
+        }
     }
 }
 
@@ -285,14 +289,37 @@ fn least_unsigned_never_moves_a_verdict_and_every_model_replays() {
 /// The SAT-core mechanism, observed through the one-shot BV backend with no
 /// preprocessing in the way: `(a | b) & (a | -b)` forces `a`; the shipped
 /// search decides `b` at its SAVED phase from the retracted `a = false` branch
-/// (`true`), and `PreferZero` decides it `false`. This is the same shape as
-/// the `axeyum-cnf` unit test, one layer up, so a broken plumb between
-/// `SolverConfig` and `Cdcl.forced_phase` fails HERE and not only in the
-/// corpus counts.
+/// (`true`), and the forced phase decides it `false`. Run in a CHILD process
+/// with `AXEYUM_MODEL_PREFERENCE_PHASE=on`, because the SAT-core half ships
+/// off and the lever is read once per process; `phase_probe` is the child and
+/// is inert without the variable. A broken plumb between `SolverConfig` and
+/// `Cdcl.forced_phase` fails HERE and not only in the corpus counts.
 #[test]
-fn prefer_zero_reaches_the_one_shot_backend() {
+fn the_forced_phase_reaches_the_one_shot_backend_when_on() {
+    let exe = std::env::current_exe().expect("test executable");
+    let status = std::process::Command::new(&exe)
+        .args(["--exact", "phase_probe", "--quiet"])
+        .env("AXEYUM_MODEL_PREFERENCE_PHASE", "on")
+        // Silenced for the same reason as in the lever test below: the
+        // child's harness lines would be counted by a mutation harness.
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .expect("spawn the probe");
+    assert!(
+        status.success(),
+        "the forced phase did not reach the one-shot backend"
+    );
+}
+
+/// The child half of the test above. Inert unless `AXEYUM_MODEL_PREFERENCE_PHASE=on`.
+#[test]
+fn phase_probe() {
     use axeyum_ir::TermArena;
     use axeyum_solver::{SatBvBackend, SolverBackend};
+    if std::env::var("AXEYUM_MODEL_PREFERENCE_PHASE").as_deref() != Ok("on") {
+        return;
+    }
     let mut arena = TermArena::new();
     let a = arena.bool_var("a").unwrap();
     let b = arena.bool_var("b").unwrap();
@@ -317,7 +344,7 @@ fn prefer_zero_reaches_the_one_shot_backend() {
     );
     assert!(
         !value_of_b(ModelPreference::PreferZero),
-        "PreferZero must decide the free `b` at false"
+        "PreferZero with the phase on must decide the free `b` at false"
     );
 }
 
@@ -556,6 +583,7 @@ fn session_option_is_acknowledged_and_a_bad_value_is_an_error() {
 /// The three spellings, round-tripped.
 #[test]
 fn spellings_round_trip() {
+    require_lever_unset();
     for preference in [
         ModelPreference::Any,
         ModelPreference::PreferZero,
@@ -572,9 +600,14 @@ fn spellings_round_trip() {
     );
     assert_eq!(ModelPreference::parse(""), None);
     assert_eq!(ModelPreference::parse("ZERO"), None);
+    // The SAT-core half ships OFF: no preference forces the phase unless the
+    // process lever says so (`the_env_lever_is_read_and_a_malformed_value_is_refused`).
     assert_eq!(ModelPreference::Any.forced_phase(), None);
-    assert_eq!(ModelPreference::PreferZero.forced_phase(), Some(false));
-    assert_eq!(ModelPreference::LeastUnsigned.forced_phase(), Some(false));
+    assert_eq!(ModelPreference::PreferZero.forced_phase(), None);
+    assert_eq!(ModelPreference::LeastUnsigned.forced_phase(), None);
+    assert!(!ModelPreference::Any.finishes_model());
+    assert!(ModelPreference::PreferZero.finishes_model());
+    assert!(ModelPreference::LeastUnsigned.finishes_model());
 }
 
 /// The lever, exercised in a CHILD process because the read is once-per-process
@@ -593,6 +626,12 @@ fn the_env_lever_is_read_and_a_malformed_value_is_refused() {
         std::process::Command::new(&exe)
             .args(["--exact", "env_probe", "--quiet"])
             .env("AXEYUM_MODEL_PREFERENCE", value)
+            // The child's own harness lines (`running 1 test`, `test result:`)
+            // are silenced: a mutation harness reading this suite's output
+            // counts them as extra test binaries and extra deaths, and reports
+            // the run INCONSISTENT. The child's exit status is the finding.
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
             .status()
             .expect("spawn the probe")
             .success()
@@ -606,6 +645,35 @@ fn the_env_lever_is_read_and_a_malformed_value_is_refused() {
     assert!(
         run("sideways"),
         "AXEYUM_MODEL_PREFERENCE=sideways ran the default arm instead of refusing"
+    );
+    // The second lever: `AXEYUM_MODEL_PREFERENCE_PHASE=off` keeps the shrink
+    // and drops the SAT-core half; a malformed value refuses.
+    let run_phase = |value: &str| -> bool {
+        std::process::Command::new(&exe)
+            .args(["--exact", "env_probe", "--quiet"])
+            .env("AXEYUM_MODEL_PREFERENCE", "zero")
+            .env("AXEYUM_MODEL_PREFERENCE_PHASE", value)
+            // The child's own harness lines (`running 1 test`, `test result:`)
+            // are silenced: a mutation harness reading this suite's output
+            // counts them as extra test binaries and extra deaths, and reports
+            // the run INCONSISTENT. The child's exit status is the finding.
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .expect("spawn the probe")
+            .success()
+    };
+    assert!(
+        run_phase("off"),
+        "AXEYUM_MODEL_PREFERENCE_PHASE=off was not honored"
+    );
+    assert!(
+        run_phase("on"),
+        "AXEYUM_MODEL_PREFERENCE_PHASE=on was not honored"
+    );
+    assert!(
+        run_phase("maybe"),
+        "AXEYUM_MODEL_PREFERENCE_PHASE=maybe ran instead of refusing"
     );
 }
 
@@ -621,6 +689,28 @@ fn env_probe() {
     let observed = std::panic::catch_unwind(|| SolverConfig::default().model_preference);
     if let Some(expected) = ModelPreference::parse(&value) {
         assert_eq!(observed.expect("a good value must not panic"), expected);
+        if let Ok(phase) = std::env::var("AXEYUM_MODEL_PREFERENCE_PHASE") {
+            let forced = std::panic::catch_unwind(|| expected.forced_phase());
+            match phase.as_str() {
+                "off" => assert_eq!(forced.expect("`off` must not panic"), None),
+                "on" => assert_eq!(
+                    forced.expect("`on` must not panic"),
+                    if expected == ModelPreference::Any {
+                        None
+                    } else {
+                        Some(false)
+                    }
+                ),
+                _ => {
+                    let error = forced.expect_err("a malformed phase value must refuse");
+                    let message = error.downcast_ref::<String>().cloned().unwrap_or_default();
+                    assert!(
+                        message.contains("AXEYUM_MODEL_PREFERENCE_PHASE"),
+                        "{message}"
+                    );
+                }
+            }
+        }
         return;
     }
     let error = observed.expect_err("a malformed value must refuse, not run");

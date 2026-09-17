@@ -172,11 +172,15 @@ Three surfaces from ADR-2140 (items 6, 7 and 9 of the 2026-09-16 list):
 
 - **`model_preference`** on `smt.solve(...)` and `solver.Config(...)`:
   `"any"` (the default, and byte-for-byte the search as shipped), `"zero"`
-  (every SAT decision is `false` first, z3's `phase=always_false`, so the
-  witness's free bits are `0`), or `"least-unsigned"` (`zero` plus the
-  bounded re-solve below). A preference never moves a verdict; every `sat`
-  still replays. `AXEYUM_MODEL_PREFERENCE` sets the same policy for a whole
-  process (a malformed value refuses rather than running the default arm).
+  (a replay-checked greedy bit-clearing pass over the witness, so it is a
+  local minimum in the unsigned order; bounded by what the solve spent), or
+  `"least-unsigned"` (the bounded re-solve below, then the same pass inside
+  the winning rung). A preference never moves a verdict; every `sat` still
+  replays. `AXEYUM_MODEL_PREFERENCE` sets the same policy for a whole process,
+  and `AXEYUM_MODEL_PREFERENCE_PHASE=on` additionally makes the SAT core
+  decide every variable `false` first (z3's `phase=always_false`; measured to
+  cost search time without moving models, so off by default). A malformed
+  value of either refuses rather than running the default arm.
 - **`smt.least_witness(script, symbols=[], ...)`** returns a `Witness`: an
   `Outcome` whose model is the first satisfiable rung of the magnitude ladder
   `1, 16, 256, 4096` over the named bit-vector constants (all of them when

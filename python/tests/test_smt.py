@@ -570,7 +570,7 @@ def test_least_witness_finds_the_magnitude_one_wrap() -> None:
     assert witness.status == "sat"
     assert witness.bound == 1
     model = witness.outcome.model
-    a, b = model["a"], model["b"]
+    a, b = int(model["a"]), int(model["b"])
     assert (a, b) in {(0xFFFFFFFF, 1), (1, 0xFFFFFFFF)}, (hex(a), hex(b))
     # The bounded witness still replays against the ORIGINAL assertions.
     assert witness.outcome.replay() is True
@@ -579,7 +579,7 @@ def test_least_witness_finds_the_magnitude_one_wrap() -> None:
 def test_least_witness_finds_the_negative_length_and_honors_symbols() -> None:
     witness = smt.least_witness(SIGNED_CHECK_BYPASS, ["len"], timeout_ms=TIMEOUT_MS)
     assert witness.bound == 1
-    assert witness.outcome.model["len"] == 0xFFFFFFFF
+    assert int(witness.outcome.model["len"]) == 0xFFFFFFFF
     assert witness.outcome.replay() is True
     # A symbol that is not declared is ignored, not an error: the bound is a
     # preference, and one that names nothing bounds nothing.
@@ -597,7 +597,7 @@ def test_least_witness_reports_no_bound_when_every_rung_fails() -> None:
     witness = smt.least_witness(script, timeout_ms=TIMEOUT_MS)
     assert witness.status == "sat"
     assert witness.bound is None
-    assert witness.outcome.model["x"] == 100_000
+    assert int(witness.outcome.model["x"]) == 100_000
     assert "bound=None" in repr(witness)
 
 
@@ -619,12 +619,13 @@ def test_model_preference_zero_shrinks_a_free_witness_and_any_is_the_default() -
     assert default.model == any_.model
     # `y` has three witnesses (0xF4, 0xF5, 0xF6); the zero preference returns
     # the smallest reachable one and the verdict does not move.
-    assert zero.model["y"] == 0xF4
-    assert zero.model["x"] == 5 and zero.model["z"] == 7
+    assert int(zero.model["y"]) == 0xF4
+    assert int(zero.model["x"]) == 5 and int(zero.model["z"]) == 7
     assert zero.replay() is True
     least = smt.solve(FREE_BITS, timeout_ms=TIMEOUT_MS, model_preference="least-unsigned")
     assert least.status == "sat"
-    assert _magnitude32(least.model["y"] | (0xFFFFFF00 if least.model["y"] >= 0x80 else 0)) <= 16
+    y = int(least.model["y"])
+    assert _magnitude32(y | (0xFFFFFF00 if y >= 0x80 else 0)) <= 16
     assert least.replay() is True
 
 

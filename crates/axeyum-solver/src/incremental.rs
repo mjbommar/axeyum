@@ -61,6 +61,36 @@ const MAX_REPLAY_SHARED_MEMO_ENTRIES: usize = 4_096;
 /// `Script`.
 pub const MODEL_SHRINK_EVALUATIONS: usize = 4_096;
 
+/// The least wall time the replay-checked model shrink (ADR-2140) may spend
+/// even when the solve that produced the model was faster than this.
+///
+/// The pass's time budget is **what the solve spent**, floored here and
+/// capped by the query's deadline (see [`shrink_deadline`]). Measured
+/// 2026-09-17 on `QF_BV/Sage2/bench_12354.smt2` (549 symbols, 192 KB): with
+/// only the evaluation budget the pass spent 25 s on a 1.7 s `sat`, which the
+/// 24 s harness reported as a LOSS. Bounding the pass by the solve's own time
+/// keeps a preference from more than doubling a query. The floor exists so a
+/// millisecond solve on a small query still gets a pass that can clear
+/// anything.
+pub const MODEL_SHRINK_MIN_BUDGET: Duration = Duration::from_millis(100);
+
+/// The deadline the model shrink runs under (ADR-2140): `max(elapsed,
+/// MODEL_SHRINK_MIN_BUDGET)` from now, never past `deadline`.
+///
+/// `elapsed` is what the solve that produced the model cost. A pass bounded
+/// this way at most doubles a query and still never crosses the query's own
+/// deadline -- and it is a bound on the MODEL's finishing, never on the
+/// verdict, which was decided before the pass began.
+#[must_use]
+pub fn shrink_deadline(deadline: Option<Instant>, elapsed: Duration) -> Option<Instant> {
+    let own = Instant::now().checked_add(elapsed.max(MODEL_SHRINK_MIN_BUDGET));
+    match (own, deadline) {
+        (Some(own), Some(query)) => Some(own.min(query)),
+        (own, None) => own,
+        (None, query) => query,
+    }
+}
+
 /// Monotone phase attribution for one incremental bit-vector solver.
 ///
 /// When constructed with
@@ -826,6 +856,9 @@ pub struct IncrementalBvSolver {
     last_profiled_cnf_assumptions: Option<Vec<CnfVar>>,
     stats: IncrementalBvStats,
     replay_checked_sat_cache: ReplayCheckedSatCache,
+    /// When the check in progress began; the model shrink's time budget is
+    /// what the check has spent so far (ADR-2140, [`shrink_deadline`]).
+    check_started: Option<Instant>,
 }
 
 impl Default for IncrementalBvSolver {
@@ -884,6 +917,7 @@ impl IncrementalBvSolver {
             last_profiled_cnf_assumptions: None,
             stats: IncrementalBvStats::default(),
             replay_checked_sat_cache: ReplayCheckedSatCache::default(),
+            check_started: None,
         }
     }
 
@@ -3805,6 +3839,7 @@ impl IncrementalBvSolver {
         let one_shot = collect_warm_one_shot_terms(assumptions);
         let active_selects = self.active_warm_array_select_closure(&one_shot.selects);
 
+        self.check_started = Some(Instant::now());
         let deadline = self
             .config
             .timeout
@@ -3956,8 +3991,12 @@ impl IncrementalBvSolver {
         // search actually decides). Only the MODEL changes, and only to a
         // candidate this same `replay` accepted.
         let mut model = model;
-        if self.config.model_preference.forced_phase().is_some() {
-            self.shrink_model_toward_zero(arena, &original_assumptions, &mut model, deadline);
+        if self.config.model_preference.finishes_model() {
+            let elapsed = self
+                .check_started
+                .map_or(Duration::ZERO, |started| started.elapsed());
+            let budget = shrink_deadline(deadline, elapsed);
+            self.shrink_model_toward_zero(arena, &original_assumptions, &mut model, budget);
         }
         Ok(WarmCandidateCheck::Sat(model))
     }

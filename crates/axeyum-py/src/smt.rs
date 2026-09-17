@@ -376,7 +376,7 @@ impl Witness {
 
 /// Decides an SMT-LIB 2 script and, on `sat`, re-solves under growing
 /// magnitude bounds (1, 16, 256, 4096) on `symbols` -- every declared
-/// bit-vector constant when `symbols` is empty -- returning the first bounded
+/// bit-vector constant when `symbols` is `None` or empty -- returning the first bounded
 /// witness, else the unbounded one, with the bound reported (ADR-2140).
 ///
 /// This is the ladder `python/examples/cindergraph_defects/check.py` used to
@@ -395,7 +395,7 @@ impl Witness {
 #[pyfunction]
 #[pyo3(signature = (
     script,
-    symbols = Vec::new(),
+    symbols = None,
     *,
     timeout_ms = 10_000,
     resource_limit = None,
@@ -405,7 +405,7 @@ impl Witness {
 fn least_witness(
     py: Python<'_>,
     script: &str,
-    symbols: Vec<String>,
+    symbols: Option<Vec<String>>,
     timeout_ms: u64,
     resource_limit: Option<u64>,
     memory_limit_mb: Option<u64>,
@@ -421,6 +421,7 @@ fn least_witness(
         false,
         preprocess,
     );
+    let symbols = symbols.unwrap_or_default();
     let names: Vec<&str> = symbols.iter().map(String::as_str).collect();
     let (finished, bound) = py
         .detach(|| {

@@ -812,7 +812,7 @@ impl PyIncrementalStats {
     fn __repr__(&self) -> String {
         format!(
             "IncrementalStats(profiled={}, checks={}, solve_ns={}, cnf_clauses={})",
-            self.profiled,
+            if self.profiled { "True" } else { "False" },
             self.stats.checks,
             self.stats.solve.as_nanos(),
             self.stats.cnf_clauses

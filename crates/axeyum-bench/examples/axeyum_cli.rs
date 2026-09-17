@@ -55,8 +55,9 @@
 //! The honored options are `:produce-models`, `:produce-unsat-cores`,
 //! `:produce-proofs`, `:print-success`, `:timeout` and `:model-preference`
 //! (`any` | `zero` | `least-unsigned`, ADR-2140: which model a `sat` prefers;
-//! `least-unsigned` re-solves under magnitude bounds 1, 16, 256, 4096 and
-//! `get-model` then answers with the smallest witness found). **Every other
+//! `zero` finishes the witness with a replay-checked bit-clearing pass, and
+//! `least-unsigned` re-solves under magnitude bounds 1, 16, 256, 4096 so
+//! `get-model` answers with the smallest witness found). **Every other
 //! option draws `unsupported`**, which is the point of this table: before ADR-0541 an
 //! unknown `set-option` was accepted and ignored, and a consumer could not tell
 //! an option that worked from one that did nothing. cvc5 1.3.4 answers
