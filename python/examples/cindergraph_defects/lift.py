@@ -445,12 +445,10 @@ class Lifter:
         x = convert(x, t)
         if op == "-":
             if t.signed:
-                self.obligation(
-                    state,
-                    "signed-overflow",
-                    i,
-                    f"(not (= {x.smt} {bv_literal(1 << (t.width - 1), t)}))",
-                )
+                # `bvnego` (SMT-LIB 2.6) is exactly "a is the signed minimum",
+                # the one value whose negation does not fit back in `t.width`
+                # bits -- no double-width arithmetic needed.
+                self.obligation(state, "signed-overflow", i, f"(not (bvnego {x.smt}))")
             return Term(f"(bvneg {x.smt})", t)
         if op == "~":
             return Term(f"(bvnot {x.smt})", t)
@@ -509,13 +507,18 @@ class Lifter:
         if op in ("+", "-", "*"):
             bvop = {"+": "bvadd", "-": "bvsub", "*": "bvmul"}[op]
             if t.signed:
-                wide = 2 * t.width
-                exact = f"({bvop} ((_ sign_extend {t.width}) {xv.smt}) ((_ sign_extend {t.width}) {yv.smt}))"
-                narrow = f"((_ sign_extend {t.width}) ({bvop} {xv.smt} {yv.smt}))"
+                # SMT-LIB 2.6's overflow-detection predicates (`bvsaddo` /
+                # `bvssubo` / `bvsmulo`) state the obligation directly, at
+                # the operand width -- no double-width sign-extended
+                # shadow computation needed.
+                overflow_op = {"+": "bvsaddo", "-": "bvssubo", "*": "bvsmulo"}[op]
                 self.obligation(
-                    state, "signed-overflow", node, f"(= {exact} {narrow})", note=f"{t} arithmetic"
+                    state,
+                    "signed-overflow",
+                    node,
+                    f"(not ({overflow_op} {xv.smt} {yv.smt}))",
+                    note=f"{t} arithmetic",
                 )
-                del wide
             return Term(f"({bvop} {xv.smt} {yv.smt})", t)
         if op in ("/", "%"):
             holds = f"(not (= {yv.smt} {bv_literal(0, t)}))"
