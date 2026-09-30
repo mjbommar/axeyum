@@ -147,9 +147,13 @@ pub struct ArithLemmaLiteral {
     pub prop: SymbolId,
     /// The truth value the proposition took in the (infeasible) assignment.
     pub truth: bool,
-    /// The arithmetic literal: the atom term when `truth`, else its negation.
+    /// The arithmetic literal in the producer's arena: the atom term when
+    /// `truth`, else its negation. [`ArithDpllRefutation::verify_for`] rebuilds
+    /// it from the source query and polarity when checking another arena.
     pub literal: TermId,
     theory: Theory,
+    // Stable position in the independently rebuilt source abstraction.
+    atom_index: usize,
 }
 
 /// A checkable refutation of a Boolean-structured linear-arithmetic query: the
@@ -282,10 +286,31 @@ impl ArithDpllRefutation {
             .iter()
             .map(|&assertion| abstractor.abstract_term(&mut scratch, assertion))
             .collect::<Result<Vec<_>, _>>()?;
-        if expected != self.skeleton {
-            return Ok(false);
+        // The producer's skeleton handles are arena-local too. The query,
+        // rather than those handles, is authoritative for the checked formula.
+        // Search interns negated theory literals after building the abstraction.
+        // Those handles need not exist in a fresh parse. Derive the literals from
+        // the query's independently rebuilt atom map and each lemma's polarity;
+        // the producer's literal handles are only a same-arena convenience.
+        let mut rebuilt = self.clone();
+        rebuilt.skeleton = expected;
+        for lemma in &mut rebuilt.lemmas {
+            for literal in lemma {
+                let Some(atom) = abstractor.atoms.get(literal.atom_index) else {
+                    return Ok(false);
+                };
+                if atom.theory != literal.theory {
+                    return Ok(false);
+                }
+                literal.prop = atom.prop;
+                literal.literal = if literal.truth {
+                    atom.term
+                } else {
+                    scratch.not(atom.term)?
+                };
+            }
         }
-        self.verify(arena)
+        rebuilt.verify(&scratch)
     }
 
     /// The Boolean symbols (atom props and original Boolean variables) the
@@ -1249,6 +1274,7 @@ fn record_lemma(
             truth: truths[i],
             literal: lits[i],
             theory: ctx.atoms[i].theory,
+            atom_index: i,
         })
         .collect()
 }
@@ -3115,8 +3141,18 @@ fn initial_int_bound_mutex_lemmas(
         let core = [lower.atom_idx, upper.atom_idx];
         let clause = block_clause(arena, &ctx.atoms, &truths, &core)?;
         let lemma = vec![
-            static_lemma_literal(arena, &ctx.atoms[lower.atom_idx], lower.truth)?,
-            static_lemma_literal(arena, &ctx.atoms[upper.atom_idx], upper.truth)?,
+            static_lemma_literal(
+                arena,
+                &ctx.atoms[lower.atom_idx],
+                lower.atom_idx,
+                lower.truth,
+            )?,
+            static_lemma_literal(
+                arena,
+                &ctx.atoms[upper.atom_idx],
+                upper.atom_idx,
+                upper.truth,
+            )?,
         ];
         out.push((clause, lemma));
     }
@@ -3200,8 +3236,18 @@ fn initial_int_bound_implication_lemmas(
         let core = [stronger.atom_idx, weaker.atom_idx];
         let clause = block_clause(arena, &ctx.atoms, &truths, &core)?;
         let lemma = vec![
-            static_lemma_literal(arena, &ctx.atoms[stronger.atom_idx], stronger.truth)?,
-            static_lemma_literal(arena, &ctx.atoms[weaker.atom_idx], !weaker.truth)?,
+            static_lemma_literal(
+                arena,
+                &ctx.atoms[stronger.atom_idx],
+                stronger.atom_idx,
+                stronger.truth,
+            )?,
+            static_lemma_literal(
+                arena,
+                &ctx.atoms[weaker.atom_idx],
+                weaker.atom_idx,
+                !weaker.truth,
+            )?,
         ];
         out.push((clause, lemma));
     }
@@ -3211,6 +3257,7 @@ fn initial_int_bound_implication_lemmas(
 fn static_lemma_literal(
     arena: &mut TermArena,
     atom: &ArithAtom,
+    atom_index: usize,
     truth: bool,
 ) -> Result<ArithLemmaLiteral, SolverError> {
     let literal = if truth {
@@ -3225,6 +3272,7 @@ fn static_lemma_literal(
         truth,
         literal,
         theory: atom.theory,
+        atom_index,
     })
 }
 

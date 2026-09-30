@@ -1167,7 +1167,7 @@ impl Evidence {
             }
             Evidence::UnsatFarkas(certificate) => Ok(certificate.verify()),
             Evidence::UnsatLraDpll(refutation) => refutation.verify(arena),
-            Evidence::UnsatArithDpll(refutation) => refutation.verify(arena),
+            Evidence::UnsatArithDpll(refutation) => refutation.verify_for(arena, assertions),
             // Degree-2 SOS/PSD refutation: re-validate the self-contained
             // certificate (rebuilds the Gram matrix from its own terms and confirms
             // the carried LDLᵀ factors reconstruct it with D ≥ 0). When a Lean module

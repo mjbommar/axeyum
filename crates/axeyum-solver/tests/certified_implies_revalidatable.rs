@@ -49,6 +49,16 @@ use axeyum_solver::{
 /// make the invariant vacuous for that row.
 const QUERIES: &[(&str, &str)] = &[
     (
+        "qf_lia_distinct_equal_bounds",
+        "(set-logic QF_LIA)\n\
+         (declare-const x Int)\n\
+         (declare-const y Int)\n\
+         (assert (distinct x y))\n\
+         (assert (<= x y))\n\
+         (assert (<= y x))\n\
+         (check-sat)",
+    ),
+    (
         "qf_bv_comparison",
         "(set-logic QF_BV)\n\
          (declare-fun a () (_ BitVec 4))\n\
@@ -374,5 +384,56 @@ fn the_corpus_actually_exercises_certified_evidence() {
         verified >= 3,
         "only {verified} rows re-validated against a fresh parse; this test cannot \
          distinguish a working checker from one that never runs"
+    );
+}
+
+#[test]
+fn arithmetic_refutation_rebuilds_literals_and_rejects_tampering() {
+    let text = "(set-logic QF_LIA)
+        (declare-const x Int) (declare-const y Int) (declare-const z Int)
+        (assert (distinct x y))
+        (assert (<= x z)) (assert (<= z y)) (assert (<= y x))
+        (check-sat)";
+    let mut produced = parse_script(text).unwrap();
+    let assertions = produced.assertions.clone();
+    let report =
+        produce_evidence(&mut produced.arena, &assertions, &SolverConfig::default()).unwrap();
+    let axeyum_solver::Evidence::UnsatArithDpll(refutation) = report.evidence else {
+        panic!("distinct/bounds regression must exercise arithmetic DPLL evidence");
+    };
+    let fresh = parse_script(text).unwrap();
+    assert!(
+        refutation
+            .verify_for(&fresh.arena, &fresh.assertions)
+            .unwrap()
+    );
+
+    assert!(
+        !refutation.lemmas.is_empty(),
+        "negative controls need theory lemmas"
+    );
+    let mut tampered = refutation.clone();
+    tampered.lemmas.clear();
+    assert!(
+        !tampered
+            .verify_for(&fresh.arena, &fresh.assertions)
+            .unwrap()
+    );
+
+    let mut tampered = refutation.clone();
+    for lemma in &mut tampered.lemmas {
+        lemma.truncate(1); // a single order literal is satisfiable
+    }
+    assert!(
+        !tampered
+            .verify_for(&fresh.arena, &fresh.assertions)
+            .unwrap()
+    );
+
+    let changed = parse_script(&text.replace("(distinct x y)", "(= x y)")).unwrap();
+    assert!(
+        !refutation
+            .verify_for(&changed.arena, &changed.assertions)
+            .unwrap()
     );
 }

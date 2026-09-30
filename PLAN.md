@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-30 | (this commit) | Repair fresh-arena integer `distinct` evidence checking, bound definite step-integration enumeration and invoke candidate finders lazily, and recover exact repeated-root squares before the rational-root coefficient budget. Reproducer regressions and certificate negative controls pass. |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -2069,6 +2070,38 @@ Nothing under `crates/axeyum-lean-kernel/src/` was touched except the new
 `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`
 (Task 1's own scope) — four lanes were live in `creal/geometric.rs`,
 `creal/exponential.rs`, `creal/trig.rs`, `creal/crossing.rs`, and `complex/`.
+
+**Three reported bug classes repaired (`DONE`, three-bug-repair, 2026-09-30).**
+Reproduced the certified CLI crash with `distinct x y`, `x ≤ y`, `y ≤ x`;
+step-integral unbounded enumeration with `floor(x)` over `[0, 10¹²]`; and
+repeated-root factorization declining on expanded `(x − 40000)²`. These are
+locally constructed reproducers; the original reporter's inputs were not supplied.
+
+Arithmetic evidence checking now rebuilds the Boolean skeleton, atom propositions,
+and signed theory literals from the supplied source assertions. Each lemma carries
+its deterministic source-atom position, avoiding producer-arena term and symbol
+handles. Both theory contradictions and propositional closure are still checked;
+removed lemmas, satisfiable singleton cores, and a changed satisfiable source query
+are rejected by regression tests. Same-arena `verify` remains a separate entry point.
+
+CAS step splitting now declines before a range exceeds the existing periodic
+splitter's 100,000-index span; checked endpoint arithmetic avoids cast-boundary
+panics. Integration candidate finders run lazily, stopping at the first certified
+antiderivative. Factorization detects exact polynomial squares before bounded
+rational-root enumeration, recursively factors the square root, and certifies the
+reassembled result without increasing root-search limits.
+
+**Validation:** CAS library: 711 passed, 4 ignored; arithmetic DPLL library slice:
+39 passed; independent-reparse evidence suite and negative controls: 3 passed;
+CAS/solver clippy across all targets with solver `full` and warnings denied passed;
+workspace formatting and diff whitespace checks passed. The original CLI reproducer
+returns `unsat` with `certified=1 arena=ok`. Removing the CAS repairs makes the
+factor regression fail and leaves the step regression running beyond a five-second
+probe (terminated). No `just check`, workspace full gate, push, or remote CI claim.
+
+**Resume:** apply any subsequently supplied original failing inputs as additional
+regressions. The repairs cover the concrete cases above, not every integration
+resource-exhaustion pattern or every factorization outside the rational fragment.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

@@ -2714,6 +2714,25 @@ pub fn factor(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     if ratint::is_zero(&coeffs) {
         return Some(CasExpr::zero());
     }
+    // Recover perfect-square factors before bounded rational-root enumeration.
+    // A repeated root can make the expanded constant coefficient exceed that
+    // search's budget even when its square root is a small linear polynomial.
+    if poly::rat_degree(&coeffs).unwrap_or(0) >= 2
+        && let Some(root) = rational_poly_sqrt(&coeffs)
+    {
+        let root_expr = MultiPoly::from_univariate(var, &root).to_expr();
+        let root_factored = factor(&root_expr, var).unwrap_or(root_expr);
+        let squared = match root_factored {
+            CasExpr::Pow(base, exponent) => CasExpr::Pow(base, exponent.checked_mul(2)?),
+            other => other.pow(2),
+        };
+        if matches!(
+            equal(&squared, expr),
+            ZeroTest::Certified { equal: true, .. }
+        ) {
+            return Some(squared);
+        }
+    }
     let mut remaining = coeffs;
     let mut factors: Vec<CasExpr> = Vec::new();
     // Peel each rational-root linear factor with its multiplicity: (x − r)^m.
@@ -13557,62 +13576,63 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
     // Try each finder (univariate rational via Horowitz; elementary-function
     // table). Every candidate is certified by differentiate-and-check, so a
     // finder shortfall or out-of-fragment case declines to `None` rather than
-    // returning a wrong answer.
-    for antiderivative in [
-        integrate_rational(expr, var),
-        integrate_elementary(expr, var),
-        integrate_poly_times_exp(expr, var),
-        integrate_poly_times_log(expr, var),
-        integrate_poly_times_sinusoid(expr, var),
-        integrate_exp_times_sinusoid(expr, var),
-        integrate_trig_monomial(expr, var),
-        integrate_trig_square(expr, var),
-        integrate_tan_power(expr, var),
-        integrate_log_substitution(expr, var),
-        integrate_gaussian(expr, var),
-        integrate_special_integral(expr, var),
-        integrate_weighted_bessel_order_zero(expr, var),
-        integrate_weighted_bessel_positive_order(expr, var),
-        integrate_bessel_order_one(expr, var),
-        integrate_fresnel(expr, var),
-        integrate_inverse_radical(expr, var),
-        integrate_radical_usub(expr, var),
-        integrate_sqrt_power(expr, var),
-        integrate_exp_quadratic_usub(expr, var),
-        integrate_odd_rational_usub(expr, var),
-        integrate_exp_substitution(expr, var),
-        integrate_trig_inner_substitution(expr, var),
-        integrate_tan_substitution(expr, var),
-        integrate_weierstrass(expr, var),
-        integrate_poly_over_sqrt_linear(expr, var),
-        integrate_poly_times_sqrt_linear(expr, var),
-        integrate_poly_times_general_exp(expr, var),
-        integrate_power_of_inner(expr, var),
-        integrate_log_derivative(expr, var),
-        integrate_log_power(expr, var),
-        integrate_log_times_cofactor(expr, var),
-        integrate_ln_composite(expr, var),
-        integrate_sinusoid_product(expr, var),
-        integrate_sqrt_quadratic(expr, var),
-        integrate_sqrt_quadratic_general(expr, var),
-        integrate_poly_times_inverse(expr, var),
-        integrate_split_fraction(expr, var),
-        integrate_even_quartic_denominator(expr, var),
-        integrate_abs_affine(expr, var),
-        integrate_nth_root_power(expr, var),
+    // returning a wrong answer. Invoke finders lazily: later recursive fallbacks
+    // must not run after an earlier candidate has already certified.
+    for finder in [
+        integrate_rational as fn(&CasExpr, &str) -> Option<CasExpr>,
+        integrate_elementary,
+        integrate_poly_times_exp,
+        integrate_poly_times_log,
+        integrate_poly_times_sinusoid,
+        integrate_exp_times_sinusoid,
+        integrate_trig_monomial,
+        integrate_trig_square,
+        integrate_tan_power,
+        integrate_log_substitution,
+        integrate_gaussian,
+        integrate_special_integral,
+        integrate_weighted_bessel_order_zero,
+        integrate_weighted_bessel_positive_order,
+        integrate_bessel_order_one,
+        integrate_fresnel,
+        integrate_inverse_radical,
+        integrate_radical_usub,
+        integrate_sqrt_power,
+        integrate_exp_quadratic_usub,
+        integrate_odd_rational_usub,
+        integrate_exp_substitution,
+        integrate_trig_inner_substitution,
+        integrate_tan_substitution,
+        integrate_weierstrass,
+        integrate_poly_over_sqrt_linear,
+        integrate_poly_times_sqrt_linear,
+        integrate_poly_times_general_exp,
+        integrate_power_of_inner,
+        integrate_log_derivative,
+        integrate_log_power,
+        integrate_log_times_cofactor,
+        integrate_ln_composite,
+        integrate_sinusoid_product,
+        integrate_sqrt_quadratic,
+        integrate_sqrt_quadratic_general,
+        integrate_poly_times_inverse,
+        integrate_split_fraction,
+        integrate_even_quartic_denominator,
+        integrate_abs_affine,
+        integrate_nth_root_power,
         // Last resort: power-reduce even trig powers (`eˣsin²x`) — placed here so the
         // direct trig/rational-trig finders keep their canonical forms.
-        integrate_power_reduced_trig(expr, var),
-        integrate_ln_argument_substitution(expr, var),
-        integrate_root_rational_usub(expr, var),
+        integrate_power_reduced_trig,
+        integrate_ln_argument_substitution,
+        integrate_root_rational_usub,
         // Final fallback: expand the integrand and integrate the expansion. Closes
         // powers of exponential/trig sums the direct finders miss — `∫sinh²x`,
         // `∫1/cosh²x` (even powers of `(eˣ±e^{−x})`) reduce to sums of exponentials.
-        integrate_via_expansion(expr, var),
-    ]
-    .into_iter()
-    .flatten()
-    {
+        integrate_via_expansion,
+    ] {
+        let Some(antiderivative) = finder(expr, var) else {
+            continue;
+        };
         let certificate = prove_derivative(&antiderivative, var, expr);
         if matches!(certificate, ZeroTest::Certified { equal: true, .. }) {
             return Some(CertifiedIntegral {
@@ -13907,7 +13927,15 @@ fn definite_integrate_step_function(
     };
     // Integer breakpoints `k` with `g(x)=k` at some `x` strictly inside the interval.
     #[allow(clippy::cast_possible_truncation)]
-    let (k_start, k_end) = (g_min.floor() as i128 + 1, g_max.ceil() as i128 - 1);
+    let (k_start, k_end) = (
+        (g_min.floor() as i128).checked_add(1)?,
+        (g_max.ceil() as i128).checked_sub(1)?,
+    );
+    // Match the periodic splitter's bounded enumeration. A wide interval must
+    // decline before allocating or iterating over billions of pieces.
+    if k_end.checked_sub(k_start)? > 100_000 {
+        return None;
+    }
     let mut breakpoints: Vec<(Rational, f64)> = Vec::new();
     for k in k_start..=k_end {
         let x_k = Rational::integer(k)
@@ -26278,6 +26306,34 @@ mod tests {
         );
         // x⁴ + y⁴ is irreducible over ℚ (its real factorization needs surds) — None.
         assert!(factor(&(x().pow(4) + y().pow(4)), "x").is_none());
+    }
+
+    #[test]
+    fn factor_repeated_root_beyond_root_search_budget() {
+        let root = CasExpr::var("x") - CasExpr::int(40_000);
+        let expanded = expand(&root.clone().pow(2)).unwrap();
+        let factored = factor(&expanded, "x").expect("perfect square bypasses root enumeration");
+        assert!(matches!(&factored, CasExpr::Pow(_, 2)));
+        assert_equal(&factored, &expanded);
+        assert_equal(&factored, &root.pow(2));
+    }
+
+    #[test]
+    fn definite_integral_declines_unbounded_step_enumeration() {
+        let integrand = CasExpr::var("x").floor();
+        assert!(
+            definite_integrate(
+                &integrand,
+                "x",
+                &CasExpr::zero(),
+                &CasExpr::int(1_000_000_000_000)
+            )
+            .is_none()
+        );
+        let small = definite_integrate(&integrand, "x", &CasExpr::zero(), &CasExpr::int(3))
+            .expect("small step integral");
+        assert!(small.is_certified());
+        assert_equal(&small.value, &CasExpr::int(3));
     }
 
     #[test]
