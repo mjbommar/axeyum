@@ -1,5 +1,7 @@
 # Track 3 — Proofs & Lean
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../CATALOG.md). Track 3 (proofs and Lean) phase plan P3.0-P3.8 as sequenced in mid-2026; its ordering predates the later evidence and Lean work.
+
 Take axeyum from "DRAT for the clausal layer (+ a bit-blast miter)" to
 "machine-checkable, Lean-consumable proofs for full SMT queries." This track owns
 the **second load-bearing front (reduction certificates)** and the **proof-format

@@ -1,5 +1,7 @@
 # Agent Program — 2026-07-28
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../CATALOG.md). The 2026-07-28 dispatch layer of per-lane agent task queues (base commit ffc466b4); its queues and Phase 0 snapshot are as of that date.
+
 **Purpose.** Turn the current measured state into a set of *discrete, parallel,
 exit-criteria'd task queues* that independent sub-agents can pick up and run
 without colliding. This folder is a **dispatch layer**, not a new roadmap: every

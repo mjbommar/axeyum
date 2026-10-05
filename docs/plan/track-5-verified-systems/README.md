@@ -1,5 +1,7 @@
 # Track 5 — Verified Systems (IR reflection)
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../CATALOG.md). Track 5 (verified systems) engineering plan adopted by ADR-0056 on 2026-07-06; its phase ordering is dated.
+
 > **Adopted as a first-class goal by
 > [ADR-0056](../../research/09-decisions/adr-0056-verified-systems-track.md)
 > (2026-07-06).** The application charter — the seL4-inspired end goal, the

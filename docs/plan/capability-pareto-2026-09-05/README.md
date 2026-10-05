@@ -1,5 +1,7 @@
 # Axeyum capability and Pareto-dominance roadmap
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../CATALOG.md). A researched capability and Pareto-dominance roadmap proposal as of 2026-09-05 (baseline cc8cb086); no completion is claimed here.
+
 Date: 2026-09-05
 Status: researched proposal; no dominance result or implementation completion claimed
 Baseline: Axeyum `cc8cb0861002c12394857548143d1e76227d4c33` (published main)

@@ -1,5 +1,7 @@
 # Track 4 — Use Cases & Frontend
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../CATALOG.md). Track 4 (use cases and frontend) phase plan P4.1-P4.7 as sequenced in mid-2026; its ordering is dated.
+
 The user-facing capabilities and the measurement harness: symbolic execution /
 reachability over memory, an angr/unicorn-class CFG frontend, constrained
 optimization, SMT-LIB command/API conformance, and — first and most

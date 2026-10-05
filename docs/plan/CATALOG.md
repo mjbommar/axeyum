@@ -11,7 +11,7 @@ rg -n 'QF_LRA' docs/plan/archive/lanes/      # every archived lane that mentions
 rg -n '<lane-or-topic>' docs/plan/CATALOG.md  # find the file, then open it
 ```
 
-Counts: 770 archived lanes (177 not DONE when archived), 55 older archive files, 340 dated plan notes, 72 lane notes, 236 strand and planning documents.
+Counts: 770 archived lanes (177 not DONE when archived), 55 older archive files, 340 dated plan notes, 72 lane notes, 508 strand and planning documents.
 
 ## Lanes that were not DONE when archived
 
@@ -202,51 +202,97 @@ the block's prose rather than its status token; `-` means the file states none.
 ## Superseded and frozen planning documents
 
 Superseded queues and the strand READMEs carry a banner naming what replaced them.
+Dated top-level documents under `docs/` first, then one table per directory.
 
 | Date | File | Title |
 |---|---|---|
-| 2026-10-05 | [`docs/refactor-2026-08/README.md`](../../docs/refactor-2026-08/README.md) | Refactor and cleanup plan — August 2026 |
-| 2026-10-05 | [`docs/python-2026-08/README.md`](../../docs/python-2026-08/README.md) | Python layer and agentic frontier — August 2026 |
-| 2026-10-05 | [`docs/plan/smtcomp-full-library-workstream/README.md`](smtcomp-full-library-workstream/README.md) | SMT-COMP Full-Library Work Stream — RESUME HERE |
-| 2026-10-05 | [`docs/plan/exploration-track/README.md`](exploration-track/README.md) | Exploration Track — searched bridge composition, certified evidence, open problems |
+
+### `docs/mathematics-2026-08/`
+
+| Date | File | Title |
+|---|---|---|
 | 2026-10-05 | [`docs/mathematics-2026-08/README.md`](../../docs/mathematics-2026-08/README.md) | Mathematics strand — August 2026 |
-| 2026-10-05 | [`docs/math-department/12-the-chair.md`](../../docs/math-department/12-the-chair.md) | 12 — The chair |
-| 2026-10-05 | [`docs/math-department/00-roadmap.md`](../../docs/math-department/00-roadmap.md) | 00 — The roadmap |
-| 2026-10-05 | [`docs/formalized-math-2026-08/README.md`](../../docs/formalized-math-2026-08/README.md) | Formalized mathematics strand — August 2026 |
-| 2026-09-11 | [`docs/plan/families/smt-quantifier-free/README.md`](families/smt-quantifier-free/README.md) | Family: SMT, quantifier-free |
-| 2026-09-10 | [`docs/plan/families/smt-quantifier-free/qf-lia.md`](families/smt-quantifier-free/qf-lia.md) | QF_LIA — linear integer arithmetic |
-| 2026-09-07 | [`docs/plan/families/smt-quantifier-free/qf-nra.md`](families/smt-quantifier-free/qf-nra.md) | QF_NRA — nonlinear real arithmetic |
-| 2026-09-07 | [`docs/plan/families/evidence/README.md`](families/evidence/README.md) | Family: the certificate chain |
-| 2026-09-06 | [`docs/plan/families/smt-quantified/uf.md`](families/smt-quantified/uf.md) | UF — quantified uninterpreted functions |
-| 2026-09-06 | [`docs/plan/families/sat/README.md`](families/sat/README.md) | Family: propositional SAT |
-| 2026-09-06 | [`docs/math-department/13-computer-algebra.md`](../../docs/math-department/13-computer-algebra.md) | 13 — The computer algebra system, as a tool |
-| 2026-09-06 | [`docs/math-department/11-applied-and-computational.md`](../../docs/math-department/11-applied-and-computational.md) | 11 — Applied and computational mathematics |
-| 2026-09-06 | [`docs/math-department/10-logic-and-foundations.md`](../../docs/math-department/10-logic-and-foundations.md) | 10 — Logic and foundations |
-| 2026-09-06 | [`docs/math-department/09-category-theory.md`](../../docs/math-department/09-category-theory.md) | 09 — Category theory |
-| 2026-09-06 | [`docs/math-department/08-probability-and-statistics.md`](../../docs/math-department/08-probability-and-statistics.md) | 08 — Probability and statistics |
-| 2026-09-06 | [`docs/math-department/07-combinatorics.md`](../../docs/math-department/07-combinatorics.md) | 07 — Combinatorics |
-| 2026-09-06 | [`docs/math-department/06-topology.md`](../../docs/math-department/06-topology.md) | 06 — Topology |
-| 2026-09-06 | [`docs/math-department/05-geometry.md`](../../docs/math-department/05-geometry.md) | 05 — Geometry |
-| 2026-09-06 | [`docs/math-department/04-algebra.md`](../../docs/math-department/04-algebra.md) | 04 — Algebra |
-| 2026-09-06 | [`docs/math-department/03-classical-analysis.md`](../../docs/math-department/03-classical-analysis.md) | 03 — Classical analysis |
-| 2026-09-06 | [`docs/math-department/02-constructive-analysis.md`](../../docs/math-department/02-constructive-analysis.md) | 02 — Constructive analysis |
-| 2026-09-06 | [`docs/math-department/01-number-theory.md`](../../docs/math-department/01-number-theory.md) | 01 — Number theory |
-| 2026-09-05 | [`docs/plan/families/smt-quantifier-free/qf-rdl.md`](families/smt-quantifier-free/qf-rdl.md) | QF_RDL — real difference logic |
-| 2026-09-05 | [`docs/plan/families/README.md`](families/README.md) | Families and divisions |
-| 2026-09-05 | [`docs/math-department/14-lean-lang.md`](../../docs/math-department/14-lean-lang.md) | 14 — The Lean language, as a boundary |
-| 2026-09-04 | [`docs/math-department/AUDIT-2026-09-04.md`](../../docs/math-department/AUDIT-2026-09-04.md) | Audit of the twelve persona reviews' absence claims |
-| 2026-09-01 | [`docs/formalized-math-2026-08/09-the-dominance-claim-verified-across-three-domains.md`](../../docs/formalized-math-2026-08/09-the-dominance-claim-verified-across-three-domains.md) | The dominance claim, verified across three domains |
 | 2026-08-31 | [`docs/mathematics-2026-08/04-reachability.md`](../../docs/mathematics-2026-08/04-reachability.md) | 04 — What this stack cannot yet state |
-| 2026-08-31 | [`docs/formalized-math-2026-08/07-the-cost-model-and-pareto-position.md`](../../docs/formalized-math-2026-08/07-the-cost-model-and-pareto-position.md) | 07 — The cost model, and the Pareto position against Mathlib |
-| 2026-08-30 | [`docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md`](../../docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md) | IVT and EVT measured against Mathlib: the Pareto claim holds for one of them |
 | 2026-08-26 | [`docs/mathematics-2026-08/diary-exact-root-obstruction.md`](../../docs/mathematics-2026-08/diary-exact-root-obstruction.md) | Why there is no exact IVT root yet, verified at the kernel |
-| 2026-08-25 | [`docs/python-2026-08/14-frontier-reachability.md`](../../docs/python-2026-08/14-frontier-reachability.md) | 14 — Why the agent attempts ~3 of 146 open facts (reachability × provability) |
-| 2026-08-25 | [`docs/python-2026-08/13-panic-surface.md`](../../docs/python-2026-08/13-panic-surface.md) | 13 — The panic surface a Python caller can reach, measured and closed |
 | 2026-08-25 | [`docs/mathematics-2026-08/diary-predicate-subset-product.md`](../../docs/mathematics-2026-08/diary-predicate-subset-product.md) | Seven theorems, one missing primitive |
 | 2026-08-25 | [`docs/mathematics-2026-08/diary-flywheel-2026-08-25.md`](../../docs/mathematics-2026-08/diary-flywheel-2026-08-25.md) | A day of parallel mathematical development: what the theorem count does not say |
 | 2026-08-25 | [`docs/mathematics-2026-08/diary-creal-sqrt.md`](../../docs/mathematics-2026-08/diary-creal-sqrt.md) | The constructive square root: the route, and what is actually left |
 | 2026-08-25 | [`docs/mathematics-2026-08/diary-constructive-ivt.md`](../../docs/mathematics-2026-08/diary-constructive-ivt.md) | Spivak Chapter 7: bisection is enough, and trisection was never the point |
 | 2026-08-25 | [`docs/mathematics-2026-08/diary-apart-as-data.md`](../../docs/mathematics-2026-08/diary-apart-as-data.md) | `Apart` as data: when a case split is legitimate |
+| 2026-08-19 | [`docs/mathematics-2026-08/02-the-library.md`](../../docs/mathematics-2026-08/02-the-library.md) | 02 — The library: ℕ → ℤ → ℚ → ℝ → ℂ |
+| 2026-08-17 | [`docs/mathematics-2026-08/01-decide-vs-certify.md`](../../docs/mathematics-2026-08/01-decide-vs-certify.md) | 01 — What we decide but cannot certify |
+| 2026-08-15 | [`docs/mathematics-2026-08/diary-simson.md`](../../docs/mathematics-2026-08/diary-simson.md) | diary: `simson` — the field question, answered in both directions |
+| 2026-08-15 | [`docs/mathematics-2026-08/diary-real-keystone.md`](../../docs/mathematics-2026-08/diary-real-keystone.md) | Diary: what ℝ actually costs, and why ℤ was the answer |
+| 2026-08-15 | [`docs/mathematics-2026-08/diary-pappus-minimality.md`](../../docs/mathematics-2026-08/diary-pappus-minimality.md) | Diary — Pappus, and a minimality claim that was decided and wrong (lane `pappus-minimality`), 2026-08-15 |
+| 2026-08-15 | [`docs/mathematics-2026-08/diary-ordered-ring-reconstruct.md`](../../docs/mathematics-2026-08/diary-ordered-ring-reconstruct.md) | Diary: the 30 axioms became hypotheses, and the refutation stopped needing them |
+| 2026-08-15 | [`docs/mathematics-2026-08/diary-int-remainder.md`](../../docs/mathematics-2026-08/diary-int-remainder.md) | Diary: the `subNatNat` borrow, and five of the last six integer axioms |
+| 2026-08-15 | [`docs/mathematics-2026-08/diary-geometry-frontier.md`](../../docs/mathematics-2026-08/diary-geometry-frontier.md) | Diary — the geometry frontier (lane `geometry-frontier`), 2026-08-15 |
+| 2026-08-15 | [`docs/mathematics-2026-08/diary-euler-linearity.md`](../../docs/mathematics-2026-08/diary-euler-linearity.md) | Diary — linear elimination, and `euler-line` (lane `euler-linearity`), 2026-08-15 |
+| 2026-08-15 | [`docs/mathematics-2026-08/diary-db-design.md`](../../docs/mathematics-2026-08/diary-db-design.md) | Diary: database design as a certificate-carrying decision problem |
+| 2026-08-14 | [`docs/mathematics-2026-08/diary-telescoping.md`](../../docs/mathematics-2026-08/diary-telescoping.md) | Diary — creative telescoping (lane `telescoping`), 2026-08-14 |
+| 2026-08-14 | [`docs/mathematics-2026-08/diary-telescoping-scale.md`](../../docs/mathematics-2026-08/diary-telescoping-scale.md) | Diary — scaling creative telescoping (lane `telescoping-scale`), 2026-08-14 |
+| 2026-08-14 | [`docs/mathematics-2026-08/diary-sorting-networks.md`](../../docs/mathematics-2026-08/diary-sorting-networks.md) | Diary — optimal-size sorting networks (lanes `sorting-networks`, `sorting-networks-2`), 2026-08-14 |
+| 2026-08-14 | [`docs/mathematics-2026-08/diary-quant-duality.md`](../../docs/mathematics-2026-08/diary-quant-duality.md) | Diary — quantifier negation duality (lane `quant-duality`), 2026-08-14 |
+| 2026-08-14 | [`docs/mathematics-2026-08/diary-mvpoly-bignum.md`](../../docs/mathematics-2026-08/diary-mvpoly-bignum.md) | diary: `mvpoly-bignum` |
+| 2026-08-14 | [`docs/mathematics-2026-08/diary-int-keystone.md`](../../docs/mathematics-2026-08/diary-int-keystone.md) | Diary: constructing ℤ over the proved ℕ development |
+| 2026-08-14 | [`docs/mathematics-2026-08/diary-infeasibility.md`](../../docs/mathematics-2026-08/diary-infeasibility.md) | diary: certified infeasibility with a minimal explanation |
+| 2026-08-14 | [`docs/mathematics-2026-08/diary-geometry.md`](../../docs/mathematics-2026-08/diary-geometry.md) | Diary — certified Euclidean geometry (lane `geometry`), 2026-08-14 |
+| 2026-08-14 | [`docs/mathematics-2026-08/diary-fp-kernels.md`](../../docs/mathematics-2026-08/diary-fp-kernels.md) | Diary — certified floating-point kernel equivalence (lane `fp-kernels`), 2026-08-14 |
+| 2026-08-14 | [`docs/mathematics-2026-08/03-symbolic-and-infinite.md`](../../docs/mathematics-2026-08/03-symbolic-and-infinite.md) | 03 — Values versus theorems |
+|  | [`docs/mathematics-2026-08/05-the-mathematics-dag.md`](../../docs/mathematics-2026-08/05-the-mathematics-dag.md) | 05 — The mathematics DAG: what exists, what is missing, what to research now |
+
+### `docs/formalized-math-2026-08/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-10-05 | [`docs/formalized-math-2026-08/README.md`](../../docs/formalized-math-2026-08/README.md) | Formalized mathematics strand — August 2026 |
+| 2026-09-01 | [`docs/formalized-math-2026-08/09-the-dominance-claim-verified-across-three-domains.md`](../../docs/formalized-math-2026-08/09-the-dominance-claim-verified-across-three-domains.md) | The dominance claim, verified across three domains |
+| 2026-08-31 | [`docs/formalized-math-2026-08/07-the-cost-model-and-pareto-position.md`](../../docs/formalized-math-2026-08/07-the-cost-model-and-pareto-position.md) | 07 — The cost model, and the Pareto position against Mathlib |
+| 2026-08-30 | [`docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md`](../../docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md) | IVT and EVT measured against Mathlib: the Pareto claim holds for one of them |
+| 2026-08-23 | [`docs/formalized-math-2026-08/06-parallel-production.md`](../../docs/formalized-math-2026-08/06-parallel-production.md) | 06 — Parallel production: how to run a fleet against the frontier |
+| 2026-08-19 | [`docs/formalized-math-2026-08/04-implement.md`](../../docs/formalized-math-2026-08/04-implement.md) | 04 — Implement: what we build, and what we import |
+| 2026-08-17 | [`docs/formalized-math-2026-08/05-throughput.md`](../../docs/formalized-math-2026-08/05-throughput.md) | 05 — The construction plan |
+| 2026-08-17 | [`docs/formalized-math-2026-08/03-integrate.md`](../../docs/formalized-math-2026-08/03-integrate.md) | 03 — Integrate |
+| 2026-08-17 | [`docs/formalized-math-2026-08/01-collect.md`](../../docs/formalized-math-2026-08/01-collect.md) | 01 — Collect |
+| 2026-08-15 | [`docs/formalized-math-2026-08/diary-whnf-cache-key.md`](../../docs/formalized-math-2026-08/diary-whnf-cache-key.md) | Diary — lane `whnf-cache-key`, 2026-08-15 |
+| 2026-08-15 | [`docs/formalized-math-2026-08/diary-import-wfrec.md`](../../docs/formalized-math-2026-08/diary-import-wfrec.md) | Diary — lane `import-wfrec`, 2026-08-15 |
+| 2026-08-15 | [`docs/formalized-math-2026-08/diary-import-strings.md`](../../docs/formalized-math-2026-08/diary-import-strings.md) | Diary — lane `import-strings`, 2026-08-15 |
+| 2026-08-15 | [`docs/formalized-math-2026-08/diary-import-scale.md`](../../docs/formalized-math-2026-08/diary-import-scale.md) | Diary — lane `import-scale`, 2026-08-15 |
+| 2026-08-15 | [`docs/formalized-math-2026-08/diary-import-brecon.md`](../../docs/formalized-math-2026-08/diary-import-brecon.md) | Diary — lane `import-brecon`, 2026-08-15 |
+| 2026-08-15 | [`docs/formalized-math-2026-08/diary-formalized-collect.md`](../../docs/formalized-math-2026-08/diary-formalized-collect.md) | Diary — lane `formalized-collect`, 2026-08-15 |
+| 2026-08-15 | [`docs/formalized-math-2026-08/02-synthesize.md`](../../docs/formalized-math-2026-08/02-synthesize.md) | 02 — Synthesize |
+|  | [`docs/formalized-math-2026-08/evidence/ivt-evt/README.md`](../../docs/formalized-math-2026-08/evidence/ivt-evt/README.md) | IVT/EVT audit evidence |
+
+### `docs/refactor-2026-08/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-10-05 | [`docs/refactor-2026-08/README.md`](../../docs/refactor-2026-08/README.md) | Refactor and cleanup plan — August 2026 |
+| 2026-08-19 | [`docs/refactor-2026-08/04-gates-and-truth.md`](../../docs/refactor-2026-08/04-gates-and-truth.md) | 04 — Gates that prove their scope, documents that match the code |
+| 2026-08-18 | [`docs/refactor-2026-08/01-int-real-keystone.md`](../../docs/refactor-2026-08/01-int-real-keystone.md) | 01 — ℤ and ℝ are one hole through every layer |
+| 2026-08-17 | [`docs/refactor-2026-08/diary-evidence-certification.md`](../../docs/refactor-2026-08/diary-evidence-certification.md) | Diary: evidence-certification — the verdict is not the certificate |
+| 2026-08-16 | [`docs/refactor-2026-08/diary-ledger-integrity.md`](../../docs/refactor-2026-08/diary-ledger-integrity.md) | diary — ledger-integrity / int-euclid (2026-08-16) |
+| 2026-08-15 | [`docs/refactor-2026-08/diary-proof-io.md`](../../docs/refactor-2026-08/diary-proof-io.md) | Diary: dropping written proof pages from the page cache (item 05.1) |
+| 2026-08-15 | [`docs/refactor-2026-08/diary-lra-dispatch.md`](../../docs/refactor-2026-08/diary-lra-dispatch.md) | Diary: the front door was answering a different question |
+| 2026-08-15 | [`docs/refactor-2026-08/diary-examples-sweep.md`](../../docs/refactor-2026-08/diary-examples-sweep.md) | Diary: catching up `docs/reference/examples.md` to Cargo reality |
+| 2026-08-15 | [`docs/refactor-2026-08/06-scratch-and-snapshots.md`](../../docs/refactor-2026-08/06-scratch-and-snapshots.md) | 06 — Where work goes: scratch, snapshots, and results |
+| 2026-08-15 | [`docs/refactor-2026-08/03-solver-decomposition.md`](../../docs/refactor-2026-08/03-solver-decomposition.md) | 03 — Decomposing `axeyum-solver` |
+| 2026-08-15 | [`docs/refactor-2026-08/02-composition.md`](../../docs/refactor-2026-08/02-composition.md) | 02 — The components are adjacent, not composed |
+| 2026-08-14 | [`docs/refactor-2026-08/unblocking-verified-2026-08-14.md`](../../docs/refactor-2026-08/unblocking-verified-2026-08-14.md) | The unblocking, verified against eleven concurrent lanes |
+| 2026-08-14 | [`docs/refactor-2026-08/gate-divergence-2026-08-14.md`](../../docs/refactor-2026-08/gate-divergence-2026-08-14.md) | The two aggregate gates have diverged |
+| 2026-08-14 | [`docs/refactor-2026-08/diary-quant-bv-shares.md`](../../docs/refactor-2026-08/diary-quant-bv-shares.md) | diary: `quant-bv-shares` |
+| 2026-08-14 | [`docs/refactor-2026-08/diary-nat-shard.md`](../../docs/refactor-2026-08/diary-nat-shard.md) | Diary: sharding `nat_prelude.rs` |
+| 2026-08-14 | [`docs/refactor-2026-08/diary-lean-gate-honesty.md`](../../docs/refactor-2026-08/diary-lean-gate-honesty.md) | diary: `lean-gate-honesty` |
+| 2026-08-14 | [`docs/refactor-2026-08/00-parallel-work.md`](../../docs/refactor-2026-08/00-parallel-work.md) | 00 — Parallel work: who owns what, and what that changes |
+|  | [`docs/refactor-2026-08/05-proof-consumption.md`](../../docs/refactor-2026-08/05-proof-consumption.md) | 05 — Proof consumption: nearly closed, and the remaining wall is Lean's |
+
+### `docs/python-2026-08/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-10-05 | [`docs/python-2026-08/README.md`](../../docs/python-2026-08/README.md) | Python layer and agentic frontier — August 2026 |
+| 2026-08-25 | [`docs/python-2026-08/14-frontier-reachability.md`](../../docs/python-2026-08/14-frontier-reachability.md) | 14 — Why the agent attempts ~3 of 146 open facts (reachability × provability) |
+| 2026-08-25 | [`docs/python-2026-08/13-panic-surface.md`](../../docs/python-2026-08/13-panic-surface.md) | 13 — The panic surface a Python caller can reach, measured and closed |
 | 2026-08-24 | [`docs/python-2026-08/studies/pyo3-maturin-feasibility.md`](../../docs/python-2026-08/studies/pyo3-maturin-feasibility.md) | PyO3 / maturin for Axeyum — design study |
 | 2026-08-24 | [`docs/python-2026-08/studies/agentic-framework-comparison.md`](../../docs/python-2026-08/studies/agentic-framework-comparison.md) | An agentic frontier-expansion framework for Axeyum |
 | 2026-08-24 | [`docs/python-2026-08/inventories/smt-solver.md`](../../docs/python-2026-08/inventories/smt-solver.md) | Public Rust API inventory for `crates/axeyum-py` (`axeyum._native`) |
@@ -264,64 +310,252 @@ Superseded queues and the strand READMEs carry a banner naming what replaced the
 | 2026-08-24 | [`docs/python-2026-08/03-agentic-layer.md`](../../docs/python-2026-08/03-agentic-layer.md) | 03 — The agentic layer: an autonomous, replayable frontier loop over the Python API |
 | 2026-08-24 | [`docs/python-2026-08/02-python-api.md`](../../docs/python-2026-08/02-python-api.md) | 02 — The Python API: a typed projection of the Rust engines and the knowledge artifacts |
 | 2026-08-24 | [`docs/python-2026-08/01-pyo3-maturin.md`](../../docs/python-2026-08/01-pyo3-maturin.md) | 01 — PyO3 / maturin: the binding crate and its gate |
-| 2026-08-23 | [`docs/formalized-math-2026-08/06-parallel-production.md`](../../docs/formalized-math-2026-08/06-parallel-production.md) | 06 — Parallel production: how to run a fleet against the frontier |
-| 2026-08-19 | [`docs/refactor-2026-08/04-gates-and-truth.md`](../../docs/refactor-2026-08/04-gates-and-truth.md) | 04 — Gates that prove their scope, documents that match the code |
-| 2026-08-19 | [`docs/mathematics-2026-08/02-the-library.md`](../../docs/mathematics-2026-08/02-the-library.md) | 02 — The library: ℕ → ℤ → ℚ → ℝ → ℂ |
-| 2026-08-19 | [`docs/formalized-math-2026-08/04-implement.md`](../../docs/formalized-math-2026-08/04-implement.md) | 04 — Implement: what we build, and what we import |
-| 2026-08-18 | [`docs/refactor-2026-08/01-int-real-keystone.md`](../../docs/refactor-2026-08/01-int-real-keystone.md) | 01 — ℤ and ℝ are one hole through every layer |
-| 2026-08-17 | [`docs/refactor-2026-08/diary-evidence-certification.md`](../../docs/refactor-2026-08/diary-evidence-certification.md) | Diary: evidence-certification — the verdict is not the certificate |
-| 2026-08-17 | [`docs/mathematics-2026-08/01-decide-vs-certify.md`](../../docs/mathematics-2026-08/01-decide-vs-certify.md) | 01 — What we decide but cannot certify |
-| 2026-08-17 | [`docs/formalized-math-2026-08/05-throughput.md`](../../docs/formalized-math-2026-08/05-throughput.md) | 05 — The construction plan |
-| 2026-08-17 | [`docs/formalized-math-2026-08/03-integrate.md`](../../docs/formalized-math-2026-08/03-integrate.md) | 03 — Integrate |
-| 2026-08-17 | [`docs/formalized-math-2026-08/01-collect.md`](../../docs/formalized-math-2026-08/01-collect.md) | 01 — Collect |
-| 2026-08-16 | [`docs/refactor-2026-08/diary-ledger-integrity.md`](../../docs/refactor-2026-08/diary-ledger-integrity.md) | diary — ledger-integrity / int-euclid (2026-08-16) |
-| 2026-08-15 | [`docs/refactor-2026-08/diary-proof-io.md`](../../docs/refactor-2026-08/diary-proof-io.md) | Diary: dropping written proof pages from the page cache (item 05.1) |
-| 2026-08-15 | [`docs/refactor-2026-08/diary-lra-dispatch.md`](../../docs/refactor-2026-08/diary-lra-dispatch.md) | Diary: the front door was answering a different question |
-| 2026-08-15 | [`docs/refactor-2026-08/diary-examples-sweep.md`](../../docs/refactor-2026-08/diary-examples-sweep.md) | Diary: catching up `docs/reference/examples.md` to Cargo reality |
-| 2026-08-15 | [`docs/refactor-2026-08/06-scratch-and-snapshots.md`](../../docs/refactor-2026-08/06-scratch-and-snapshots.md) | 06 — Where work goes: scratch, snapshots, and results |
-| 2026-08-15 | [`docs/refactor-2026-08/03-solver-decomposition.md`](../../docs/refactor-2026-08/03-solver-decomposition.md) | 03 — Decomposing `axeyum-solver` |
-| 2026-08-15 | [`docs/refactor-2026-08/02-composition.md`](../../docs/refactor-2026-08/02-composition.md) | 02 — The components are adjacent, not composed |
-| 2026-08-15 | [`docs/mathematics-2026-08/diary-simson.md`](../../docs/mathematics-2026-08/diary-simson.md) | diary: `simson` — the field question, answered in both directions |
-| 2026-08-15 | [`docs/mathematics-2026-08/diary-real-keystone.md`](../../docs/mathematics-2026-08/diary-real-keystone.md) | Diary: what ℝ actually costs, and why ℤ was the answer |
-| 2026-08-15 | [`docs/mathematics-2026-08/diary-pappus-minimality.md`](../../docs/mathematics-2026-08/diary-pappus-minimality.md) | Diary — Pappus, and a minimality claim that was decided and wrong (lane `pappus-minimality`), 2026-08-15 |
-| 2026-08-15 | [`docs/mathematics-2026-08/diary-ordered-ring-reconstruct.md`](../../docs/mathematics-2026-08/diary-ordered-ring-reconstruct.md) | Diary: the 30 axioms became hypotheses, and the refutation stopped needing them |
-| 2026-08-15 | [`docs/mathematics-2026-08/diary-int-remainder.md`](../../docs/mathematics-2026-08/diary-int-remainder.md) | Diary: the `subNatNat` borrow, and five of the last six integer axioms |
-| 2026-08-15 | [`docs/mathematics-2026-08/diary-geometry-frontier.md`](../../docs/mathematics-2026-08/diary-geometry-frontier.md) | Diary — the geometry frontier (lane `geometry-frontier`), 2026-08-15 |
-| 2026-08-15 | [`docs/mathematics-2026-08/diary-euler-linearity.md`](../../docs/mathematics-2026-08/diary-euler-linearity.md) | Diary — linear elimination, and `euler-line` (lane `euler-linearity`), 2026-08-15 |
-| 2026-08-15 | [`docs/mathematics-2026-08/diary-db-design.md`](../../docs/mathematics-2026-08/diary-db-design.md) | Diary: database design as a certificate-carrying decision problem |
-| 2026-08-15 | [`docs/formalized-math-2026-08/diary-whnf-cache-key.md`](../../docs/formalized-math-2026-08/diary-whnf-cache-key.md) | Diary — lane `whnf-cache-key`, 2026-08-15 |
-| 2026-08-15 | [`docs/formalized-math-2026-08/diary-import-wfrec.md`](../../docs/formalized-math-2026-08/diary-import-wfrec.md) | Diary — lane `import-wfrec`, 2026-08-15 |
-| 2026-08-15 | [`docs/formalized-math-2026-08/diary-import-strings.md`](../../docs/formalized-math-2026-08/diary-import-strings.md) | Diary — lane `import-strings`, 2026-08-15 |
-| 2026-08-15 | [`docs/formalized-math-2026-08/diary-import-scale.md`](../../docs/formalized-math-2026-08/diary-import-scale.md) | Diary — lane `import-scale`, 2026-08-15 |
-| 2026-08-15 | [`docs/formalized-math-2026-08/diary-import-brecon.md`](../../docs/formalized-math-2026-08/diary-import-brecon.md) | Diary — lane `import-brecon`, 2026-08-15 |
-| 2026-08-15 | [`docs/formalized-math-2026-08/diary-formalized-collect.md`](../../docs/formalized-math-2026-08/diary-formalized-collect.md) | Diary — lane `formalized-collect`, 2026-08-15 |
-| 2026-08-15 | [`docs/formalized-math-2026-08/02-synthesize.md`](../../docs/formalized-math-2026-08/02-synthesize.md) | 02 — Synthesize |
-| 2026-08-14 | [`docs/refactor-2026-08/unblocking-verified-2026-08-14.md`](../../docs/refactor-2026-08/unblocking-verified-2026-08-14.md) | The unblocking, verified against eleven concurrent lanes |
-| 2026-08-14 | [`docs/refactor-2026-08/gate-divergence-2026-08-14.md`](../../docs/refactor-2026-08/gate-divergence-2026-08-14.md) | The two aggregate gates have diverged |
-| 2026-08-14 | [`docs/refactor-2026-08/diary-quant-bv-shares.md`](../../docs/refactor-2026-08/diary-quant-bv-shares.md) | diary: `quant-bv-shares` |
-| 2026-08-14 | [`docs/refactor-2026-08/diary-nat-shard.md`](../../docs/refactor-2026-08/diary-nat-shard.md) | Diary: sharding `nat_prelude.rs` |
-| 2026-08-14 | [`docs/refactor-2026-08/diary-lean-gate-honesty.md`](../../docs/refactor-2026-08/diary-lean-gate-honesty.md) | diary: `lean-gate-honesty` |
-| 2026-08-14 | [`docs/refactor-2026-08/00-parallel-work.md`](../../docs/refactor-2026-08/00-parallel-work.md) | 00 — Parallel work: who owns what, and what that changes |
-| 2026-08-14 | [`docs/mathematics-2026-08/diary-telescoping.md`](../../docs/mathematics-2026-08/diary-telescoping.md) | Diary — creative telescoping (lane `telescoping`), 2026-08-14 |
-| 2026-08-14 | [`docs/mathematics-2026-08/diary-telescoping-scale.md`](../../docs/mathematics-2026-08/diary-telescoping-scale.md) | Diary — scaling creative telescoping (lane `telescoping-scale`), 2026-08-14 |
-| 2026-08-14 | [`docs/mathematics-2026-08/diary-sorting-networks.md`](../../docs/mathematics-2026-08/diary-sorting-networks.md) | Diary — optimal-size sorting networks (lanes `sorting-networks`, `sorting-networks-2`), 2026-08-14 |
-| 2026-08-14 | [`docs/mathematics-2026-08/diary-quant-duality.md`](../../docs/mathematics-2026-08/diary-quant-duality.md) | Diary — quantifier negation duality (lane `quant-duality`), 2026-08-14 |
-| 2026-08-14 | [`docs/mathematics-2026-08/diary-mvpoly-bignum.md`](../../docs/mathematics-2026-08/diary-mvpoly-bignum.md) | diary: `mvpoly-bignum` |
-| 2026-08-14 | [`docs/mathematics-2026-08/diary-int-keystone.md`](../../docs/mathematics-2026-08/diary-int-keystone.md) | Diary: constructing ℤ over the proved ℕ development |
-| 2026-08-14 | [`docs/mathematics-2026-08/diary-infeasibility.md`](../../docs/mathematics-2026-08/diary-infeasibility.md) | diary: certified infeasibility with a minimal explanation |
-| 2026-08-14 | [`docs/mathematics-2026-08/diary-geometry.md`](../../docs/mathematics-2026-08/diary-geometry.md) | Diary — certified Euclidean geometry (lane `geometry`), 2026-08-14 |
-| 2026-08-14 | [`docs/mathematics-2026-08/diary-fp-kernels.md`](../../docs/mathematics-2026-08/diary-fp-kernels.md) | Diary — certified floating-point kernel equivalence (lane `fp-kernels`), 2026-08-14 |
-| 2026-08-14 | [`docs/mathematics-2026-08/03-symbolic-and-infinite.md`](../../docs/mathematics-2026-08/03-symbolic-and-infinite.md) | 03 — Values versus theorems |
-| 2026-08-01 | [`docs/plan/exploration-track/phase-9-lean-evidence/T9.1-axiom-ledger-triage.md`](exploration-track/phase-9-lean-evidence/T9.1-axiom-ledger-triage.md) | T9.1 — Axiom-ledger triage: classify every ledger row |
-| 2026-08-01 | [`docs/plan/exploration-track/phase-9-lean-evidence/README.md`](exploration-track/phase-9-lean-evidence/README.md) | Phase 9 — the Lean evidence ladder and Comparator compatibility |
-| 2026-08-01 | [`docs/plan/exploration-track/phase-2-evaluation/README.md`](exploration-track/phase-2-evaluation/README.md) | Phase 2 — evaluation harness and reward signal |
-| 2026-08-01 | [`docs/plan/exploration-track/phase-0-catalogue/T0.6-coverage-expansion.md`](exploration-track/phase-0-catalogue/T0.6-coverage-expansion.md) | T0.6 — Trace coverage for `solve()` preamble + quantifier routes |
-| 2026-08-01 | [`docs/plan/exploration-track/phase-0-catalogue/T0.4-behavioral-replay-validator.md`](exploration-track/phase-0-catalogue/T0.4-behavioral-replay-validator.md) | T0.4 — Behavioral replay validator |
-| 2026-08-01 | [`docs/plan/exploration-track/phase-0-catalogue/T0.1-route-trace-json-export.md`](exploration-track/phase-0-catalogue/T0.1-route-trace-json-export.md) | T0.1 — RouteTrace JSON export + bench persistence |
-| 2026-08-01 | [`docs/plan/exploration-track/00-review-synthesis.md`](exploration-track/00-review-synthesis.md) | Review synthesis — what nine branch reviews found |
-| 2026-07-31 | [`docs/plan/exploration-track/phase-8-open-problems/README.md`](exploration-track/phase-8-open-problems/README.md) | Phase 8 — open-problem intake, triage, and the output taxonomy |
-| 2026-07-21 | [`docs/plan/exploration-track/phase-7-agentic-loop/T7.8-provenance-integration.md`](exploration-track/phase-7-agentic-loop/T7.8-provenance-integration.md) | T7.8 — Provenance + no-loss integration |
-|  | [`docs/refactor-2026-08/05-proof-consumption.md`](../../docs/refactor-2026-08/05-proof-consumption.md) | 05 — Proof consumption: nearly closed, and the remaining wall is Lean's |
+
+### `docs/render-2026-08/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-08-21 | [`docs/render-2026-08/TODO.md`](../../docs/render-2026-08/TODO.md) | Render strand P0 task board |
+| 2026-08-21 | [`docs/render-2026-08/README.md`](../../docs/render-2026-08/README.md) | Render strand (2026-08): reader-facing export of Axeyum artifacts |
+| 2026-08-21 | [`docs/render-2026-08/19-adr-kernel-diary.md`](../../docs/render-2026-08/19-adr-kernel-diary.md) | 19 -- P1-ADR diary: the promotion ADR and the kernel theorem pages |
+| 2026-08-21 | [`docs/render-2026-08/18-runrec-diary.md`](../../docs/render-2026-08/18-runrec-diary.md) | 18 -- RUNREC diary (render strand, round 3 / P1) |
+| 2026-08-21 | [`docs/render-2026-08/17-cards-diary.md`](../../docs/render-2026-08/17-cards-diary.md) | 17 -- P1-CARDS diary (render strand, P1) |
+| 2026-08-21 | [`docs/render-2026-08/16-reader-review.md`](../../docs/render-2026-08/16-reader-review.md) | 16 -- Coordinator reader review (proxy for the owner's cold read) |
+| 2026-08-21 | [`docs/render-2026-08/15-integrate-diary.md`](../../docs/render-2026-08/15-integrate-diary.md) | 15 -- INTEGRATE diary (render strand, round 2) |
+| 2026-08-21 | [`docs/render-2026-08/14-p0-exit-report.md`](../../docs/render-2026-08/14-p0-exit-report.md) | 14 -- P0 exit-criteria report |
+| 2026-08-21 | [`docs/render-2026-08/13-facts-diary.md`](../../docs/render-2026-08/13-facts-diary.md) | 13 -- FACTS lane diary (P0-B: fact ledger -> Doc-IR) |
+| 2026-08-21 | [`docs/render-2026-08/12-cert-diary.md`](../../docs/render-2026-08/12-cert-diary.md) | 12 -- CERT diary (render strand, round 1) |
+| 2026-08-21 | [`docs/render-2026-08/11-design-diary.md`](../../docs/render-2026-08/11-design-diary.md) | 11 -- DESIGN lane diary |
+| 2026-08-21 | [`docs/render-2026-08/10-core-diary.md`](../../docs/render-2026-08/10-core-diary.md) | 10 -- CORE lane diary (render strand, round 1) |
+| 2026-08-21 | [`docs/render-2026-08/07-r-notes.md`](../../docs/render-2026-08/07-r-notes.md) | 07 -- R-notes: the two round-1 research questions |
+| 2026-08-21 | [`docs/render-2026-08/02-prior-art.md`](../../docs/render-2026-08/02-prior-art.md) | 02 -- Prior art survey (SerpAPI, 2026-08-21) |
+|  | [`docs/render-2026-08/06-roadmap.md`](../../docs/render-2026-08/06-roadmap.md) | 06 -- Roadmap: research -> implement -> test -> iterate |
+|  | [`docs/render-2026-08/05-html-interactivity.md`](../../docs/render-2026-08/05-html-interactivity.md) | 05 -- HTML: beautiful, interactive, self-contained, no Node |
+|  | [`docs/render-2026-08/04-prototype-plan.md`](../../docs/render-2026-08/04-prototype-plan.md) | 04 -- Prototype plan (P0): smallest end-to-end truth |
+|  | [`docs/render-2026-08/03-architecture.md`](../../docs/render-2026-08/03-architecture.md) | 03 -- Architecture |
+|  | [`docs/render-2026-08/01-goals-and-requirements.md`](../../docs/render-2026-08/01-goals-and-requirements.md) | 01 -- Goals and requirements |
+
+### `docs/math-department/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-10-05 | [`docs/math-department/12-the-chair.md`](../../docs/math-department/12-the-chair.md) | 12 — The chair |
+| 2026-10-05 | [`docs/math-department/00-roadmap.md`](../../docs/math-department/00-roadmap.md) | 00 — The roadmap |
+| 2026-09-06 | [`docs/math-department/13-computer-algebra.md`](../../docs/math-department/13-computer-algebra.md) | 13 — The computer algebra system, as a tool |
+| 2026-09-06 | [`docs/math-department/11-applied-and-computational.md`](../../docs/math-department/11-applied-and-computational.md) | 11 — Applied and computational mathematics |
+| 2026-09-06 | [`docs/math-department/10-logic-and-foundations.md`](../../docs/math-department/10-logic-and-foundations.md) | 10 — Logic and foundations |
+| 2026-09-06 | [`docs/math-department/09-category-theory.md`](../../docs/math-department/09-category-theory.md) | 09 — Category theory |
+| 2026-09-06 | [`docs/math-department/08-probability-and-statistics.md`](../../docs/math-department/08-probability-and-statistics.md) | 08 — Probability and statistics |
+| 2026-09-06 | [`docs/math-department/07-combinatorics.md`](../../docs/math-department/07-combinatorics.md) | 07 — Combinatorics |
+| 2026-09-06 | [`docs/math-department/06-topology.md`](../../docs/math-department/06-topology.md) | 06 — Topology |
+| 2026-09-06 | [`docs/math-department/05-geometry.md`](../../docs/math-department/05-geometry.md) | 05 — Geometry |
+| 2026-09-06 | [`docs/math-department/04-algebra.md`](../../docs/math-department/04-algebra.md) | 04 — Algebra |
+| 2026-09-06 | [`docs/math-department/03-classical-analysis.md`](../../docs/math-department/03-classical-analysis.md) | 03 — Classical analysis |
+| 2026-09-06 | [`docs/math-department/02-constructive-analysis.md`](../../docs/math-department/02-constructive-analysis.md) | 02 — Constructive analysis |
+| 2026-09-06 | [`docs/math-department/01-number-theory.md`](../../docs/math-department/01-number-theory.md) | 01 — Number theory |
+| 2026-09-05 | [`docs/math-department/14-lean-lang.md`](../../docs/math-department/14-lean-lang.md) | 14 — The Lean language, as a boundary |
+| 2026-09-04 | [`docs/math-department/AUDIT-2026-09-04.md`](../../docs/math-department/AUDIT-2026-09-04.md) | Audit of the twelve persona reviews' absence claims |
+|  | [`docs/math-department/README.md`](../../docs/math-department/README.md) | The math department review board |
+
+### `docs/campaign-2026-08-13/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-08-14 | [`docs/campaign-2026-08-13/agent-k-lemma-splitting/DIARY.md`](../../docs/campaign-2026-08-13/agent-k-lemma-splitting/DIARY.md) | agent-k — automatic hypothesis minimisation / lemma splitting |
+| 2026-08-14 | [`docs/campaign-2026-08-13/agent-j-misconceptions/DIARY.md`](../../docs/campaign-2026-08-13/agent-j-misconceptions/DIARY.md) | agent-j — misconception corpus as a negative-control suite |
+| 2026-08-13 | [`docs/campaign-2026-08-13/coordinator/NEXT-MATH-STACK.md`](../../docs/campaign-2026-08-13/coordinator/NEXT-MATH-STACK.md) | The next improvements to axeyum's mathematical stack |
+| 2026-08-13 | [`docs/campaign-2026-08-13/coordinator/FRAGMENTATION.md`](../../docs/campaign-2026-08-13/coordinator/FRAGMENTATION.md) | What axeyum united today, and where the seams still are |
+| 2026-08-13 | [`docs/campaign-2026-08-13/coordinator/FEEDBACK.md`](../../docs/campaign-2026-08-13/coordinator/FEEDBACK.md) | Coordinator feedback for the axeyum roadmap — 2026-08-13 |
+| 2026-08-13 | [`docs/campaign-2026-08-13/coordinator/DIARY.md`](../../docs/campaign-2026-08-13/coordinator/DIARY.md) | Coordinator diary — frontier campaign, 2026-08-13 |
+| 2026-08-13 | [`docs/campaign-2026-08-13/coordinator/ACTION-ITEMS.md`](../../docs/campaign-2026-08-13/coordinator/ACTION-ITEMS.md) | Calibrated action items after the 2026-08-13 campaign |
+| 2026-08-13 | [`docs/campaign-2026-08-13/agent-i-cas-bridge/FEEDBACK.md`](../../docs/campaign-2026-08-13/agent-i-cas-bridge/FEEDBACK.md) | agent-i — roadmap feedback for axeyum itself |
+| 2026-08-13 | [`docs/campaign-2026-08-13/agent-i-cas-bridge/DIARY.md`](../../docs/campaign-2026-08-13/agent-i-cas-bridge/DIARY.md) | agent-i — CAS/solver bridge diary |
+| 2026-08-13 | [`docs/campaign-2026-08-13/agent-h-proof-reconstruction/DIARY.md`](../../docs/campaign-2026-08-13/agent-h-proof-reconstruction/DIARY.md) | agent-h DIARY — streaming resolution reconstruction |
+| 2026-08-13 | [`docs/campaign-2026-08-13/agent-g-drat-memory/DIARY.md`](../../docs/campaign-2026-08-13/agent-g-drat-memory/DIARY.md) | agent-g DIARY — DRAT checking memory |
+| 2026-08-13 | [`docs/campaign-2026-08-13/agent-e-vdw/RESULT.md`](../../docs/campaign-2026-08-13/agent-e-vdw/RESULT.md) | agent-e — van der Waerden numbers, certified end to end in pure Rust |
+| 2026-08-13 | [`docs/campaign-2026-08-13/agent-e-vdw/DIARY.md`](../../docs/campaign-2026-08-13/agent-e-vdw/DIARY.md) | agent-e diary — van der Waerden numbers |
+| 2026-08-13 | [`docs/campaign-2026-08-13/agent-d-lean-bridge/FEEDBACK.md`](../../docs/campaign-2026-08-13/agent-d-lean-bridge/FEEDBACK.md) | agent-d feedback for the axeyum roadmap — 2026-08-13 |
+| 2026-08-13 | [`docs/campaign-2026-08-13/agent-c-rado-akb2/DIARY.md`](../../docs/campaign-2026-08-13/agent-c-rado-akb2/DIARY.md) | agent-c diary — the `a^k` line, R_k(a(x-y)=bz) = a^k for gcd(a,b)=1, a >= b+2 |
+| 2026-08-13 | [`docs/campaign-2026-08-13/agent-b-rado741/RESULT.md`](../../docs/campaign-2026-08-13/agent-b-rado741/RESULT.md) | agent-b result — `R_4(5(x-y)=4z) = 741` |
+| 2026-08-13 | [`docs/campaign-2026-08-13/agent-b-rado741/FRAGMENTATION.md`](../../docs/campaign-2026-08-13/agent-b-rado741/FRAGMENTATION.md) | One stack, eight stages — agent-b, `R_4(5(x-y)=4z)` at `n = 741` |
+| 2026-08-13 | [`docs/campaign-2026-08-13/agent-a-offdiag-schur/RESULT.md`](../../docs/campaign-2026-08-13/agent-a-offdiag-schur/RESULT.md) | agent-a — generalized off-diagonal Schur numbers `S(3; s,t,u)` |
+| 2026-08-13 | [`docs/campaign-2026-08-13/agent-a-offdiag-schur/FRAGMENTATION.md`](../../docs/campaign-2026-08-13/agent-a-offdiag-schur/FRAGMENTATION.md) | One framework instead of six tools — what actually happened in this run |
+| 2026-08-13 | [`docs/campaign-2026-08-13/agent-a-offdiag-schur/DIARY.md`](../../docs/campaign-2026-08-13/agent-a-offdiag-schur/DIARY.md) | agent-a diary — generalized off-diagonal Schur numbers S(3; s,t,u) |
+| 2026-08-13 | [`docs/campaign-2026-08-13/README.md`](../../docs/campaign-2026-08-13/README.md) | Campaign evidence — 2026-08-13/14 |
+| 2026-08-13 | [`docs/campaign-2026-08-13/README-workspace.md`](../../docs/campaign-2026-08-13/README-workspace.md) | Frontier campaign — 2026-08-13 |
+| 2026-08-12 | [`docs/campaign-2026-08-13/agent-b-rado741/DIARY.md`](../../docs/campaign-2026-08-13/agent-b-rado741/DIARY.md) | agent-b diary — R_4(5(x-y)=4z) = 741 |
+|  | [`docs/campaign-2026-08-13/coordinator/BATCH-2.md`](../../docs/campaign-2026-08-13/coordinator/BATCH-2.md) | Batch 2 — queued, fires as batch-1 slots free |
+|  | [`docs/campaign-2026-08-13/agent-k-lemma-splitting/RESULT.md`](../../docs/campaign-2026-08-13/agent-k-lemma-splitting/RESULT.md) | agent-k — automatic hypothesis minimisation and lemma splitting |
+|  | [`docs/campaign-2026-08-13/agent-k-lemma-splitting/FEEDBACK.md`](../../docs/campaign-2026-08-13/agent-k-lemma-splitting/FEEDBACK.md) | agent-k — roadmap feedback for axeyum |
+|  | [`docs/campaign-2026-08-13/agent-j-misconceptions/RESULT.md`](../../docs/campaign-2026-08-13/agent-j-misconceptions/RESULT.md) | agent-j — the misconception corpus as a negative-control evaluation |
+|  | [`docs/campaign-2026-08-13/agent-j-misconceptions/FEEDBACK.md`](../../docs/campaign-2026-08-13/agent-j-misconceptions/FEEDBACK.md) | agent-j — feedback |
+|  | [`docs/campaign-2026-08-13/agent-i-cas-bridge/RESULT.md`](../../docs/campaign-2026-08-13/agent-i-cas-bridge/RESULT.md) | agent-i — wiring axeyum-cas into the solver |
+|  | [`docs/campaign-2026-08-13/agent-h-proof-reconstruction/RESULT.md`](../../docs/campaign-2026-08-13/agent-h-proof-reconstruction/RESULT.md) | agent-h RESULT — streaming resolution reconstruction |
+|  | [`docs/campaign-2026-08-13/agent-h-proof-reconstruction/FEEDBACK.md`](../../docs/campaign-2026-08-13/agent-h-proof-reconstruction/FEEDBACK.md) | agent-h FEEDBACK — roadmap feedback for axeyum itself |
+|  | [`docs/campaign-2026-08-13/agent-g-drat-memory/RESULT.md`](../../docs/campaign-2026-08-13/agent-g-drat-memory/RESULT.md) | agent-g RESULT — DRAT checking memory, before and after |
+|  | [`docs/campaign-2026-08-13/agent-g-drat-memory/FEEDBACK.md`](../../docs/campaign-2026-08-13/agent-g-drat-memory/FEEDBACK.md) | agent-g FEEDBACK — roadmap items from the DRAT memory lane |
+|  | [`docs/campaign-2026-08-13/agent-f-rewrite-preconditions/RESULT.md`](../../docs/campaign-2026-08-13/agent-f-rewrite-preconditions/RESULT.md) | agent-f — rewrite preconditions: result |
+|  | [`docs/campaign-2026-08-13/agent-f-rewrite-preconditions/FRAGMENTATION.md`](../../docs/campaign-2026-08-13/agent-f-rewrite-preconditions/FRAGMENTATION.md) | agent-f — integration record |
+|  | [`docs/campaign-2026-08-13/agent-f-rewrite-preconditions/FEEDBACK.md`](../../docs/campaign-2026-08-13/agent-f-rewrite-preconditions/FEEDBACK.md) | agent-f — roadmap feedback |
+|  | [`docs/campaign-2026-08-13/agent-f-rewrite-preconditions/DIARY.md`](../../docs/campaign-2026-08-13/agent-f-rewrite-preconditions/DIARY.md) | agent-f diary — rewrite preconditions |
+|  | [`docs/campaign-2026-08-13/agent-e-vdw/FRAGMENTATION.md`](../../docs/campaign-2026-08-13/agent-e-vdw/FRAGMENTATION.md) | Did agent-a's per-colour extension carry? — the integration record |
+|  | [`docs/campaign-2026-08-13/agent-e-vdw/FEEDBACK.md`](../../docs/campaign-2026-08-13/agent-e-vdw/FEEDBACK.md) | agent-e feedback — roadmap items from the van der Waerden lane |
+|  | [`docs/campaign-2026-08-13/agent-d-lean-bridge/RESULT.md`](../../docs/campaign-2026-08-13/agent-d-lean-bridge/RESULT.md) | agent-d — Lean bridge — what is established |
+|  | [`docs/campaign-2026-08-13/agent-d-lean-bridge/FRAGMENTATION.md`](../../docs/campaign-2026-08-13/agent-d-lean-bridge/FRAGMENTATION.md) | agent-d — integration record for the Lean bridge slice |
+|  | [`docs/campaign-2026-08-13/agent-d-lean-bridge/DIARY.md`](../../docs/campaign-2026-08-13/agent-d-lean-bridge/DIARY.md) | agent-d — Lean bridge — diary (append-only) |
+|  | [`docs/campaign-2026-08-13/agent-c-rado-akb2/RESULT.md`](../../docs/campaign-2026-08-13/agent-c-rado-akb2/RESULT.md) | agent-c RESULT — the `a^k` line for `R_k(a(x-y) = bz)` |
+|  | [`docs/campaign-2026-08-13/agent-c-rado-akb2/FRAGMENTATION.md`](../../docs/campaign-2026-08-13/agent-c-rado-akb2/FRAGMENTATION.md) | One framework across a normally fragmented pipeline — agent-c's record |
+|  | [`docs/campaign-2026-08-13/agent-c-rado-akb2/FEEDBACK.md`](../../docs/campaign-2026-08-13/agent-c-rado-akb2/FEEDBACK.md) | agent-c FEEDBACK — roadmap feedback for axeyum |
+|  | [`docs/campaign-2026-08-13/agent-b-rado741/FEEDBACK.md`](../../docs/campaign-2026-08-13/agent-b-rado741/FEEDBACK.md) | agent-b feedback to the axeyum roadmap |
+|  | [`docs/campaign-2026-08-13/agent-a-offdiag-schur/FEEDBACK.md`](../../docs/campaign-2026-08-13/agent-a-offdiag-schur/FEEDBACK.md) | agent-a — roadmap feedback for axeyum |
+
+### `docs/prover-track/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-08-17 | [`docs/prover-track/research/13-residual-trust-surface.md`](../../docs/prover-track/research/13-residual-trust-surface.md) | The residual trust surface, measured |
+| 2026-08-07 | [`docs/prover-track/research/06-kernel-gap-analysis.md`](../../docs/prover-track/research/06-kernel-gap-analysis.md) | 06 — Lean kernel gap analysis (post-P0) |
+| 2026-08-07 | [`docs/prover-track/plan/README.md`](../../docs/prover-track/plan/README.md) | Track 6 — Certificate-First Proof Assistant |
+| 2026-08-07 | [`docs/prover-track/SYNTHESIS.md`](../../docs/prover-track/SYNTHESIS.md) | Synthesis — what this track learned |
+| 2026-07-21 | [`docs/prover-track/process/options-considered.md`](../../docs/prover-track/process/options-considered.md) | Options considered — the design space, and what we chose |
+| 2026-07-21 | [`docs/prover-track/process/critique/iteration-4.md`](../../docs/prover-track/process/critique/iteration-4.md) | Iteration 4 — adversarial review |
+| 2026-07-21 | [`docs/prover-track/process/critique/iteration-3.md`](../../docs/prover-track/process/critique/iteration-3.md) | Iteration 3 — adversarial review of v4 ("build it, sliced") |
+| 2026-07-15 | [`docs/prover-track/research/11-dedukti-and-substrates.md`](../../docs/prover-track/research/11-dedukti-and-substrates.md) | Dedukti, Lambdapi, Logipedia, and Metamath Zero as Certificate Substrates |
+| 2026-07-15 | [`docs/prover-track/research/09-P0-kernel-unsoundness.md`](../../docs/prover-track/research/09-P0-kernel-unsoundness.md) | P0 — historical: `axeyum-lean-kernel` admitted a proof of `False` |
+| 2026-07-15 | [`docs/prover-track/research/08-solver-automation-assets.md`](../../docs/prover-track/research/08-solver-automation-assets.md) | Solver Automation Assets — What a Prover Layer Inherits |
+| 2026-07-15 | [`docs/prover-track/research/07-reconstruction-assets.md`](../../docs/prover-track/research/07-reconstruction-assets.md) | 07 — Reconstruction assets: what a prover track could reuse |
+| 2026-07-15 | [`docs/prover-track/research/04-software-ir-verification.md`](../../docs/prover-track/research/04-software-ir-verification.md) | Software / IR Verification Landscape (2024–2026) |
+| 2026-07-15 | [`docs/prover-track/research/03-atp-itp-seam.md`](../../docs/prover-track/research/03-atp-itp-seam.md) | The Automated ↔ Interactive Seam |
+| 2026-07-15 | [`docs/prover-track/research/02-ai-assisted-proving.md`](../../docs/prover-track/research/02-ai-assisted-proving.md) | AI-Assisted Theorem Proving: State and Direction of Travel |
+| 2026-07-15 | [`docs/prover-track/research/01-itp-anatomy.md`](../../docs/prover-track/research/01-itp-anatomy.md) | The Anatomy and Design Space of Proof Construction Above a Kernel |
+| 2026-07-15 | [`docs/prover-track/process/quantified-uf-probe.md`](../../docs/prover-track/process/quantified-uf-probe.md) | P6.6-paper — the attempt, and what it returned |
+| 2026-07-15 | [`docs/prover-track/process/DIARY.md`](../../docs/prover-track/process/DIARY.md) | Prover Track — Diary |
+| 2026-07-15 | [`docs/prover-track/plan/P6.0-kernel-trustworthiness.md`](../../docs/prover-track/plan/P6.0-kernel-trustworthiness.md) | P6.0 — Kernel trustworthiness |
+|  | [`docs/prover-track/research/12-elaboration-egraphs-fmf.md`](../../docs/prover-track/research/12-elaboration-egraphs-fmf.md) | 12 — Elaboration, E-Graphs, and Finite Model Finding |
+|  | [`docs/prover-track/research/10-autoformalization.md`](../../docs/prover-track/research/10-autoformalization.md) | 10 — Autoformalization: the faithfulness gap and the low-resource-target problem |
+|  | [`docs/prover-track/research/05-education-and-agentic.md`](../../docs/prover-track/research/05-education-and-agentic.md) | Education and Agentic Proving Surfaces |
+|  | [`docs/prover-track/process/critique/iteration-2.md`](../../docs/prover-track/process/critique/iteration-2.md) | Critique — Iteration 2 (adversarial, against the "no") |
+|  | [`docs/prover-track/process/critique/iteration-1.md`](../../docs/prover-track/process/critique/iteration-1.md) | Critique — Iteration 1 (adversarial) |
+|  | [`docs/prover-track/process/README.md`](../../docs/prover-track/process/README.md) | Process record — not the deliverable |
+|  | [`docs/prover-track/plan/P6.5-spec-surface.md`](../../docs/prover-track/plan/P6.5-spec-surface.md) | P6.5 — Definitions and specs |
+|  | [`docs/prover-track/plan/P6.4-agent-surface.md`](../../docs/prover-track/plan/P6.4-agent-surface.md) | P6.4 — Agent surface |
+|  | [`docs/prover-track/plan/P6.3-certificate-tactics.md`](../../docs/prover-track/plan/P6.3-certificate-tactics.md) | P6.3 — Certificate-first tactics |
+|  | [`docs/prover-track/plan/P6.2-goals-and-holes.md`](../../docs/prover-track/plan/P6.2-goals-and-holes.md) | P6.2 — Goals, holes, unification |
+|  | [`docs/prover-track/plan/P6.1-obligation-bridge.md`](../../docs/prover-track/plan/P6.1-obligation-bridge.md) | P6.1 — The obligation bridge (CIC ⇄ IR) |
+|  | [`docs/prover-track/design/03-architecture.md`](../../docs/prover-track/design/03-architecture.md) | Architecture — a certificate-first proof assistant |
+|  | [`docs/prover-track/design/02-agentic-surface.md`](../../docs/prover-track/design/02-agentic-surface.md) | Agentic surface — designing for the driver we actually have |
+|  | [`docs/prover-track/design/00-thesis.md`](../../docs/prover-track/design/00-thesis.md) | Thesis — why this system, and why it is ours to build |
+|  | [`docs/prover-track/REFERENCES.md`](../../docs/prover-track/REFERENCES.md) | References — index |
+|  | [`docs/prover-track/README.md`](../../docs/prover-track/README.md) | Prover track — certificate-first proof construction |
+
+### `docs/consumer-track/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-08-07 | [`docs/consumer-track/UPSTREAM-FEEDBACK.md`](../../docs/consumer-track/UPSTREAM-FEEDBACK.md) | Upstream feedback log - for the axeyum core/solver developer |
+| 2026-07-21 | [`docs/consumer-track/verify/verified-systems-and-protocols.md`](../../docs/consumer-track/verify/verified-systems-and-protocols.md) | Verified systems & protocols — the Track 5 application charter |
+| 2026-07-20 | [`docs/consumer-track/verify/llvm-ir-frontend.md`](../../docs/consumer-track/verify/llvm-ir-frontend.md) | Verifying LLVM IR — feasibility & design |
+| 2026-07-20 | [`docs/consumer-track/verify/canonical-llvm-loop-bridge.md`](../../docs/consumer-track/verify/canonical-llvm-loop-bridge.md) | Checked LLVM loop bridge |
+| 2026-07-06 | [`docs/consumer-track/verify/reflect-common-abstraction.md`](../../docs/consumer-track/verify/reflect-common-abstraction.md) | DRY across MIR & LLVM — the shared reflection core |
+| 2026-06-29 | [`docs/consumer-track/verify/verified-systems-and-protocols-scoreboard.md`](../../docs/consumer-track/verify/verified-systems-and-protocols-scoreboard.md) | Verified systems & protocols — measured scoreboard |
+| 2026-06-29 | [`docs/consumer-track/verify/unbounded-protocol-safety.md`](../../docs/consumer-track/verify/unbounded-protocol-safety.md) | Unbounded protocol safety — rung 4 design note |
+| 2026-06-29 | [`docs/consumer-track/verify/real-rust-frontend.md`](../../docs/consumer-track/verify/real-rust-frontend.md) | Verifying real Rust (not a DSL) — feasibility & design |
+| 2026-06-29 | [`docs/consumer-track/verify/protocol-toolkit.md`](../../docs/consumer-track/verify/protocol-toolkit.md) | An ergonomic protocol toolkit — design note |
+| 2026-06-29 | [`docs/consumer-track/verify/protocol-state-machines.md`](../../docs/consumer-track/verify/protocol-state-machines.md) | Bounded protocol state machines — Block C design note |
+| 2026-06-29 | [`docs/consumer-track/verify/fuzzing-and-multi-peer.md`](../../docs/consumer-track/verify/fuzzing-and-multi-peer.md) | Fuzzing the protocol toolkit + two-peer protocols — design note |
+| 2026-06-27 | [`docs/consumer-track/property/STATUS.md`](../../docs/consumer-track/property/STATUS.md) | axeyum-property STATUS.md |
+| 2026-06-27 | [`docs/consumer-track/property/SCOREBOARD.md`](../../docs/consumer-track/property/SCOREBOARD.md) | axeyum-property SCOREBOARD |
+| 2026-06-26 | [`docs/consumer-track/verify/STATUS.md`](../../docs/consumer-track/verify/STATUS.md) | axeyum-verify — STATUS |
+| 2026-06-26 | [`docs/consumer-track/evm/STATUS.md`](../../docs/consumer-track/evm/STATUS.md) | axeyum-evm — STATUS |
+| 2026-06-25 | [`docs/consumer-track/03-decision.md`](../../docs/consumer-track/03-decision.md) | Iteration 3 — decision: what we build (2026-06-25) |
+| 2026-06-25 | [`docs/consumer-track/02-research-synthesis.md`](../../docs/consumer-track/02-research-synthesis.md) | Iteration 2 — research synthesis (2026-06-25) |
+| 2026-06-25 | [`docs/consumer-track/01-ideas-and-ranking.md`](../../docs/consumer-track/01-ideas-and-ranking.md) | Iteration 1 — candidate apps + first-pass ranking (2026-06-25) |
+|  | [`docs/consumer-track/verify/tock-log2-external-case-study.md`](../../docs/consumer-track/verify/tock-log2-external-case-study.md) | Tock integer logarithms — bounded external verification case study |
+|  | [`docs/consumer-track/verify/reflection-semantics-gate.md`](../../docs/consumer-track/verify/reflection-semantics-gate.md) | Reflection semantics gate |
+|  | [`docs/consumer-track/verify/SCOREBOARD.md`](../../docs/consumer-track/verify/SCOREBOARD.md) | Verify capability scoreboard |
+|  | [`docs/consumer-track/verify/PLAN.md`](../../docs/consumer-track/verify/PLAN.md) | axeyum-verify — PLAN |
+|  | [`docs/consumer-track/property/PLAN.md`](../../docs/consumer-track/property/PLAN.md) | axeyum-property PLAN.md |
+|  | [`docs/consumer-track/evm/SCOREBOARD.md`](../../docs/consumer-track/evm/SCOREBOARD.md) | EVM / symbolic-execution capability scoreboard |
+|  | [`docs/consumer-track/evm/PLAN.md`](../../docs/consumer-track/evm/PLAN.md) | axeyum-evm — PLAN |
+|  | [`docs/consumer-track/SCOREBOARD.md`](../../docs/consumer-track/SCOREBOARD.md) | Consumer-track scoreboard — aggregate (App D measurement backbone) |
+|  | [`docs/consumer-track/README.md`](../../docs/consumer-track/README.md) | Consumer applications |
+
+### `docs/solver-comparison-2026-09/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-10-05 | [`docs/solver-comparison-2026-09/11-roadmap-and-plan.md`](../../docs/solver-comparison-2026-09/11-roadmap-and-plan.md) | Roadmap and plan — from the inventory and gap analysis (2026-09-09) |
+| 2026-09-10 | [`docs/solver-comparison-2026-09/12-cdcl-consolidation-plan.md`](../../docs/solver-comparison-2026-09/12-cdcl-consolidation-plan.md) | Consolidating the Boolean and CDCL(T) engines — plan (DRAFT, 2026-09-10) |
+| 2026-09-09 | [`docs/solver-comparison-2026-09/10-gap-analysis.md`](../../docs/solver-comparison-2026-09/10-gap-analysis.md) | Gap analysis (2026-09-09) |
+| 2026-09-09 | [`docs/solver-comparison-2026-09/09-abc-and-aiger.md`](../../docs/solver-comparison-2026-09/09-abc-and-aiger.md) | ABC and AIGER — AIG-level reasoning (2026-09-09) |
+| 2026-09-09 | [`docs/solver-comparison-2026-09/08-proof-checking-ecosystem.md`](../../docs/solver-comparison-2026-09/08-proof-checking-ecosystem.md) | Carcara, drat-trim, and the proof-checking ecosystem — inventory and gaps (2026-09-09) |
+| 2026-09-09 | [`docs/solver-comparison-2026-09/07-z3-noodler-and-mata.md`](../../docs/solver-comparison-2026-09/07-z3-noodler-and-mata.md) | Z3-Noodler and Mata — automata-based string solving (2026-09-09) |
+| 2026-09-09 | [`docs/solver-comparison-2026-09/06-cryptominisat-and-rust-sat.md`](../../docs/solver-comparison-2026-09/06-cryptominisat-and-rust-sat.md) | CryptoMiniSat, MiniSat, varisat, and splr — XOR reasoning and the Rust SAT field (2026-09-09) |
+| 2026-09-09 | [`docs/solver-comparison-2026-09/05-yices-opensmt-smtinterpol.md`](../../docs/solver-comparison-2026-09/05-yices-opensmt-smtinterpol.md) | Yices2, OpenSMT, and SMTInterpol — arithmetic and interpolation (2026-09-09) |
+| 2026-09-09 | [`docs/solver-comparison-2026-09/04-bitwuzla-boolector-stp.md`](../../docs/solver-comparison-2026-09/04-bitwuzla-boolector-stp.md) | Bitwuzla, Boolector, and STP — inventory and gaps (2026-09-09) |
+| 2026-09-09 | [`docs/solver-comparison-2026-09/03-cvc5.md`](../../docs/solver-comparison-2026-09/03-cvc5.md) | cvc5 — inventory and gaps (2026-09-09) |
+| 2026-09-09 | [`docs/solver-comparison-2026-09/02-z3.md`](../../docs/solver-comparison-2026-09/02-z3.md) | Z3 — inventory and gaps (2026-09-09) |
+| 2026-09-09 | [`docs/solver-comparison-2026-09/01-cadical-kissat.md`](../../docs/solver-comparison-2026-09/01-cadical-kissat.md) | CaDiCaL and Kissat — inventory and gaps (2026-09-09) |
+| 2026-09-09 | [`docs/solver-comparison-2026-09/00-README.md`](../../docs/solver-comparison-2026-09/00-README.md) | Reference-solver comparison and gap analysis (2026-09-09) |
+
+### `docs/solver-inventory-2026-09/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-09-09 | [`docs/solver-inventory-2026-09/11-wiring-and-integration.md`](../../docs/solver-inventory-2026-09/11-wiring-and-integration.md) | Is everything we implemented actually wired up? (2026-09-09) |
+| 2026-09-09 | [`docs/solver-inventory-2026-09/10-verification-log.md`](../../docs/solver-inventory-2026-09/10-verification-log.md) | Coordinator verification log (2026-09-09) |
+| 2026-09-09 | [`docs/solver-inventory-2026-09/09-harnesses-benchmarks-and-gates.md`](../../docs/solver-inventory-2026-09/09-harnesses-benchmarks-and-gates.md) | Harnesses, benchmarks, test suites, and gates — inventory (2026-09-09) |
+| 2026-09-09 | [`docs/solver-inventory-2026-09/08-models-proofs-and-evidence.md`](../../docs/solver-inventory-2026-09/08-models-proofs-and-evidence.md) | Post-processing: models, proofs, certificates, and evidence — inventory (2026-09-09) |
+| 2026-09-09 | [`docs/solver-inventory-2026-09/07-strings-and-regex.md`](../../docs/solver-inventory-2026-09/07-strings-and-regex.md) | Strings and regular expressions — inventory (2026-09-09) |
+| 2026-09-09 | [`docs/solver-inventory-2026-09/06-euf-and-quantifiers.md`](../../docs/solver-inventory-2026-09/06-euf-and-quantifiers.md) | EUF, e-graphs, and quantifier reasoning — inventory (2026-09-09) |
+| 2026-09-09 | [`docs/solver-inventory-2026-09/05-bitvector-arrays-fp-and-datatypes.md`](../../docs/solver-inventory-2026-09/05-bitvector-arrays-fp-and-datatypes.md) | Bit-vectors, arrays, floating point, and datatypes — inventory (2026-09-09) |
+| 2026-09-09 | [`docs/solver-inventory-2026-09/04-arithmetic-theories.md`](../../docs/solver-inventory-2026-09/04-arithmetic-theories.md) | Arithmetic theories: LRA, LIA, NRA, NIA, difference logic, and the CDCL(T) loop — inventory (2026-09-09) |
+| 2026-09-09 | [`docs/solver-inventory-2026-09/03-dispatch-routing-and-backends.md`](../../docs/solver-inventory-2026-09/03-dispatch-routing-and-backends.md) | Solver facade, dispatch, routing, and backends — inventory (2026-09-09) |
+| 2026-09-09 | [`docs/solver-inventory-2026-09/02-frontend-ir-and-rewriting.md`](../../docs/solver-inventory-2026-09/02-frontend-ir-and-rewriting.md) | Front end, term IR, and the rewriting / preprocessing pipeline — inventory (2026-09-09) |
+| 2026-09-09 | [`docs/solver-inventory-2026-09/01-sat-core-and-cnf.md`](../../docs/solver-inventory-2026-09/01-sat-core-and-cnf.md) | SAT core, CNF, and bit-blasting — inventory (2026-09-09) |
+| 2026-09-09 | [`docs/solver-inventory-2026-09/00-README.md`](../../docs/solver-inventory-2026-09/00-README.md) | The SAT/SMT solver stack — a comprehensive inventory (2026-09-09) |
+
+### `docs/facts-extraction-2026-08-14/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-08-14 | [`docs/facts-extraction-2026-08-14/diary-facts-number.md`](../../docs/facts-extraction-2026-08-14/diary-facts-number.md) | `facts-number` -- extraction diary, 2026-08-14 |
+| 2026-08-14 | [`docs/facts-extraction-2026-08-14/diary-facts-logic.md`](../../docs/facts-extraction-2026-08-14/diary-facts-logic.md) | diary: `facts-logic` -- the `S:logic-and-proof` strand |
+
+### `docs/status-archive/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-07-06 | [`docs/status-archive/process-documentation-lane-through-2026-07-06.md`](../../docs/status-archive/process-documentation-lane-through-2026-07-06.md) | Archived: Process/documentation lane (through 2026-07-06) |
+| 2026-07-03 | [`docs/status-archive/current-focus-through-2026-07-03.md`](../../docs/status-archive/current-focus-through-2026-07-03.md) | Archived: Current-focus session log (2026-06-27 → 2026-07-03) |
+| 2026-07-03 | [`docs/status-archive/changelog-2026-07-03.md`](../../docs/status-archive/changelog-2026-07-03.md) | STATUS changelog — 2026-07-03 (archived) |
+| 2026-07-02 | [`docs/status-archive/changelog-through-2026-07-02.md`](../../docs/status-archive/changelog-through-2026-07-02.md) | Archived: STATUS changelog entries through 2026-07-02 |
+
+### `docs/reviews/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-07-17 | [`docs/reviews/multiagent-20260717/README.md`](../../docs/reviews/multiagent-20260717/README.md) | axeyum + glaurung code review -- rank-ordered recommendations |
+| 2026-07-17 | [`docs/reviews/multiagent-20260717/4-axeyum-breadth.md`](../../docs/reviews/multiagent-20260717/4-axeyum-breadth.md) | Axeyum quantitative breadth sweep -- 2026-07-17 |
+| 2026-07-17 | [`docs/reviews/README.md`](../../docs/reviews/README.md) | Review archive |
+| 2026-06-20 | [`docs/reviews/codex-20260620/report.md`](../../docs/reviews/codex-20260620/report.md) | Codex Review - 2026-06-20 |
+| 2026-06-20 | [`docs/reviews/codex-20260620/diary.md`](../../docs/reviews/codex-20260620/diary.md) | Codex Review Diary - 2026-06-20 |
+|  | [`docs/reviews/multiagent-20260717/3-glaurung-seam.md`](../../docs/reviews/multiagent-20260717/3-glaurung-seam.md) | Review Diary: glaurung <-> axeyum integration seam |
+|  | [`docs/reviews/multiagent-20260717/2-axeyum-architecture.md`](../../docs/reviews/multiagent-20260717/2-axeyum-architecture.md) | axeyum architecture review diary |
+|  | [`docs/reviews/multiagent-20260717/1-axeyum-core.md`](../../docs/reviews/multiagent-20260717/1-axeyum-core.md) | axeyum-solver core review diary |
+
+### `docs/plan/families/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-09-11 | [`docs/plan/families/smt-quantifier-free/README.md`](families/smt-quantifier-free/README.md) | Family: SMT, quantifier-free |
+| 2026-09-10 | [`docs/plan/families/smt-quantifier-free/qf-lia.md`](families/smt-quantifier-free/qf-lia.md) | QF_LIA — linear integer arithmetic |
+| 2026-09-07 | [`docs/plan/families/smt-quantifier-free/qf-nra.md`](families/smt-quantifier-free/qf-nra.md) | QF_NRA — nonlinear real arithmetic |
+| 2026-09-07 | [`docs/plan/families/evidence/README.md`](families/evidence/README.md) | Family: the certificate chain |
+| 2026-09-06 | [`docs/plan/families/smt-quantified/uf.md`](families/smt-quantified/uf.md) | UF — quantified uninterpreted functions |
+| 2026-09-06 | [`docs/plan/families/sat/README.md`](families/sat/README.md) | Family: propositional SAT |
+| 2026-09-05 | [`docs/plan/families/smt-quantifier-free/qf-rdl.md`](families/smt-quantifier-free/qf-rdl.md) | QF_RDL — real difference logic |
+| 2026-09-05 | [`docs/plan/families/README.md`](families/README.md) | Families and divisions |
 |  | [`docs/plan/families/smt-quantifier-free/qf-uflia.md`](families/smt-quantifier-free/qf-uflia.md) | QF_UFLIA — uninterpreted functions with linear integer arithmetic |
 |  | [`docs/plan/families/smt-quantifier-free/qf-uf.md`](families/smt-quantifier-free/qf-uf.md) | QF_UF — uninterpreted functions, quantifier-free |
 |  | [`docs/plan/families/smt-quantifier-free/qf-slia.md`](families/smt-quantifier-free/qf-slia.md) | QF_SLIA — strings with linear integer arithmetic |
@@ -336,6 +570,21 @@ Superseded queues and the strand READMEs carry a banner naming what replaced the
 |  | [`docs/plan/families/smt-comp-tracks/README.md`](families/smt-comp-tracks/README.md) | Family: SMT-COMP tracks other than single query |
 |  | [`docs/plan/families/model-checking/README.md`](families/model-checking/README.md) | Family: hardware model checking |
 |  | [`docs/plan/families/boolean-optimization/README.md`](families/boolean-optimization/README.md) | Family: Boolean optimization and counting |
+
+### `docs/plan/exploration-track/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-10-05 | [`docs/plan/exploration-track/README.md`](exploration-track/README.md) | Exploration Track — searched bridge composition, certified evidence, open problems |
+| 2026-08-01 | [`docs/plan/exploration-track/phase-9-lean-evidence/T9.1-axiom-ledger-triage.md`](exploration-track/phase-9-lean-evidence/T9.1-axiom-ledger-triage.md) | T9.1 — Axiom-ledger triage: classify every ledger row |
+| 2026-08-01 | [`docs/plan/exploration-track/phase-9-lean-evidence/README.md`](exploration-track/phase-9-lean-evidence/README.md) | Phase 9 — the Lean evidence ladder and Comparator compatibility |
+| 2026-08-01 | [`docs/plan/exploration-track/phase-2-evaluation/README.md`](exploration-track/phase-2-evaluation/README.md) | Phase 2 — evaluation harness and reward signal |
+| 2026-08-01 | [`docs/plan/exploration-track/phase-0-catalogue/T0.6-coverage-expansion.md`](exploration-track/phase-0-catalogue/T0.6-coverage-expansion.md) | T0.6 — Trace coverage for `solve()` preamble + quantifier routes |
+| 2026-08-01 | [`docs/plan/exploration-track/phase-0-catalogue/T0.4-behavioral-replay-validator.md`](exploration-track/phase-0-catalogue/T0.4-behavioral-replay-validator.md) | T0.4 — Behavioral replay validator |
+| 2026-08-01 | [`docs/plan/exploration-track/phase-0-catalogue/T0.1-route-trace-json-export.md`](exploration-track/phase-0-catalogue/T0.1-route-trace-json-export.md) | T0.1 — RouteTrace JSON export + bench persistence |
+| 2026-08-01 | [`docs/plan/exploration-track/00-review-synthesis.md`](exploration-track/00-review-synthesis.md) | Review synthesis — what nine branch reviews found |
+| 2026-07-31 | [`docs/plan/exploration-track/phase-8-open-problems/README.md`](exploration-track/phase-8-open-problems/README.md) | Phase 8 — open-problem intake, triage, and the output taxonomy |
+| 2026-07-21 | [`docs/plan/exploration-track/phase-7-agentic-loop/T7.8-provenance-integration.md`](exploration-track/phase-7-agentic-loop/T7.8-provenance-integration.md) | T7.8 — Provenance + no-loss integration |
 |  | [`docs/plan/exploration-track/sequencing.md`](exploration-track/sequencing.md) | Sequencing, gates, and what to do first |
 |  | [`docs/plan/exploration-track/risks.md`](exploration-track/risks.md) | Consolidated risk register |
 |  | [`docs/plan/exploration-track/phase-9-lean-evidence/T9.9-export-pin-limits.md`](exploration-track/phase-9-lean-evidence/T9.9-export-pin-limits.md) | T9.9 — Export-pin range 4.30 to 4.32 + limits/memory audit |
@@ -438,9 +687,178 @@ Superseded queues and the strand READMEs carry a banner naming what replaced the
 |  | [`docs/plan/exploration-track/phase-0-catalogue/README.md`](exploration-track/phase-0-catalogue/README.md) | Phase 0 — the bridge catalogue as data |
 |  | [`docs/plan/exploration-track/adr-queue.md`](exploration-track/adr-queue.md) | ADR queue |
 |  | [`docs/plan/exploration-track/STATUS.md`](exploration-track/STATUS.md) | Exploration-track status moved to the root plan |
-|  | [`docs/mathematics-2026-08/05-the-mathematics-dag.md`](../../docs/mathematics-2026-08/05-the-mathematics-dag.md) | 05 — The mathematics DAG: what exists, what is missing, what to research now |
-|  | [`docs/math-department/README.md`](../../docs/math-department/README.md) | The math department review board |
-|  | [`docs/formalized-math-2026-08/evidence/ivt-evt/README.md`](../../docs/formalized-math-2026-08/evidence/ivt-evt/README.md) | IVT/EVT audit evidence |
+
+### `docs/plan/smtcomp-full-library-workstream/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-10-05 | [`docs/plan/smtcomp-full-library-workstream/README.md`](smtcomp-full-library-workstream/README.md) | SMT-COMP Full-Library Work Stream — RESUME HERE |
+
+### `docs/plan/track-1-engine/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-10-05 | [`docs/plan/track-1-engine/README.md`](track-1-engine/README.md) | Track 1 — Engine & Performance |
+| 2026-07-10 | [`docs/plan/track-1-engine/P1.6-theory-combination.md`](track-1-engine/P1.6-theory-combination.md) | P1.6 — Theory combination (Nelson–Oppen / interface equalities) |
+| 2026-07-09 | [`docs/plan/track-1-engine/P1.5-cdcl-t-loop.md`](track-1-engine/P1.5-cdcl-t-loop.md) | P1.5 — CDCL(T) loop (theory integration) — KEYSTONE |
+| 2026-07-01 | [`docs/plan/track-1-engine/P1.9-lra-simplex.md`](track-1-engine/P1.9-lra-simplex.md) | P1.9 · LRA feasibility: Fourier–Motzkin → incremental exact-rational simplex |
+|  | [`docs/plan/track-1-engine/P1.8-strategy-tactics.md`](track-1-engine/P1.8-strategy-tactics.md) | P1.8 — Strategy & tactics (per-instance engine selection) |
+|  | [`docs/plan/track-1-engine/P1.7-pbls-engine.md`](track-1-engine/P1.7-pbls-engine.md) | P1.7 — Propagation-based local-search BV engine (portfolio) |
+|  | [`docs/plan/track-1-engine/P1.4-egraph.md`](track-1-engine/P1.4-egraph.md) | P1.4 — Incremental e-graph (congruence closure) — KEYSTONE |
+|  | [`docs/plan/track-1-engine/P1.3-sat-core-modernization.md`](track-1-engine/P1.3-sat-core-modernization.md) | P1.3 — SAT-core modernization |
+|  | [`docs/plan/track-1-engine/P1.2-preprocessing.md`](track-1-engine/P1.2-preprocessing.md) | P1.2 — Preprocessing (word-level + AIG, shrink before you solve) |
+|  | [`docs/plan/track-1-engine/P1.1-sat-inprocessing.md`](track-1-engine/P1.1-sat-inprocessing.md) | P1.1 — SAT inprocessing (the single biggest performance win) |
+
+### `docs/plan/track-2-theories/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-10-05 | [`docs/plan/track-2-theories/README.md`](track-2-theories/README.md) | Track 2 — Theories & Breadth |
+| 2026-08-07 | [`docs/plan/track-2-theories/P2.7-strings/00-current-state.md`](track-2-theories/P2.7-strings/00-current-state.md) | P2.7 · 00 — Current state: layered and sound-incomplete |
+| 2026-07-22 | [`docs/plan/track-2-theories/P2.8-fp-polish.md`](track-2-theories/P2.8-fp-polish.md) | P2.8 — FP semantic repair and completeness |
+| 2026-07-14 | [`docs/plan/track-2-theories/P2.6-quantifiers.md`](track-2-theories/P2.6-quantifiers.md) | P2.6 — Quantifiers (e-matching, triggers, MBQI, QE) |
+| 2026-07-06 | [`docs/plan/track-2-theories/P2.5-nra/09-next-arithmetic-lever-decomposition.md`](track-2-theories/P2.5-nra/09-next-arithmetic-lever-decomposition.md) | P2.5 · 09 — The next arithmetic decide-rate lever: census + sliced decomposition |
+| 2026-07-01 | [`docs/plan/track-2-theories/P2.7-strings/03-phaseA-ir-sort-and-combination.md`](track-2-theories/P2.7-strings/03-phaseA-ir-sort-and-combination.md) | P2.7 · Phase A — First-class string/sequence sort + String+LIA combination |
+| 2026-07-01 | [`docs/plan/track-2-theories/P2.5-nra/07-phaseE-nia.md`](track-2-theories/P2.5-nra/07-phaseE-nia.md) | P2.5 · Phase E — Nonlinear integer arithmetic (NIA) |
+| 2026-06-30 | [`docs/plan/track-2-theories/P2.5-nra/08-evaluation-and-soundness.md`](track-2-theories/P2.5-nra/08-evaluation-and-soundness.md) | P2.5 · 08 — Evaluation, soundness gates, and ADRs |
+| 2026-06-30 | [`docs/plan/track-2-theories/P2.5-nra/06-phaseD-nlsat-cac.md`](track-2-theories/P2.5-nra/06-phaseD-nlsat-cac.md) | P2.5 · Phase D — The complete oracle (already exists as CAD; finish perf + proof) |
+| 2026-06-30 | [`docs/plan/track-2-theories/P2.5-nra/03-phaseA-algebraic-core.md`](track-2-theories/P2.5-nra/03-phaseA-algebraic-core.md) | P2.5 · Phase A — The algebraic core (already in `axeyum-ir`) |
+| 2026-06-30 | [`docs/plan/track-2-theories/P2.5-nra/00-current-state.md`](track-2-theories/P2.5-nra/00-current-state.md) | P2.5 · 00 — Current state: what axeyum's nonlinear engine decides today |
+|  | [`docs/plan/track-2-theories/P2.9-datatypes-lazy.md`](track-2-theories/P2.9-datatypes-lazy.md) | P2.9 — Datatypes lazy (e-graph splitting + occurs-check) |
+|  | [`docs/plan/track-2-theories/P2.7-strings/08-evaluation-and-soundness.md`](track-2-theories/P2.7-strings/08-evaluation-and-soundness.md) | P2.7 · 08 — Evaluation, soundness gates, and ADRs |
+|  | [`docs/plan/track-2-theories/P2.7-strings/07-phaseE-models-and-automata.md`](track-2-theories/P2.7-strings/07-phaseE-models-and-automata.md) | P2.7 · Phase E — Unbounded model construction + automata/stabilization fallback |
+|  | [`docs/plan/track-2-theories/P2.7-strings/06-phaseD-extended-functions.md`](track-2-theories/P2.7-strings/06-phaseD-extended-functions.md) | P2.7 · Phase D — Extended functions (lazy reduction + context-dependent simplification) |
+|  | [`docs/plan/track-2-theories/P2.7-strings/05-phaseC-regex-derivatives.md`](track-2-theories/P2.7-strings/05-phaseC-regex-derivatives.md) | P2.7 · Phase C — Regex membership via symbolic Boolean derivatives |
+|  | [`docs/plan/track-2-theories/P2.7-strings/04-phaseB-word-equations.md`](track-2-theories/P2.7-strings/04-phaseB-word-equations.md) | P2.7 · Phase B — The word-equation core |
+|  | [`docs/plan/track-2-theories/P2.7-strings/02-architecture.md`](track-2-theories/P2.7-strings/02-architecture.md) | P2.7 · 02 — Architecture: a word-level, length-aware string theory solver |
+|  | [`docs/plan/track-2-theories/P2.7-strings/01-literature.md`](track-2-theories/P2.7-strings/01-literature.md) | P2.7 · 01 — Literature survey: SMT string/sequence solving |
+|  | [`docs/plan/track-2-theories/P2.7-strings.md`](track-2-theories/P2.7-strings.md) | P2.7 — Strings: unbounded, length-aware, full `str.*` + regex |
+|  | [`docs/plan/track-2-theories/P2.5-nra/05-phaseC-icp.md`](track-2-theories/P2.5-nra/05-phaseC-icp.md) | P2.5 · Phase C — Interval Constraint Propagation (cheap filter + transcendentals) |
+|  | [`docs/plan/track-2-theories/P2.5-nra/04-phaseB-incremental-linearization.md`](track-2-theories/P2.5-nra/04-phaseB-incremental-linearization.md) | P2.5 · Phase B — Incremental linearization (the cheap front layer) |
+|  | [`docs/plan/track-2-theories/P2.5-nra/02-architecture.md`](track-2-theories/P2.5-nra/02-architecture.md) | P2.5 · 02 — Architecture: the layered nonlinear engine |
+|  | [`docs/plan/track-2-theories/P2.5-nra/01-literature.md`](track-2-theories/P2.5-nra/01-literature.md) | P2.5 · 01 — Literature survey: nonlinear arithmetic solving |
+|  | [`docs/plan/track-2-theories/P2.5-nra-cad.md`](track-2-theories/P2.5-nra-cad.md) | P2.5 — Nonlinear arithmetic: incremental linearization → ICP → NLSAT/CAC |
+|  | [`docs/plan/track-2-theories/P2.4-lia-cuts.md`](track-2-theories/P2.4-lia-cuts.md) | P2.4 — LIA cut portfolio (native integer solver) |
+|  | [`docs/plan/track-2-theories/P2.3-euf.md`](track-2-theories/P2.3-euf.md) | P2.3 — EUF on the e-graph (from Ackermann to incremental) |
+|  | [`docs/plan/track-2-theories/P2.2-arrays-lazy.md`](track-2-theories/P2.2-arrays-lazy.md) | P2.2 — Arrays: lazy axiom instantiation |
+|  | [`docs/plan/track-2-theories/P2.10-breadth-backlog.md`](track-2-theories/P2.10-breadth-backlog.md) | P2.10 — Breadth backlog (the remaining theory columns) |
+|  | [`docs/plan/track-2-theories/P2.1-bv-lazy.md`](track-2-theories/P2.1-bv-lazy.md) | P2.1 — BV: lazy blasting, word-level slicing, real theory-checker |
+
+### `docs/plan/track-3-proof-lean/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-10-05 | [`docs/plan/track-3-proof-lean/README.md`](track-3-proof-lean/README.md) | Track 3 — Proofs & Lean |
+|  | [`docs/plan/track-3-proof-lean/P3.8-interpolation.md`](track-3-proof-lean/P3.8-interpolation.md) | P3.8 — Craig interpolation (proof-based, theory-aware) |
+|  | [`docs/plan/track-3-proof-lean/P3.7-lean-reconstruction.md`](track-3-proof-lean/P3.7-lean-reconstruction.md) | P3.7 — Alethe→Lean reconstruction (the capstone) |
+|  | [`docs/plan/track-3-proof-lean/P3.6-lean-kernel.md`](track-3-proof-lean/P3.6-lean-kernel.md) | P3.6 — In-tree Rust Lean kernel (`axeyum-lean-kernel`) |
+|  | [`docs/plan/track-3-proof-lean/P3.5-reduction-proofs.md`](track-3-proof-lean/P3.5-reduction-proofs.md) | P3.5 — Alethe for the reductions (retire trust-ledger entries) |
+|  | [`docs/plan/track-3-proof-lean/P3.4-embedded-checker.md`](track-3-proof-lean/P3.4-embedded-checker.md) | P3.4 — Embedded Alethe checker subset (self-checking) |
+|  | [`docs/plan/track-3-proof-lean/P3.3-alethe-qfbv.md`](track-3-proof-lean/P3.3-alethe-qfbv.md) | P3.3 — Alethe for QF_BV (the first SMT-level proof) |
+|  | [`docs/plan/track-3-proof-lean/P3.2-alethe-ir.md`](track-3-proof-lean/P3.2-alethe-ir.md) | P3.2 — Alethe term/proof IR + emitter — KEYSTONE (critical path) |
+|  | [`docs/plan/track-3-proof-lean/P3.1-lrat.md`](track-3-proof-lean/P3.1-lrat.md) | P3.1 — LRAT clausal upgrade |
+|  | [`docs/plan/track-3-proof-lean/P3.0-trust-ledger.md`](track-3-proof-lean/P3.0-trust-ledger.md) | P3.0 — Reduction trust ledger |
+
+### `docs/plan/track-4-usecases-frontend/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-10-05 | [`docs/plan/track-4-usecases-frontend/README.md`](track-4-usecases-frontend/README.md) | Track 4 — Use Cases & Frontend |
+| 2026-07-21 | [`docs/plan/track-4-usecases-frontend/P4.4-smtlib-surface.md`](track-4-usecases-frontend/P4.4-smtlib-surface.md) | P4.4 — SMT-LIB command/API conformance |
+| 2026-06-27 | [`docs/plan/track-4-usecases-frontend/P4.1-warm-lazy-memory.md`](track-4-usecases-frontend/P4.1-warm-lazy-memory.md) | P4.1 — Warm lazy arrays / symbolic memory |
+|  | [`docs/plan/track-4-usecases-frontend/P4.7-synthesis.md`](track-4-usecases-frontend/P4.7-synthesis.md) | P4.7 — Synthesis & abduction (SyGuS, abducts, optimization-as-synthesis) |
+|  | [`docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md`](track-4-usecases-frontend/P4.6-chc-horn.md) | P4.6 — CHC / Horn solving (PDR/Spacer-style unbounded reachability) |
+|  | [`docs/plan/track-4-usecases-frontend/P4.5-benchmarking.md`](track-4-usecases-frontend/P4.5-benchmarking.md) | P4.5 — Benchmarking & the performance gate |
+|  | [`docs/plan/track-4-usecases-frontend/P4.3-optimization.md`](track-4-usecases-frontend/P4.3-optimization.md) | P4.3 — Optimization: OMT lexicographic/Pareto + MILP hardening |
+|  | [`docs/plan/track-4-usecases-frontend/P4.2-symexec-cfg.md`](track-4-usecases-frontend/P4.2-symexec-cfg.md) | P4.2 — Symbolic-execution CFG frontend (angr/unicorn-class) |
+
+### `docs/plan/track-5-verified-systems/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-10-05 | [`docs/plan/track-5-verified-systems/README.md`](track-5-verified-systems/README.md) | Track 5 — Verified Systems (IR reflection) |
+| 2026-07-21 | [`docs/plan/track-5-verified-systems/P5.5-target-selection-tock-log2.md`](track-5-verified-systems/P5.5-target-selection-tock-log2.md) | P5.5 replacement target selection — Tock integer logarithms |
+| 2026-07-14 | [`docs/plan/track-5-verified-systems/P5.5-target-selection-maestro-device-id.md`](track-5-verified-systems/P5.5-target-selection-maestro-device-id.md) | P5.5 target selection — Maestro device-number encoding |
+| 2026-07-06 | [`docs/plan/track-5-verified-systems/P5.5-external-target.md`](track-5-verified-systems/P5.5-external-target.md) | P5.5 — A real external target, measured |
+| 2026-07-03 | [`docs/plan/track-5-verified-systems/P5.1-reflection-frontend.md`](track-5-verified-systems/P5.1-reflection-frontend.md) | P5.1 — The reflection front end (crate-ify MIR + LLVM reflection) |
+|  | [`docs/plan/track-5-verified-systems/obligations/fsm-refinement.md`](track-5-verified-systems/obligations/fsm-refinement.md) | Compiler-reflected FSM refinement |
+|  | [`docs/plan/track-5-verified-systems/obligations/control-flow-constant-time.md`](track-5-verified-systems/obligations/control-flow-constant-time.md) | Control-flow constant-time by self-composition |
+|  | [`docs/plan/track-5-verified-systems/obligations/bounded-memory-and-page-table-math.md`](track-5-verified-systems/obligations/bounded-memory-and-page-table-math.md) | Bounded memory and page-table-shaped math |
+|  | [`docs/plan/track-5-verified-systems/obligations/README.md`](track-5-verified-systems/obligations/README.md) | P5.3 obligation catalog |
+|  | [`docs/plan/track-5-verified-systems/P5.4-fuzz-oracle.md`](track-5-verified-systems/P5.4-fuzz-oracle.md) | P5.4 — The fuzzing loop: reflections as oracles, witnesses as seeds |
+|  | [`docs/plan/track-5-verified-systems/P5.3-kernel-theories.md`](track-5-verified-systems/P5.3-kernel-theories.md) | P5.3 — Kernel-shaped obligations: memory regions, 2-safety, FSM refinement |
+|  | [`docs/plan/track-5-verified-systems/P5.2-contracts-modular.md`](track-5-verified-systems/P5.2-contracts-modular.md) | P5.2 — Contracts & modular verification |
+
+### `docs/plan/proof-approaches-2026-08-12/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-08-12 | [`docs/plan/proof-approaches-2026-08-12/route-c/REPORT.md`](proof-approaches-2026-08-12/route-c/REPORT.md) | Route C — the first machine-checked mathematics in axeyum's own Lean kernel |
+| 2026-08-12 | [`docs/plan/proof-approaches-2026-08-12/route-c/LOG.md`](proof-approaches-2026-08-12/route-c/LOG.md) | Route C lab notebook — machine-checked mathematics in axeyum's own Lean kernel |
+| 2026-08-12 | [`docs/plan/proof-approaches-2026-08-12/route-b/LOG.md`](proof-approaches-2026-08-12/route-b/LOG.md) | Route B lab notebook — append-only |
+| 2026-08-12 | [`docs/plan/proof-approaches-2026-08-12/route-a/LOG.md`](proof-approaches-2026-08-12/route-a/LOG.md) | Route A lab notebook — proving the shell colouring solution-free |
+| 2026-08-12 | [`docs/plan/proof-approaches-2026-08-12/README.md`](proof-approaches-2026-08-12/README.md) | Proof approaches — session of 2026-08-12 |
+| 2026-08-12 | [`docs/plan/proof-approaches-2026-08-12/PROOF-BRIEF.md`](proof-approaches-2026-08-12/PROOF-BRIEF.md) | Ground truth brief — the theorem we are trying to PROVE |
+| 2026-08-12 | [`docs/plan/proof-approaches-2026-08-12/ORCHESTRATOR-LOG.md`](proof-approaches-2026-08-12/ORCHESTRATOR-LOG.md) | Orchestrator lab notebook — proof approaches session, 2026-08-12 |
+|  | [`docs/plan/proof-approaches-2026-08-12/route-b/REPORT.md`](proof-approaches-2026-08-12/route-b/REPORT.md) | Route B — what axeyum actually proved |
+|  | [`docs/plan/proof-approaches-2026-08-12/route-a/REPORT.md`](proof-approaches-2026-08-12/route-a/REPORT.md) | Route A — report |
+
+### `docs/plan/agent-program-2026-07-28/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-10-05 | [`docs/plan/agent-program-2026-07-28/README.md`](agent-program-2026-07-28/README.md) | Agent Program — 2026-07-28 |
+| 2026-07-28 | [`docs/plan/agent-program-2026-07-28/phase-0-integration.md`](agent-program-2026-07-28/phase-0-integration.md) | Phase 0 — Integration & tree hygiene (BLOCKING, serial, one owner) |
+| 2026-07-28 | [`docs/plan/agent-program-2026-07-28/lane-a-quantifiers.md`](agent-program-2026-07-28/lane-a-quantifiers.md) | A — Quantifiers (the capability gap) |
+| 2026-07-26 | [`docs/plan/agent-program-2026-07-28/lane-b-strings.md`](agent-program-2026-07-28/lane-b-strings.md) | B — Strings (the volume gap) |
+| 2026-07-07 | [`docs/plan/agent-program-2026-07-28/lane-f-engine.md`](agent-program-2026-07-28/lane-f-engine.md) | F — Engine keystone & QF_BV hard tail |
+|  | [`docs/plan/agent-program-2026-07-28/lane-e-lean-evidence.md`](agent-program-2026-07-28/lane-e-lean-evidence.md) | E — Lean parity & certified evidence |
+|  | [`docs/plan/agent-program-2026-07-28/lane-d-measurement.md`](agent-program-2026-07-28/lane-d-measurement.md) | D — Measurement backbone (SMT-COMP full library) |
+|  | [`docs/plan/agent-program-2026-07-28/lane-c-floating-point.md`](agent-program-2026-07-28/lane-c-floating-point.md) | C — Floating point (QF_FP / QF_BVFP / QF_ABVFP) |
+
+### `docs/plan/agent-notebooks-2026-08-13/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-08-12 | [`docs/plan/agent-notebooks-2026-08-13/orchestrator-LOG.md`](agent-notebooks-2026-08-13/orchestrator-LOG.md) | Orchestrator lab notebook — proof approaches session, 2026-08-12 |
+| 2026-08-12 | [`docs/plan/agent-notebooks-2026-08-13/nat-prelude-LOG.md`](agent-notebooks-2026-08-13/nat-prelude-LOG.md) | nat_prelude extraction — lab notebook (append-only) |
+| 2026-08-12 | [`docs/plan/agent-notebooks-2026-08-13/colouring-encoder-LOG.md`](agent-notebooks-2026-08-13/colouring-encoder-LOG.md) | Colouring encoder lab notebook |
+| 2026-08-12 | [`docs/plan/agent-notebooks-2026-08-13/cas-bridge-LOG.md`](agent-notebooks-2026-08-13/cas-bridge-LOG.md) | CAS <-> SMT bridge lab notebook (append-only) |
+| 2026-08-12 | [`docs/plan/agent-notebooks-2026-08-13/cas-benchmark-LOG.md`](agent-notebooks-2026-08-13/cas-benchmark-LOG.md) | CAS/SMT arithmetic capability corpus — append-only lab notebook |
+| 2026-08-12 | [`docs/plan/agent-notebooks-2026-08-13/artifact-repo-LOG.md`](agent-notebooks-2026-08-13/artifact-repo-LOG.md) | Artifact repo build log (append-only) |
+|  | [`docs/plan/agent-notebooks-2026-08-13/paper-rewrite-LOG.md`](agent-notebooks-2026-08-13/paper-rewrite-LOG.md) | Paper rewrite notebook (append-only) |
+
+### `docs/plan/cas-smt-capability-2026-08-12/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-08-12 | [`docs/plan/cas-smt-capability-2026-08-12/baseline-9f0f4ed.md`](cas-smt-capability-2026-08-12/baseline-9f0f4ed.md) | Baseline at `9f0f4ed005220b4985bf6edd97f052e3a4a19163` |
+| 2026-08-12 | [`docs/plan/cas-smt-capability-2026-08-12/after-175372b.md`](cas-smt-capability-2026-08-12/after-175372b.md) | Result: `9f0f4ed` → `175372bdc` (the CAS bridge) |
+| 2026-08-12 | [`docs/plan/cas-smt-capability-2026-08-12/LOG.md`](cas-smt-capability-2026-08-12/LOG.md) | CAS/SMT arithmetic capability corpus — append-only lab notebook |
+|  | [`docs/plan/cas-smt-capability-2026-08-12/README.md`](cas-smt-capability-2026-08-12/README.md) | CAS/SMT arithmetic capability corpus |
+
+### `docs/plan/capability-pareto-2026-09-05/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-10-05 | [`docs/plan/capability-pareto-2026-09-05/README.md`](capability-pareto-2026-09-05/README.md) | Axeyum capability and Pareto-dominance roadmap |
+
+### `docs/plan/cas-parity-corpus-2026-09-05/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-09-05 | [`docs/plan/cas-parity-corpus-2026-09-05/README.md`](cas-parity-corpus-2026-09-05/README.md) | CAS SymPy parity corpus |
+
+### `docs/plan/references/`
+
+| Date | File | Title |
+|---|---|---|
+| 2026-07-21 | [`docs/plan/references/axeyum-current-state.md`](references/axeyum-current-state.md) | axeyum current-state audit (baseline captured 2026-07-10) |
+| 2026-06-15 | [`docs/plan/references/README.md`](references/README.md) | references/ — distilled top-down review of the reference solvers |
+|  | [`docs/plan/references/z3-theories.md`](references/z3-theories.md) | Z3 theory solvers & quantifiers |
+|  | [`docs/plan/references/z3-core.md`](references/z3-core.md) | Z3 core — architecture, SAT, DPLL(T), preprocessing, strategy |
+|  | [`docs/plan/references/proof-and-lean.md`](references/proof-and-lean.md) | Proof production & Lean interop |
+|  | [`docs/plan/references/bitwuzla-and-sat.md`](references/bitwuzla-and-sat.md) | Bitwuzla + state-of-the-art CDCL + the Rust SAT landscape |
 
 ## Dated plan notes (`docs/plan/*.md`)
 

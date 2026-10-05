@@ -1,5 +1,7 @@
 # Consolidating the Boolean and CDCL(T) engines — plan (DRAFT, 2026-09-10)
 
+> Live status of this plan is [PLAN.md](../../PLAN.md) item SOL-2; this file is its design detail.
+
 **Status:** iteration 2, 2026-09-10. Both research lanes have landed
 ([R-A migration inventory](../research/03-measurements/cdclt-native-migration-inventory-2026-09-10.md),
 [R-B BatSat surface](../research/03-measurements/batsat-slice2-surface-2026-09-10.md))

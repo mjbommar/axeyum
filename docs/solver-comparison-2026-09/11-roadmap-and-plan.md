@@ -1,5 +1,7 @@
 # Roadmap and plan — from the inventory and gap analysis (2026-09-09)
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../plan/global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../plan/CATALOG.md). The ordered roadmap distilled from the 2026-09-09 inventory and gap analysis; its ordering is as of that date.
+
 This distills [`docs/solver-inventory-2026-09/`](../solver-inventory-2026-09/00-README.md)
 (what we have, and what is actually wired), the nine reference-solver files in
 this folder, and [10-gap-analysis.md](10-gap-analysis.md) into an ordered plan.

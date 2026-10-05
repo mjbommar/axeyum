@@ -1,5 +1,7 @@
 # Track 2 — Theories & Breadth
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../CATALOG.md). Track 2 (theories and breadth) phase plan P2.1-P2.10 as sequenced in mid-2026; phase ordering and notes are dated.
+
 Bring each theory to Z3 feature/behavior parity. The recurring upgrade is
 **eager/one-shot reduction → lazy, e-graph-integrated** decision procedure on the
 [CDCL(T) loop](../track-1-engine/P1.5-cdcl-t-loop.md). Most phases here depend on

@@ -46,10 +46,31 @@ STRAND_DIRS = (
     "docs/formalized-math-2026-08",
     "docs/refactor-2026-08",
     "docs/python-2026-08",
+    "docs/render-2026-08",
     "docs/math-department",
+    "docs/campaign-2026-08-13",
+    "docs/prover-track",
+    "docs/consumer-track",
+    "docs/solver-comparison-2026-09",
+    "docs/solver-inventory-2026-09",
+    "docs/facts-extraction-2026-08-14",
+    "docs/status-archive",
+    "docs/reviews",
     "docs/plan/families",
     "docs/plan/exploration-track",
     "docs/plan/smtcomp-full-library-workstream",
+    "docs/plan/track-1-engine",
+    "docs/plan/track-2-theories",
+    "docs/plan/track-3-proof-lean",
+    "docs/plan/track-4-usecases-frontend",
+    "docs/plan/track-5-verified-systems",
+    "docs/plan/proof-approaches-2026-08-12",
+    "docs/plan/agent-program-2026-07-28",
+    "docs/plan/agent-notebooks-2026-08-13",
+    "docs/plan/cas-smt-capability-2026-08-12",
+    "docs/plan/capability-pareto-2026-09-05",
+    "docs/plan/cas-parity-corpus-2026-09-05",
+    "docs/plan/references",
 )
 
 
@@ -122,7 +143,7 @@ def render() -> str:
         if p.parent == ROOT / "docs/plan" and p.name not in ("README.md", "CATALOG.md")
     ]
     lane_notes = [doc_row(p) for p in tracked("docs/plan/notes")]
-    strands = [doc_row(p) for d in STRAND_DIRS for p in tracked(d)]
+    strands = {d: [doc_row(p) for p in tracked(d)] for d in STRAND_DIRS}
     loose = [
         doc_row(p) for p in tracked("docs")
         if p.parent == ROOT / "docs" and DATE.search(p.name)
@@ -145,7 +166,7 @@ def render() -> str:
     w("")
     w(f"Counts: {len(lanes)} archived lanes ({len(open_lanes)} not DONE when archived), "
       f"{len(older_archive)} older archive files, {len(notes)} dated plan notes, "
-      f"{len(lane_notes)} lane notes, {len(strands) + len(loose)} strand and planning documents.")
+      f"{len(lane_notes)} lane notes, {sum(map(len, strands.values())) + len(loose)} strand and planning documents.")
     w("")
 
     def lane_table(rows: list[tuple[str, str, str, str]]) -> None:
@@ -174,8 +195,14 @@ def render() -> str:
     w("## Superseded and frozen planning documents")
     w("")
     w("Superseded queues and the strand READMEs carry a banner naming what replaced them.")
+    w("Dated top-level documents under `docs/` first, then one table per directory.")
     w("")
-    doc_table(loose + strands)
+    doc_table(loose)
+    for directory, rows in strands.items():
+        if rows:
+            w(f"### `{directory}/`")
+            w("")
+            doc_table(rows)
     w("## Dated plan notes (`docs/plan/*.md`)")
     w("")
     w("Result notes, designs, handoffs and earlier queues. Evidence for claims; never the queue.")

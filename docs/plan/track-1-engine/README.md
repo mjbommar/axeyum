@@ -1,5 +1,7 @@
 # Track 1 — Engine & Performance
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../CATALOG.md). Track 1 (engine and performance) phase plan P1.1-P1.9 as sequenced on 2026-06-15; phase statuses here are not maintained.
+
 Make axeyum a *real* solver: a fast bit-blasted QF_BV path competitive with Z3,
 and the shared engine infrastructure (e-graph + CDCL(T) loop) that the theories
 in [Track 2](../track-2-theories/README.md) need. This track owns the **first
