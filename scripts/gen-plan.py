@@ -405,7 +405,8 @@ def sync_catalog(check: bool) -> int:
     if check:
         print(
             "gen-plan: ERROR: docs/plan/CATALOG.md is stale; rerun "
-            "`python3 scripts/gen-plan.py`",
+            "`python3 scripts/gen-plan.py` (it indexes git-tracked files only, "
+            "so `git add` a new note before regenerating)",
             file=sys.stderr,
         )
         return 1
