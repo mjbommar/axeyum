@@ -11,7 +11,7 @@ rg -n 'QF_LRA' docs/plan/archive/lanes/      # every archived lane that mentions
 rg -n '<lane-or-topic>' docs/plan/CATALOG.md  # find the file, then open it
 ```
 
-Counts: 770 archived lanes (177 not DONE when archived), 55 older archive files, 340 dated plan notes, 72 lane notes, 508 strand and planning documents.
+Counts: 770 archived lanes (177 not DONE when archived), 55 older archive files, 341 dated plan notes, 72 lane notes, 508 strand and planning documents.
 
 ## Lanes that were not DONE when archived
 
@@ -866,6 +866,7 @@ Result notes, designs, handoffs and earlier queues. Evidence for claims; never t
 
 | Date | File | Title |
 |---|---|---|
+| 2026-10-05 | [`docs/plan/gate-sweep-2026-10-05.md`](gate-sweep-2026-10-05.md) | Gate sweep, 2026-10-05: what is red on `a38d5f5da` |
 | 2026-10-05 | [`docs/plan/01-dependency-dag.md`](01-dependency-dag.md) | 01 — Dependency DAG, keystones, and execution order |
 | 2026-10-05 | [`docs/plan/00-north-star.md`](00-north-star.md) | 00 — North-star reference targets |
 | 2026-09-16 | [`docs/plan/improvement-list-2026-09-16.md`](improvement-list-2026-09-16.md) | Improvement list, 2026-09-16: the solver as a security tool |
