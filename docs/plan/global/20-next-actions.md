@@ -125,12 +125,15 @@ Gates that cannot fail, stale labels and abandoned state are how false claims
 ship. Detail: [architecture review](docs/research/11-design-review/2026-08-27-architecture-review.md),
 [gate divergence](docs/refactor-2026-08/gate-divergence-2026-08-14.md).
 
-1. **ENG-1 Red gates on `a38d5f5da`.** `check-plan-authority.py` (global/ was
-   60,663 bytes against a 32,000 cap; fixed by this consolidation) and
-   `check-parity-freshness.py` (exit 2: `PARITY.md:1972` "Budget curve" header
-   unrecognised); the `AlgS` shape duplicates red the hygiene gate on hosts with
-   a fresh `shape_search`. Land the DONE-lane archive gate. *Exit:* each exits
-   0 on main and each has a mutation control that kills exactly one test.
+1. **ENG-1 Red gates.** On `a38d5f5da`, 25 `check.sh` steps fail when run
+   alone, including `check-parity-freshness.py` (exit 2: the `PARITY.md:1972`
+   "Budget curve" header), `shape-duplicates`, `proposition-duplication`,
+   `merge-hygiene`, `carcara-gate` and `kernel-stack-envelope`; 79 more failed
+   only in a parallel sweep and are unconfirmed. The consolidation fixed three
+   (`plan-authority`, `example-inventory-count`, its controls). List and method:
+   [gate sweep 2026-10-05](../gate-sweep-2026-10-05.md). *Exit:* every step
+   exits 0 alone on main (or is removed by an ADR), the unconfirmed 79 are
+   classified, and each repaired guard has a control that kills exactly one test.
 2. **ENG-2 Worktrees and branches.** `git worktree list` showed 201 entries on
    2026-10-05 before this consolidation (198 under `.claude/worktrees/`); 14 branches are unmerged into `main` (13 dated
    2026-08-22…31, one 2026-09-01). *Exit:* a read-only inventory classifies

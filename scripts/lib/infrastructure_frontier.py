@@ -668,7 +668,7 @@ def load_cross_check_dispatchable(dispatch_output: str | None) -> dict:
         return {
             "ran": False,
             "note": (
-                "Not re-run this generation; see docs/plan/status/"
+                "Not re-run this generation; see docs/plan/archive/lanes/"
                 "l2-g3-infrastructure-frontier.md for the last captured run. "
                 "scripts/check-dispatchable-frontier.py is out of this "
                 "lane's edit scope and is read-only input here."
