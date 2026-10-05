@@ -238,7 +238,8 @@ ship. Detail: [architecture review](docs/research/11-design-review/2026-08-27-ar
    `merge-hygiene`, `carcara-gate` and `kernel-stack-envelope`; 79 more failed
    only in a parallel sweep and are unconfirmed. The consolidation fixed three
    (`plan-authority`, `example-inventory-count`, its controls). List and method:
-   [gate sweep 2026-10-05](docs/plan/gate-sweep-2026-10-05.md). *Exit:* every step
+   [gate sweep 2026-10-05](docs/plan/gate-sweep-2026-10-05.md); the `just`-only
+   `check-parity-docs.py` adds 104 errors (92 of them undocumented examples). *Exit:* every step
    exits 0 alone on main (or is removed by an ADR), the unconfirmed 79 are
    classified, and each repaired guard has a control that kills exactly one test.
 2. **ENG-2 Worktrees and branches.** `git worktree list` showed 201 entries on
@@ -288,6 +289,10 @@ the state column is what a resuming lane inherits.
 | EVD — evidence and Lean | `PAUSED`; Lean chair's Next Ten all ticked; BatSat removed (ADR-1910) | QF_BV evidence last measured 2026-08-17; SOS fallback still present. |
 | CON — consumers | `PAUSED`; the 2026-09-16 improvement lists closed for Axeyum (16/16) | Glaurung's default-backend decision is open (CON-1); cindergraph and Glaurung are pushed by the user only. |
 | ENG — hygiene | `TODO`; planning consolidated 2026-10-05 (lanes archived, size gate fixed) | 25 gates red when run alone on `a38d5f5da` (ENG-1); 198 agent worktrees and 14 unmerged branches (ENG-2). |
+
+Public documentation is guarded rather than tracked: all 260 Cargo examples and
+the consumer 48-case aggregate are checked by `scripts/check-parity-docs.py`
+and `scripts/gen-example-inventory.py`.
 
 ## Resume protocol
 

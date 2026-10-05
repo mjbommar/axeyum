@@ -7,8 +7,8 @@ Give it a supported claim ("this bit-vector formula can never be satisfied",
 "this Rust function can't panic", "the derivative of x² + c is 2x") and Axeyum
 tries to decide it. A definitive result is replayed or certified according to
 the route; unsupported, incomplete, or resource-bounded cases remain an explicit
-`unknown`. The exact current coverage is summarized in
-[Project State](docs/PROJECT-STATE.md).
+`unknown`. Current measured status — every number with its source — is in
+[PLAN.md § Status](PLAN.md#status).
 
 It's written entirely in Rust, has **no C or C++ in the default build**, and
 **runs scalar QF_BV queries in the browser via WebAssembly** — no solver server
@@ -38,7 +38,7 @@ position. `python3 scripts/validate-facts.py` reports the ledger;
 **Choose a path:** [try a query](#start-here) ·
 [see what you can build](#what-you-can-build-with-axeyum) ·
 [understand the architecture](#how-axeyum-fits-together) ·
-[check current support](docs/PROJECT-STATE.md) ·
+[check current status](PLAN.md#status) ·
 [browse all documentation](docs/README.md)
 
 ## Four familiar tools, one proof-carrying stack
@@ -101,8 +101,9 @@ than asserted — `python3 scripts/validate-facts.py` and
 `python3 scripts/validate-claims.py` re-derive them — and the honest reading of
 any status here is whatever those commands print, not whatever this file says.
 
-The current measured denominators, important negative results, and precise
-meaning of "parity" are in **[Project State](docs/PROJECT-STATE.md)**. The
+The current measured denominators are in **[PLAN.md § Status](PLAN.md#status)**;
+the August public summary [Project State](docs/PROJECT-STATE.md) is kept as
+history and still explains what "parity" does and does not mean. The
 authoritative capability × assurance × evidence inventory is the
 [capability matrix](docs/research/08-planning/capability-matrix.md). [PLAN.md](PLAN.md)
 is the single live engineering tracker; [STATUS.md](STATUS.md) is only a
@@ -186,8 +187,9 @@ routes keep their lower assurance explicit:
 - selected `unsat` routes over the bit-vector-reducible core
   (QF_BV/ABV/UF/AUFBV/bounded-LIA/datatypes) → a rechecked **DRAT** certificate
   for the generated CNF; promoted routes also carry the independent
-  bit-blast-faithfulness check. Broader decision routes and the default BatSat
-  backend may remain explicitly proofless/lower-assurance.
+  bit-blast-faithfulness check. Broader decision routes may remain explicitly
+  proofless/lower-assurance. The SAT engine is the in-tree CDCL core
+  (ADR-1908); no linked SAT solver remains (ADR-1910 removed BatSat).
 - covered `QF_LRA` `unsat` paths → a **Farkas** refutation (exact-rational,
   self-verifying).
 - supported **k-induction** proof routes emit and check a DRAT certificate for
@@ -221,19 +223,19 @@ axeyum-produced terms as a tactic (ADR-1666). Cross-library statement
 identity runs through the carrier correspondence ledger (ADR-1665). Full
 detail: [`docs/math-department/14-lean-lang.md`](docs/math-department/14-lean-lang.md).
 
-See
-[Project State](docs/PROJECT-STATE.md#evidence-and-lean) and the
-[Lean-system strategy](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
-plus its [implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md)
-and [complete Lean 4.30 parity contract](docs/plan/lean4-complete-parity-contract-2026-07-22.md).
+See the [complete Lean 4.30 parity contract](docs/plan/lean4-complete-parity-contract-2026-07-22.md)
+and its generated [parity ledger](docs/plan/generated/lean-complete-parity.md),
+which counts official, Axeyum and paired executions separately (as of TL0.6.3:
+2 decided official outcomes, 0 paired cells, 0 parity credit). The July
+strategy and implementation plans it grew from are now history.
 The first bounded U2 checkpoint derives
 [3,678 default / 3,723 full-Lake CTest registrations](docs/plan/lean-u2-test-authority-2026-07-22.md)
 from pinned upstream semantics while explicitly recording zero official,
 Axeyum, or paired executions.
 The next bounded checkpoint derives the pinned workflow into
 [17 contexts, 153 cells, 111 declared CTest attempts, and eight exact selection
-sets](docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md), while all
-attempts remain not-run and all parity counters remain zero.
+sets](docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md); at that
+checkpoint no attempt had run and every parity counter was zero.
 The prerequisite [execution-evidence contract](docs/plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
 now freezes explicit resource lanes, typed terminations, immutable attempts and
 completion-last records, but still records zero real runs or outcomes.
@@ -408,7 +410,8 @@ and can be removed with `cargo clean`.
 | [`axeyum-egraph`](crates/axeyum-egraph) | Incremental congruence-closure e-graph — the shared equality bus with a Nieuwenhuis–Oliveras proof forest and backtrackable trail. |
 | [`axeyum-aig`](crates/axeyum-aig) | AIG circuit graph with deterministic structural hashing, evaluation, ASCII AIGER export. |
 | [`axeyum-bv`](crates/axeyum-bv) | Term-to-AIG bit lowering with explicit term-bit and symbol-input maps. |
-| [`axeyum-cnf`](crates/axeyum-cnf) | Tseitin CNF encoding, DIMACS I/O, BatSat-backed solving, replay maps, and a proof-producing CDCL core with an in-tree DRAT checker. |
+| [`axeyum-cnf`](crates/axeyum-cnf) | Tseitin CNF encoding, DIMACS I/O, replay maps, and the proof-producing CDCL core (the only SAT engine) with an in-tree DRAT checker; an external CaDiCaL/Kissat binary over DIMACS is the referee (ADR-1910). |
+| [`axeyum-arith`](crates/axeyum-arith) | Shared exact arithmetic: dyadic rationals, certified radix conversion, and the contracts for big rationals, polynomials, modular rings and algebraic numbers (ADR-1710). |
 | [`axeyum-fp`](crates/axeyum-fp) | IEEE 754 floating-point formula builders (F16–F128 + ML formats). |
 | [`axeyum-query`](crates/axeyum-query) | Query object, structural cache keys, conservative slicing, replay checks. |
 | [`axeyum-rewrite`](crates/axeyum-rewrite) | Rewrite manifest contracts, denotation-preserving canonicalizer, array elimination (QF_ABV → QF_BV). |
@@ -426,6 +429,9 @@ and can be removed with `cargo clean`.
 | [`axeyum-verify`](crates/axeyum-verify) (+ [`-macros`](crates/axeyum-verify-macros)) | `#[axeyum::verify]` bounded Rust verifier — panics/overflow/`unwrap`/assertions → failing test or certificate. |
 | [`axeyum-evm`](crates/axeyum-evm) | EVM bytecode symbolic bug-hunter with replayable calldata witnesses, bounded-safe verdicts, and optional re-checked evidence. |
 | [`axeyum-wasm`](crates/axeyum-wasm) | WebAssembly binding — the browser playground engine. |
+| [`axeyum-py`](crates/axeyum-py) | Python bindings (the `axeyum._native` extension behind the `axeyum` package). |
+| [`axeyum-machine`](crates/axeyum-machine) (+ [`-evidence`](crates/axeyum-machine-evidence)) | Executable instruction-set semantics, with content-bound evidence producers and replay checkers. |
+| [`axeyum-search`](crates/axeyum-search) | Cube-and-conquer search and cover certification for parameterised combinatorial families. |
 
 **Tooling & corpora**
 
@@ -463,9 +469,9 @@ explicitly, and exits nonzero on parse, execution, or in-script errors. The
 binary is built from the repository and is not yet published as a crate or
 prebuilt release.
 
-- [Project State](docs/PROJECT-STATE.md) — what is built, what has actually been
-  measured, what remains partial, and what "Z3/Lean parity" does and does not
-  mean.
+- [PLAN.md § Status](PLAN.md#status) — what is measured now, each number with
+  its source; [Project State](docs/PROJECT-STATE.md) is the August public summary
+  of what "Z3/Lean parity" does and does not mean.
 - [How Axeyum solves a query](docs/learn/07-how-axeyum-solves-a-query.md) — the
   best single page: the pipeline and the untrusted-search / trusted-checking
   boundary, with diagrams.

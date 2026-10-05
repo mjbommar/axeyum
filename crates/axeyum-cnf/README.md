@@ -9,8 +9,9 @@ rejected by the current LRAT elaborator.
 The [crate documentation](src/lib.rs) contains a compile-tested checked-UNSAT
 example. Read [CNF, SAT, and propositional
 evidence](../../docs/internals/cnf-and-sat.md) before interpreting assurance:
-the BatSat adapter's proofless UNSAT is lower assurance, while a checked DRAT or
-LRAT artifact establishes UNSAT for the encoded CNF.
+an UNSAT without a proof is lower assurance, while a checked DRAT or LRAT
+artifact establishes UNSAT for the encoded CNF. The in-tree CDCL core is the
+only SAT engine; the BatSat adapter was removed (ADR-1910).
 
 ```sh
 cargo test -p axeyum-cnf

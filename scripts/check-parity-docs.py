@@ -196,6 +196,8 @@ DOCUMENTED_TEST_SOURCES = {
     for suite in (
         "abv_differential_fuzz",
         "bv_differential_fuzz",
+        "corpus_regression",
+        "difference_logic_differential_fuzz",
         "evidence",
         "int_inequality_lean_reconstruct",
         "lean_crosscheck",
@@ -204,7 +206,11 @@ DOCUMENTED_TEST_SOURCES = {
         "math_resource_lra_routes",
         "math_resource_uf_routes",
         "progress_frontier",
+        "qf_lia_differential_fuzz",
+        "qf_lra_differential_fuzz",
+        "qf_uflra_differential_fuzz",
         "rules_as_code_examples",
+        "simplex_lra_fallback_differential",
     )
 }
 

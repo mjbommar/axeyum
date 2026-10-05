@@ -131,7 +131,8 @@ ship. Detail: [architecture review](docs/research/11-design-review/2026-08-27-ar
    `merge-hygiene`, `carcara-gate` and `kernel-stack-envelope`; 79 more failed
    only in a parallel sweep and are unconfirmed. The consolidation fixed three
    (`plan-authority`, `example-inventory-count`, its controls). List and method:
-   [gate sweep 2026-10-05](../gate-sweep-2026-10-05.md). *Exit:* every step
+   [gate sweep 2026-10-05](../gate-sweep-2026-10-05.md); the `just`-only
+   `check-parity-docs.py` adds 104 errors (92 of them undocumented examples). *Exit:* every step
    exits 0 alone on main (or is removed by an ADR), the unconfirmed 79 are
    classified, and each repaired guard has a control that kills exactly one test.
 2. **ENG-2 Worktrees and branches.** `git worktree list` showed 201 entries on
