@@ -130,7 +130,7 @@ written (`IntDev::congr` is the single-hole case).~~
 
 **Correction, 2026-08-31: built, the same day this document was written.**
 `crates/axeyum-lean-kernel/src/creal/congruence.rs` landed 2026-08-27
-(`cb8b54e20`, [status](../plan/status/136-congruence-deriver.md)): a registry
+(`cb8b54e20`, [status](../plan/archive/lanes/136-congruence-deriver.md)): a registry
 of six base congruence lemmas, a `CongruExpr` term representation the deriver
 can inspect without running it, and `derive`/`declare_derived_congr` — pure
 structural recursion producing `(statement, proof)` or a typed decline, never
@@ -232,7 +232,7 @@ reconstruction) as of 2026-08-31 — that stays an open falsifiability bet, not
 a stale claim. A related but different cost curve — Sturm-isolation cost for
 the row-3 EVT decidable fragment (concrete argmax, not a `∀x` identity) — was
 separately measured up to degree 22-24
-([status](../plan/status/138-cas-extremum.md)): 16 ms-13.7 s for
+([status](../plan/archive/lanes/138-cas-extremum.md)): 16 ms-13.7 s for
 sparse-critical-point polynomials, ~24 s for a degree-6 "thick"
 (every-coefficient-nonzero) polynomial, declining soundly rather than
 exploding either way. That is evidence the surrounding CAS machinery scales

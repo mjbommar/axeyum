@@ -141,7 +141,7 @@ fn expand_scaled_left(
 /// `g * (a·mp + b·np) = (g·a)·mp + (g·b)·np`.
 /// `g * (a·mp + b·np) = (g·a)·mp + (g·b)·np`.
 ///
-/// Retired to `crate::ring::nat` (docs/plan/status/460-ring-tactic-1.md): a
+/// Retired to `crate::ring::nat` (docs/plan/archive/lanes/460-ring-tactic-1.md): a
 /// pure ring-rearrangement chain over `left_distrib`/`mul_assoc`, now
 /// searched for and emitted rather than hand-assembled. Unlike
 /// `left_distrib`/`right_distrib` themselves this identity is a downstream

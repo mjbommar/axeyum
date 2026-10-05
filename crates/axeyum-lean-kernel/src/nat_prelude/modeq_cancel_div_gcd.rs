@@ -13,8 +13,8 @@
 //!   `mod_eq_cancel_left_div_gcd_general` -- identifiers cannot carry `'`):
 //!   `0 < m -> c ≡ d [MOD m] -> c*a ≡ d*b [MOD m] -> a ≡ b [MOD m / gcd m c]`.
 //!
-//! Two prior lanes (`docs/plan/status/329-nat-modeq-mirrors.md`,
-//! `docs/plan/status/335-int-dvd-mirrors.md`) sized this family as needing a
+//! Two prior lanes (`docs/plan/archive/lanes/329-nat-modeq-mirrors.md`,
+//! `docs/plan/archive/lanes/335-int-dvd-mirrors.md`) sized this family as needing a
 //! new "divide-by-gcd factorization" slice (rewriting `m = g*(m/g)`,
 //! coprimality of the quotients). By the time this lane started,
 //! `Nat.gcd_mul_right` (`gcd_mul_right.rs`) had already landed for a sibling

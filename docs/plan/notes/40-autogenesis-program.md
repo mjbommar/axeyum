@@ -1,6 +1,6 @@
 # Notes: 40-autogenesis-program
 
-Detail moved out of [`../status/40-autogenesis-program.md`](../status/40-autogenesis-program.md) so the
+Detail moved out of [`../status/40-autogenesis-program.md`](../archive/lanes/40-autogenesis-program.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

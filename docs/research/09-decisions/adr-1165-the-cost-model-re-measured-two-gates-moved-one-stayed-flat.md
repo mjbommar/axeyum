@@ -29,7 +29,7 @@ Index-status: accepted
 Related: ADR-0601/0602/0603 (the strategy this document operationalizes),
 ADR-0608 (`shape_search`, the retrieval machinery), ADR-0692/0875/0895/1090
 (the IVT/EVT worked example's own correction chain, the convention this ADR
-follows), `docs/plan/status/136-congruence-deriver.md` (the congruence
+follows), `docs/plan/archive/lanes/136-congruence-deriver.md` (the congruence
 producer), `scripts/brief-step0.py` (the retrieval-compliance measurement).
 
 ## Context
@@ -122,7 +122,7 @@ without running it, and `derive`/`declare_derived_congr`, pure structural
 recursion returning `Result<(ExprId, ExprId), CongrError>`. One permanent
 production registration, `CReal.mulPowCongr`, dispatched from
 `build_creal_prelude_uncached`. Its own status doc
-(`docs/plan/status/136-congruence-deriver.md`) reports the deepest
+(`docs/plan/archive/lanes/136-congruence-deriver.md`) reports the deepest
 kernel-checked demo — five registered-op nodes — at 7.62 ms derive+check, and
 is explicit that nothing existing was retired: `neg_congr`, `add_congr`,
 `mul_congr`, `min_congr`/`max_congr`/`abs_congr`, `pow_congr`,
@@ -148,7 +148,7 @@ specific committed benchmark this lane could re-run in bounded time. Reported
 as unverified rather than silently re-asserted or deleted. A different but
 related cost curve — Sturm-isolation cost for the row-3 EVT decidable
 fragment, concrete argmax rather than a `∀x` identity — is separately
-measured in `docs/plan/status/138-cas-extremum.md` up to degree 22-24
+measured in `docs/plan/archive/lanes/138-cas-extremum.md` up to degree 22-24
 (16 ms-13.7 s sparse, ~24 s for a degree-6 "thick" polynomial, declining
 soundly). That is adjacent evidence the surrounding CAS machinery scales
 gracefully; it is not a substitute measurement for the specific axis doc 07's

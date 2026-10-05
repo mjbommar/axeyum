@@ -5,7 +5,7 @@ Lane: ledger-coverage
 
 ## Task
 
-`docs/plan/status/141-ledger-6-backlog.md` registered a hand-picked 12-fact
+`docs/plan/archive/lanes/141-ledger-6-backlog.md` registered a hand-picked 12-fact
 backlog and closed with an explicit admission: nobody has ever run the full
 diff of `prelude_theorem_inventory --include-constructed`'s theorem list
 against `artifacts/facts/`'s registered names, and a future lane should "run

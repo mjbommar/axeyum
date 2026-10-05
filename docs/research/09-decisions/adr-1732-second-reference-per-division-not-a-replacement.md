@@ -63,7 +63,7 @@ arbitrary binary path would be exactly that knob with a new name.
    `PARITY.md` is unchanged.
 
 Scope for this ADR, per the solvers actually pinned (see
-[`docs/plan/status/second-reference.md`](../../plan/status/second-reference.md)
+[`docs/plan/archive/lanes/second-reference.md`](../../plan/archive/lanes/second-reference.md)
 for provenance): `yices2` for QF_LRA (2nd, ahead of cvc5), QF_UF (tied 1st),
 QF_RDL (1st); `smtinterpol` for QF_UFLIA (1st). QF_LIA (QiuQi/OpenSMT) and
 QF_UFLRA (not currently on the board) are not covered — neither leader nor

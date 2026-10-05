@@ -12,7 +12,7 @@ puts the same obstruction in two places. Reviewer 01 (number theory) says the
 Mathlib's enclosing `variable` block, so a coercion-carrying statement re-parses
 as nothing (**no screen exists**); typeclass-headed statements have no
 record-spine target".
-[`docs/plan/status/315-attestation-ceiling.md`](../../plan/status/315-attestation-ceiling.md)
+[`docs/plan/archive/lanes/315-attestation-ceiling.md`](../../plan/archive/lanes/315-attestation-ceiling.md)
 item 3 says the same thing in the same words. Neither gives a count, and nothing
 had run the route over the population to find one.
 

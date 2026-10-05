@@ -24,8 +24,8 @@
 //! `exists_most_significant_bit` (∃ the highest bit set in a nonzero `v`)
 //! composed with `lt_of_testBit` (agreement above a differing bit, differing
 //! AT that bit, forces the order). Two prior lanes
-//! (`docs/plan/status/253-nat-xor-parity.md`,
-//! `docs/plan/status/254-nat-parity-lowbit.md`) sized this as needing a
+//! (`docs/plan/archive/lanes/253-nat-xor-parity.md`,
+//! `docs/plan/archive/lanes/254-nat-parity-lowbit.md`) sized this as needing a
 //! highest-differing-bit `testBit` induction and left it open; this lane
 //! confirms that sizing and narrows exactly what is missing, having read
 //! the actual proof route rather than guessed it.
@@ -97,12 +97,12 @@
 //! fuel-agreement lemmas — i.e. its own lane, not a follow-on task. Sizing
 //! `lt_xor_cases` honestly puts the full route at 4 further substantial
 //! pieces beyond what `Nat.xor_comm` (below) contributes. See
-//! `docs/plan/status/260-nat-lt-xor-cases.md` for the handoff.
+//! `docs/plan/archive/lanes/260-nat-lt-xor-cases.md` for the handoff.
 //!
 //! ## `scripts/gen-autogenesis-bitwise-family-projection.py`
 //!
 //! Checked directly: it names three unrelated `testBit` facts (per
-//! `docs/plan/status/244-nat-testbit-bitwise.md`), not `lt-xor-cases`, so it
+//! `docs/plan/archive/lanes/244-nat-testbit-bitwise.md`), not `lt-xor-cases`, so it
 //! does not pin this fact open independent of provability.
 
 use crate::KernelError;

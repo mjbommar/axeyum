@@ -8,7 +8,7 @@
 //!
 //! # What `prove_mul` unblocks — measured, and it is not eight
 //!
-//! `docs/plan/status/277-cas-multivariate.md` sized the non-constant-cofactor
+//! `docs/plan/archive/lanes/277-cas-multivariate.md` sized the non-constant-cofactor
 //! cluster at 8 and listed a *fractional literal cast* as a separate blocker on
 //! `medians-concurrent`. The two blockers **overlap**, and nothing said so.
 //! Counting, per certificate in `artifacts/geometry-certificates/`, terms whose

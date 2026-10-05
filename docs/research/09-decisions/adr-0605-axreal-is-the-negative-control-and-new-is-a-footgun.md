@@ -83,4 +83,4 @@ Both remedies landed together: `reconstruct::arithmetic::axreal_call_site_guard`
 AxReal signature again, proved discriminating by temporarily reintroducing
 such a call and confirming exactly that gate went red. `axreal`'s 30
 declarations are untouched. Full account:
-[`docs/plan/status/140-axreal-constructor-rename.md`](../../plan/status/140-axreal-constructor-rename.md).
+[`docs/plan/archive/lanes/140-axreal-constructor-rename.md`](../../plan/archive/lanes/140-axreal-constructor-rename.md).

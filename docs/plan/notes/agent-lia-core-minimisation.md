@@ -1,6 +1,6 @@
 # Notes: agent-lia-core-minimisation
 
-Detail moved out of [`../status/agent-lia-core-minimisation.md`](../status/agent-lia-core-minimisation.md) so the
+Detail moved out of [`../status/agent-lia-core-minimisation.md`](../archive/lanes/agent-lia-core-minimisation.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

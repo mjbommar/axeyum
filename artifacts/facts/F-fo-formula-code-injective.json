@@ -58,7 +58,7 @@
     {
       "id": "mutation-duplicate-tag",
       "kind": "instance-pin",
-      "supports": "MUTATION-VERIFIED. Two mutations were applied to a scratch copy of the lane's worktree, built, run, and restored byte-for-byte with git status verified clean. Both are recorded with their measured kill counts in docs/plan/status/arithmetization-2026-09-05.md rather than here, so this row does not repeat a number it did not measure itself.",
+      "supports": "MUTATION-VERIFIED. Two mutations were applied to a scratch copy of the lane's worktree, built, run, and restored byte-for-byte with git status verified clean. Both are recorded with their measured kill counts in docs/plan/archive/lanes/arithmetization-2026-09-05.md rather than here, so this row does not repeat a number it did not measure itself.",
       "check_status": "checked",
       "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_code:: fo_numbering:: --test-threads=4",
       "checkers": [

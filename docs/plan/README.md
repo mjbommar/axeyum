@@ -17,6 +17,10 @@ Start with these documents:
 4. [Foundational dependency DAG](../research/08-planning/foundational-dag.md) —
    obligations that precede new public surface.
 
+5. [Planning catalog](CATALOG.md) — generated index of everything historical:
+   archived lanes (with the status each had when archived), superseded queues,
+   dated notes, and the August strands. Search it instead of reading old plans.
+
 Do not infer current priority from a dated file in this directory. A plan or
 preregistration records what was authorized at that time; a result records what
 was observed; neither overrides root `PLAN.md`.
@@ -26,6 +30,7 @@ was observed; neither overrides root `PLAN.md`.
 | Need | Start here |
 |---|---|
 | Current status or next action | [Root `PLAN.md`](../../PLAN.md) |
+| An old lane, queue, or plan, and what it left open | [Planning catalog](CATALOG.md), then [`archive/`](archive/README.md) |
 | Solver capability and assurance | [Capability matrix](../research/08-planning/capability-matrix.md) |
 | Parser, IR, solver, and proof support | [Support matrix](../research/08-planning/support-matrix.md) |
 | Trusted and independently checked boundaries | [Trust ledger](../research/08-planning/trust-ledger.md) |

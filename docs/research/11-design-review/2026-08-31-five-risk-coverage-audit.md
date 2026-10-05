@@ -191,7 +191,7 @@ projection, string literals, zeta reduction, well-founded recursion, longer
 reduction chains.
 
 **Stale counts in committed prose.** `justfile:1146,1157-1159` and
-`docs/plan/status/390-l0-s5-kernel-differential.md` still describe the gate as
+`docs/plan/archive/lanes/390-l0-s5-kernel-differential.md` still describe the gate as
 "32 cases" with "4 of 8 targeted guards killed outright". Nothing enforces
 those numbers, so they drifted when ADR-0815 landed.
 

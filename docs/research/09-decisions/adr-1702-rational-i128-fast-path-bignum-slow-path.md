@@ -24,7 +24,7 @@ Four consequences are on the record:
   literals above `2^127` (78-digit EVM `2^256` words). Axeyum decides **0 of
   26** — they are rejected before any solver work. cvc5, the parity reference,
   decides 6; z3 decides 12.
-- [`docs/plan/status/111-nra-handelman-cert.md`](../../plan/status/111-nra-handelman-cert.md)
+- [`docs/plan/archive/lanes/111-nra-handelman-cert.md`](../../plan/archive/lanes/111-nra-handelman-cert.md)
   records a Handelman certificate whose exact derivation needs a numerator
   around `1.6·10^57`, which does not fit an `i128` product, so the lane carried
   a relaxation instead of the exact coefficient.

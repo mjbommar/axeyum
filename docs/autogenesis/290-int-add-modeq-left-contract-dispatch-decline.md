@@ -10,7 +10,7 @@ Discharge `F:ml430-int-add-modeq-left-ee732b5b` (`Int.add_modEq_left`,
 ever selected via a producer contract rather than a registered operation
 (`producer-contract-int-modeq-family-v1`, route `kernel-lane`, landed the
 same day by the `producer-contracts` lane —
-[`docs/plan/status/135-producer-contracts.md`](../plan/status/135-producer-contracts.md),
+[`docs/plan/archive/lanes/135-producer-contracts.md`](../plan/archive/lanes/135-producer-contracts.md),
 [`289-producer-contract-admissibility.md`](289-producer-contract-admissibility.md)).
 That lane's own status note is explicit about what it did and did not
 establish: `selected_fact_id: F:ml430-int-add-modeq-left-ee732b5b` — "genuinely

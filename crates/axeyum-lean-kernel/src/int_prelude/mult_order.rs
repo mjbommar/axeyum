@@ -64,7 +64,7 @@
 //!
 //! What does NOT land here: existence of a primitive root modulo a prime
 //! (item 5). The obstruction is measured and recorded in ADR-1598 and in
-//! `docs/plan/status/520-primitive-roots.md`.
+//! `docs/plan/archive/lanes/520-primitive-roots.md`.
 
 use super::defs::DERIVED_HEIGHT;
 use super::modeq::imodeq;

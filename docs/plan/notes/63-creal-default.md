@@ -1,6 +1,6 @@
 # agent-creal-default — detail
 
-Companion to [`../status/63-creal-default.md`](../status/63-creal-default.md).
+Companion to [`../status/63-creal-default.md`](../archive/lanes/63-creal-default.md).
 
 ## Slice A — `PreludeKey::CReal`
 

@@ -42,7 +42,7 @@
 //! `Prime p` via `prime_pos`), and does not touch `Nat.least_number`/LNP or
 //! any excluded-middle question at all: it is a single modus-tollens step.
 //! There is no row 2 to extract here (see the module-level argument in
-//! `docs/plan/status/graded-families-number-theory.md`): a direct logical
+//! `docs/plan/archive/lanes/graded-families-number-theory.md`): a direct logical
 //! inference on an unconditional theorem has no comparison or unbounded
 //! search to reduce to a boundary.
 //!

@@ -37,7 +37,7 @@ and closing it took the bridge from 70 to 72 by promoting `AntitoneOn` and
       ∀ x0 x1 x2, Le x1 x2 → Lt 1 x1 → Lt 1 x2 → Le (log x2 x0) (log x1 x0)
 
 — no `AntitoneOn`, no `Set.Ioi`, and no kernel `Set` type at all. The lane that
-closed it says as much in `docs/plan/status/337-log-clog-finish.md`. What that
+closed it says as much in `docs/plan/archive/lanes/337-log-clog-finish.md`. What that
 closure established is that *this proposition* has an equivalent pointwise
 form. It did not establish that `Set.Ioi` is expressible here.
 
@@ -147,5 +147,5 @@ compares the whole derived block against the committed file, so any edit to the
 derivation function invalidates that file in every test case and V5 fires
 throughout — 20 to 25 cases per mutant, against 5 for deleting V5 itself. That
 is correct behaviour and it is not coverage; the kill counts are reported as
-measured in `docs/plan/status/342-bridge-elision.md` rather than dressed up. The
+measured in `docs/plan/archive/lanes/342-bridge-elision.md` rather than dressed up. The
 frontier's S7 does isolate, because there the subject is a fixture.

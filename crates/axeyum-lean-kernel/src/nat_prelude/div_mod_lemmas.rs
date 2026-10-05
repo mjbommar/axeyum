@@ -483,7 +483,7 @@ pub(super) fn declare_add_div_mod_shift_family(
 /// `(a+b)+(c+d) = (a+c)+(b+d)`, returned as `Eq (add(add a b)(add c d))
 /// (add(add a c)(add b d))`.
 ///
-/// Retired to `crate::ring::nat` (docs/plan/status/460-ring-tactic-1.md): a
+/// Retired to `crate::ring::nat` (docs/plan/archive/lanes/460-ring-tactic-1.md): a
 /// pure ring-rearrangement chain, now searched for and emitted rather than
 /// hand-assembled — one of eight verbatim-duplicated hand proofs of this
 /// exact identity across `nat_prelude` (`binomial.rs`, `finite_set.rs`,

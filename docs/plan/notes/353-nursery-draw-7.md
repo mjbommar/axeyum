@@ -1,6 +1,6 @@
 # 353 — nursery draw 7: every measurement, and how to re-run it
 
-Detail behind [`../status/353-nursery-draw-7.md`](../status/353-nursery-draw-7.md)
+Detail behind [`../status/353-nursery-draw-7.md`](../archive/lanes/353-nursery-draw-7.md)
 and [ADR-0654](../../research/09-decisions/adr-0654-draw-7-is-authored-and-the-lawful-family-set-was-forced-not-chosen.md).
 
 Nothing here is carried from ADR-0645, ADR-0653 or the draw-6b notes. Every

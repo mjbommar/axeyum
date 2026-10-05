@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 
@@ -11,6 +12,99 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def read(relative: str) -> str:
     return (ROOT / relative).read_text(encoding="utf-8")
+
+
+# PLAN.md is generated (scripts/gen-plan.py) from docs/plan/global/ and every
+# file in docs/plan/status/, so the no-journal-growth bound is measured there.
+#
+# HISTORY OF THIS BOUND, because each version failed differently. A flat 52,000
+# shared by every lane was red for days (no single edit caused it, so no single
+# edit fixed it). Its replacement -- 3,000 per lane plus a ceiling DERIVED from
+# the lane count -- could never force anything out: every new lane raised the
+# ceiling by its own cap. By 2026-10-05 it was red at 635 over-cap lanes, PLAN.md
+# had reached 75,717 lines from 770 lane files, and 601 of them were DONE.
+#
+# So the bound is now on what is ACTIVE:
+#   * each lane file keeps its own 3,000-byte cap (attributable, names the lane);
+#   * docs/plan/global/ keeps a 32,000-byte total, because it is shared;
+#   * a lane whose status token says DONE must be archived
+#     (`scripts/archive-plan-lane.py <lane>`), so finished work leaves the plan;
+#   * at most MAX_ACTIVE_LANES lane files exist, so the total is FIXED
+#     (GLOBAL_CAP + LANE_CAP x MAX_ACTIVE_LANES), not derived from the count.
+# Detail belongs in docs/plan/notes/<lane>.md (`scripts/archive-plan-status.py`);
+# finished lanes in docs/plan/archive/lanes/, indexed by docs/plan/CATALOG.md.
+LANE_CAP = 3_000
+GLOBAL_CAP = 32_000
+MAX_ACTIVE_LANES = 25
+LANE_STATUS_TOKEN = re.compile(r"\(\s*`([A-Za-z][A-Za-z -]*)`\s*,")
+DONE_PREFIXES = ("DONE", "LANDED", "COMPLETE", "CLOSED", "MERGED", "SHIPPED")
+
+
+def budget_errors(root: Path) -> list[str]:
+    errors: list[str] = []
+    lane_sources = [
+        path for path in sorted((root / "docs/plan/status").glob("*.md"))
+        if path.name != "README.md"
+    ]
+    global_sources = [
+        path for path in sorted((root / "docs/plan/global").glob("*.md"))
+        if path.name != "README.md"
+    ]
+    for path in sorted(lane_sources, key=lambda p: -p.stat().st_size):
+        size = path.stat().st_size
+        if size > LANE_CAP:
+            errors.append(
+                f"{path.relative_to(root)} is {size} bytes (> {LANE_CAP}); move the "
+                f"detail to docs/plan/notes/{path.name} -- "
+                "`python3 scripts/archive-plan-status.py --apply` does it without "
+                "losing anything"
+            )
+    for path in lane_sources:
+        match = LANE_STATUS_TOKEN.search(path.read_text(encoding="utf-8")[:1200])
+        if match and match.group(1).strip().upper().startswith(DONE_PREFIXES):
+            errors.append(
+                f"{path.relative_to(root)} says `{match.group(1).strip()}`; a finished "
+                f"lane leaves the plan -- `python3 scripts/archive-plan-lane.py "
+                f"{path.stem}` moves it to docs/plan/archive/lanes/ and keeps every link"
+            )
+    if len(lane_sources) > MAX_ACTIVE_LANES:
+        errors.append(
+            f"{len(lane_sources)} lane files in docs/plan/status/ (> {MAX_ACTIVE_LANES} "
+            "active); archive finished or abandoned lanes with "
+            "`scripts/archive-plan-lane.py`"
+        )
+    global_bytes = sum(path.stat().st_size for path in global_sources)
+    if global_bytes > GLOBAL_CAP:
+        biggest = sorted(global_sources, key=lambda p: -p.stat().st_size)[:3]
+        detail = "; ".join(f"{p.name} {p.stat().st_size}" for p in biggest)
+        errors.append(
+            f"docs/plan/global/ totals {global_bytes} bytes (> {GLOBAL_CAP}); "
+            f"largest: {detail}"
+        )
+    plan = root / "PLAN.md"
+    ceiling = GLOBAL_CAP + LANE_CAP * MAX_ACTIVE_LANES
+    if plan.exists() and plan.stat().st_size > ceiling:
+        errors.append(
+            f"PLAN.md is {plan.stat().st_size} bytes (> {ceiling} = {GLOBAL_CAP} "
+            f"global + {LANE_CAP} x {MAX_ACTIVE_LANES} active lanes)"
+        )
+    return errors
+
+
+def instruction_sync_errors(root: Path) -> list[str]:
+    """CLAUDE.md and AGENTS.md carry one text; only the title and first line differ.
+
+    They were two hand-maintained copies, and by 2026-10-05 AGENTS.md still
+    described BatSat solving and a Layout missing half the crates. One body
+    cannot drift.
+    """
+    claude, agents = (root / "CLAUDE.md"), (root / "AGENTS.md")
+    if not (claude.exists() and agents.exists()):
+        return []
+    body = lambda path: path.read_text(encoding="utf-8").splitlines()[3:]  # noqa: E731
+    if body(claude) != body(agents):
+        return ["CLAUDE.md and AGENTS.md differ below their title lines; edit both together"]
+    return []
 
 
 def main() -> int:
@@ -35,69 +129,8 @@ def main() -> int:
         if marker not in plan:
             errors.append(f"PLAN.md is missing required marker: {marker!r}")
 
-    # PLAN.md is generated (scripts/gen-plan.py); the writing happens in
-    # docs/plan/global/ and docs/plan/status/, so the no-journal-growth ceiling
-    # is measured there.  `README.md` in each directory documents the format and
-    # is not emitted into PLAN.md, so it is not journal either.
-    #
-    # THE CEILING USED TO BE A FLAT 52,000 ACROSS ALL LANES, AND THAT IS WHY IT
-    # WAS RED FOR DAYS.  Its own comment records the growth as 0 -> 54,398 ->
-    # 98,180 -> 233,888 in two days; on 2026-08-18 it stood at 177,878, 3.4x
-    # over, and every lane had learned to scroll past it.  A budget shared by 25
-    # lanes is nobody's to fix: no single edit causes the failure, so no single
-    # edit repairs it.  That is the same shared-append-point defect the per-lane
-    # split was created to remove (CLAUDE.md: per-lane state belongs in per-lane
-    # paths, never in one file every lane writes) — reappearing one level up, in
-    # the BUDGET rather than the file.
-    #
-    # So the bound is now attributable:
-    #   * each lane file gets its own cap, and a violation names the lane;
-    #   * docs/plan/global/ keeps a total, because it genuinely is shared;
-    #   * the overall ceiling is DERIVED from those two, so adding a 27th lane
-    #     cannot red the gate on its own — which the flat number did.
-    # Detail that does not fit belongs in docs/plan/notes/<lane>.md, which
-    # gen-plan.py does not read and this gate does not count.
-    # `scripts/archive-plan-status.py` performs the move without losing a byte.
-    LANE_CAP = 3_000
-    GLOBAL_CAP = 32_000
-    lane_sources = [
-        path for path in sorted((ROOT / "docs/plan/status").glob("*.md"))
-        if path.name != "README.md"
-    ]
-    global_sources = [
-        path for path in sorted((ROOT / "docs/plan/global").glob("*.md"))
-        if path.name != "README.md"
-    ]
-    global_bytes = sum(path.stat().st_size for path in global_sources)
-    lane_bytes = sum(path.stat().st_size for path in lane_sources)
-    authored = global_bytes + lane_bytes
-    derived_ceiling = GLOBAL_CAP + LANE_CAP * len(lane_sources)
-
-    over = [
-        (path, path.stat().st_size)
-        for path in lane_sources
-        if path.stat().st_size > LANE_CAP
-    ]
-    for path, size in sorted(over, key=lambda pair: -pair[1]):
-        errors.append(
-            f"{path.relative_to(ROOT)} is {size} bytes (> {LANE_CAP}); move the "
-            f"detail to docs/plan/notes/{path.name} — "
-            f"`python3 scripts/archive-plan-status.py --apply` does it without "
-            "losing anything, and skips files another lane has uncommitted"
-        )
-    if global_bytes > GLOBAL_CAP:
-        biggest = sorted(global_sources, key=lambda p: -p.stat().st_size)[:3]
-        detail = "; ".join(f"{p.name} {p.stat().st_size}" for p in biggest)
-        errors.append(
-            f"docs/plan/global/ totals {global_bytes} bytes (> {GLOBAL_CAP}); "
-            f"largest: {detail}"
-        )
-    if authored > derived_ceiling:
-        errors.append(
-            f"PLAN.md sources total {authored} bytes (> {derived_ceiling} = "
-            f"{GLOBAL_CAP} global + {LANE_CAP} x {len(lane_sources)} lanes); "
-            f"global/ {global_bytes}, status/ {lane_bytes}"
-        )
+    errors.extend(budget_errors(ROOT))
+    errors.extend(instruction_sync_errors(ROOT))
     if status_path.stat().st_size > 1_500:
         errors.append("STATUS.md is no longer a compact compatibility pointer")
     if exploration_status_path.stat().st_size > 2_000:

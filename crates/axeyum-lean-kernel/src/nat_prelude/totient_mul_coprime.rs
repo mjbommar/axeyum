@@ -1,8 +1,8 @@
 //! Two small pieces toward `Nat.totient_mul_of_coprime`
 //! (`Coprime m n -> totient(m*n) = totient(m)*totient(n)`), the base case
 //! all three remaining open `ml430` totient mirrors need per
-//! `docs/plan/status/301-totient-multiplicative.md` and its correction in
-//! `docs/plan/status/316-queue-sweep.md`.
+//! `docs/plan/archive/lanes/301-totient-multiplicative.md` and its correction in
+//! `docs/plan/archive/lanes/316-queue-sweep.md`.
 //!
 //! **This file does NOT attempt the full formula.** `316` corrected `301`'s
 //! own Step 4 (`Nat.count_range_row_major`): the row-major double-counting

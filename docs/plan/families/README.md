@@ -24,9 +24,10 @@ Each carries the same seven headings, and two conventions matter:
 
 - **Numbers are stamped copies.** A division file names the solver commit its
   row came from. Re-read the ledger; do not quote the file.
-- **"Cause established?" is a real question with a real "no".** Three divisions
-  have no established cause (QF_UF's remaining four, UF's thirty-two, QF_RDL's
-  fourteen since the last re-census) and two of those had a cause that was
+- **"Cause established?" is a real question with a real "no".** One division
+  has no established cause (QF_RDL's fourteen since the last re-census; QF_UF
+  is now 200/200 and UF's thirty-two have a measured cause, see
+  [uf.md](smt-quantified/uf.md)), and two divisions once had a cause that was
   *refuted*. A division without a cause gets a census, not a slice.
 
 ## The rule this tree exists to enforce

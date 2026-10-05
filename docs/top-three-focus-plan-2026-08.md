@@ -1,5 +1,7 @@
 # Axeyum top-three focus plan
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](plan/global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](plan/CATALOG.md). This was the 2026-08-25 top-three focus plan.
+
 Date: 2026-08-25
 
 This plan converts the current architecture audit into three priorities. It is

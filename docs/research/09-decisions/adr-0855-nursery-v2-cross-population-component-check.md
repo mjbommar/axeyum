@@ -34,7 +34,7 @@ was checked by anything.
 
 Independently measured (script: temporary diagnostic, since folded into
 `build_cross_population_report`'s own logic; full detail in
-`docs/plan/status/nursery-v2-component-coverage.md`): computing weakly
+`docs/plan/archive/lanes/nursery-v2-component-coverage.md`): computing weakly
 connected components over `nursery-v1`'s 216 entries UNION
 `nursery-v2-extension`'s 340 entries (adjacency from
 `artifacts/facts/*.json`'s `depends_on`, restricted to edges where both

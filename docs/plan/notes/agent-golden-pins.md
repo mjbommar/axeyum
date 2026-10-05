@@ -1,6 +1,6 @@
 # Lane: golden-pins — the module banner is no longer under every pin
 
-Detail for [`../status/agent-golden-pins.md`](../status/agent-golden-pins.md).
+Detail for [`../status/agent-golden-pins.md`](../archive/lanes/agent-golden-pins.md).
 
 ## The defect, stated as a mechanism
 

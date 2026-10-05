@@ -1,5 +1,7 @@
 # Formalized mathematics strand — August 2026
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../plan/global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../plan/CATALOG.md). Frozen strand from August 2026 -- its reasoning still holds; its counts and 'next' lists are as of 2026-08-19.
+
 > **STATUS 2026-08-19 — the cross-check story changed, and this strand is its
 > home.** Lean has **two** checkers and they disagree about our own artifact.
 > Measured 2026-08-18 on the 470-declaration constructed-real carrier:

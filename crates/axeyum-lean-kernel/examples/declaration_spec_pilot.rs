@@ -358,7 +358,7 @@ fn decl_ty_value(kernel: &mut Kernel, name: NameId) -> (ExprId, ExprId) {
 /// real declaration name collides with the normalized form), so this
 /// cannot mask a genuine structural divergence -- confirmed by the
 /// eta-expansion bug this exact check caught before this normalization was
-/// added (see docs/plan/status/l3-d1-declaration-spec.md).
+/// added (see docs/plan/archive/lanes/l3-d1-declaration-spec.md).
 fn normalize_shadow_names(rendered: &str) -> String {
     rendered.replace("SpecGen", "")
 }

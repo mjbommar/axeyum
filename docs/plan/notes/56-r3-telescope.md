@@ -1,6 +1,6 @@
 # Notes: 56-r3-telescope
 
-Detail moved out of [`../status/56-r3-telescope.md`](../status/56-r3-telescope.md) so the
+Detail moved out of [`../status/56-r3-telescope.md`](../archive/lanes/56-r3-telescope.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

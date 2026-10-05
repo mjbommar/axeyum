@@ -165,7 +165,7 @@ happens the gate (b) measurement above found the native core at least BatSat's
 equal on both public families, so the flip costs no measured capability — but
 that is a convenience, not the argument. The before/after measurement for this
 lane is recorded in
-[`docs/plan/status/1703-native-core-retire-batsat.md`](../../plan/status/1703-native-core-retire-batsat.md)
+[`docs/plan/archive/lanes/1703-native-core-retire-batsat.md`](../../plan/archive/lanes/1703-native-core-retire-batsat.md)
 and any regression is reported there and here as a finding, never tuned away or
 hidden.
 

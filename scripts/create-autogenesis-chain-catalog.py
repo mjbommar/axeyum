@@ -61,7 +61,7 @@ def theorem_index(
     ADR-0603 "mirror" fact is deliberately flipped onto an existing
     declaration rather than re-derived (measured 2026-08-29:
     `Int.modEq_add_left`, `Nat.coprime_of_lt_prime`, `Nat.descFactorial_of_lt`
-    -- see docs/plan/status/284-autogenesis-gate-rot.md), and
+    -- see docs/plan/archive/lanes/284-autogenesis-gate-rot.md), and
     `check-fact-depends-derived.py` already accepts this shape
     (`theorem_to_fact.setdefault`, first fact wins) rather than treating it as
     an anomaly. This mirrors that acceptance, with one refinement: a fact

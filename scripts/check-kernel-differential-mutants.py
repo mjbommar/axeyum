@@ -14,7 +14,7 @@ ADR-0717 S5 subsystem -- so a lane cannot silently delete an inconvenient
 entry, claim a KILLED without naming what it killed, or let the artifact
 drift out of the shape the roadmap's "ratchet on killed critical mutants"
 exit criterion expects. This is the ratchet; the measurement itself is
-`docs/plan/status/390-l0-s5-kernel-differential.md`'s recorded procedure.
+`docs/plan/archive/lanes/390-l0-s5-kernel-differential.md`'s recorded procedure.
 
 Guards, named the same way as check-kernel-differential.py's:
   M1  the artifact file exists and parses as JSON

@@ -56,7 +56,7 @@
 //! carrier for it) — none of that is attempted here. This file only builds
 //! the COUNTING half; the second supplementary law still needs the
 //! connecting theorem plus a `p mod 8` case split on top of it. See
-//! `docs/plan/status/gauss-lemma-countrange.md` for exact sizing.
+//! `docs/plan/archive/lanes/gauss-lemma-countrange.md` for exact sizing.
 
 use super::NatPrelude;
 use super::fermat_number_mirrors::pos_of_lt_add_left;

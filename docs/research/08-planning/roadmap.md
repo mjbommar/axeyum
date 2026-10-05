@@ -1,5 +1,7 @@
 # Roadmap
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../../plan/global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../../plan/CATALOG.md). Phases 0-7 have landed; this is the foundation roadmap and phase record. The live queue is PLAN.md.
+
 Status: **foundation phases (0–7) landed**; active execution is ordered in the
 single root project tracker.
 Last updated: 2026-08-30

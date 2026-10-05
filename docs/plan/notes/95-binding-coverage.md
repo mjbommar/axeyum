@@ -1,6 +1,6 @@
 # Notes: 95-binding-coverage
 
-Detail moved out of [`../status/95-binding-coverage.md`](../status/95-binding-coverage.md) so the
+Detail moved out of [`../status/95-binding-coverage.md`](../archive/lanes/95-binding-coverage.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

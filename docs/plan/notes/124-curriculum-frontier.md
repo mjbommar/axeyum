@@ -1,6 +1,6 @@
 # Notes: 124-curriculum-frontier
 
-Detail moved out of [`../status/124-curriculum-frontier.md`](../status/124-curriculum-frontier.md) so the
+Detail moved out of [`../status/124-curriculum-frontier.md`](../archive/lanes/124-curriculum-frontier.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

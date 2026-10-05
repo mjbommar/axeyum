@@ -1,5 +1,7 @@
 # Axeyum overall vision and status review
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](plan/global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](plan/CATALOG.md). This was the 2026-08-26 overall vision and status review.
+
 Date: 2026-08-26  
 Repository checkpoint: `0fb4d6334` (review lane after rebase; current mutable views include concurrent mathematics through `93c34cd4a`)
 

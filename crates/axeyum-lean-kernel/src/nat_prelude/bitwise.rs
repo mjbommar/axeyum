@@ -617,7 +617,7 @@ pub(super) fn declare_bitwise_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
 // SYMBOLIC `f` known only to be commutative (`hf : ∀ a b, f a b = f b a`).
 //
 // A Python simulation (recorded in
-// `docs/plan/status/256-nat-bitwise-comm.md`) confirmed the prediction this
+// `docs/plan/archive/lanes/256-nat-bitwise-comm.md`) confirmed the prediction this
 // module's own agreement work implies: the UNCONDITIONAL form
 // `bitwiseAux f fuel m n = bitwiseAux f fuel n m` is FALSE when `fuel` is
 // insufficient and `f false true = true` (`f = or`, `f = xor`) — e.g.

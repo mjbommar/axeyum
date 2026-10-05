@@ -273,4 +273,4 @@ introducing any of the 19 drawn names, with a live positive control
   reasoning above in the `FAMILY_MODULES` comment block.
 * `artifacts/autogenesis/holdout-adjacency-review-v1.json` — the two R11
   disclosure reviews, written before the draw.
-* `docs/plan/status/423-nursery-draw-19c.md` — the before/after gate table.
+* `docs/plan/archive/lanes/423-nursery-draw-19c.md` — the before/after gate table.

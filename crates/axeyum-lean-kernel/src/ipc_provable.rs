@@ -1,5 +1,5 @@
 //! **Slice 2 of the decomposition recorded in `ipc_heyting.rs`'s module
-//! docs** (and in `docs/plan/status/273-logic-excluded-middle.md`): an
+//! docs** (and in `docs/plan/archive/lanes/273-logic-excluded-middle.md`): an
 //! inductive `Provable : FormulaList -> Formula -> Prop` relation encoding
 //! intuitionistic propositional natural deduction, over `ipc_heyting.rs`'s
 //! `Formula` AST.

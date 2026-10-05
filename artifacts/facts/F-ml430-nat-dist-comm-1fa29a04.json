@@ -62,7 +62,7 @@
       }
     ]
   },
-  "notes": "Proved in Axeyum: `Nat.dist_comm` (`nat_prelude/dist.rs`), declared alongside `Nat.dist` by the `nat-dist-nth` lane (2026-08-30, `docs/plan/status/348-nat-dist-nth.md`) but not yet reconciled to this ml430 mirror. `Nat.dist n m := add (sub n m) (sub m n)` over our own `Nat.sub`/`Nat.add` -- the SAME definition Mathlib.Data.Nat.Dist states, not merely a construction that agrees with it pointwise -- so flipping this mirror is honest under the mirror-flip criterion in CLAUDE.md. This lane confirmed the rendered type matches `formal.statement` and closed the fact by evidence only; no new proof was written.",
+  "notes": "Proved in Axeyum: `Nat.dist_comm` (`nat_prelude/dist.rs`), declared alongside `Nat.dist` by the `nat-dist-nth` lane (2026-08-30, `docs/plan/archive/lanes/348-nat-dist-nth.md`) but not yet reconciled to this ml430 mirror. `Nat.dist n m := add (sub n m) (sub m n)` over our own `Nat.sub`/`Nat.add` -- the SAME definition Mathlib.Data.Nat.Dist states, not merely a construction that agrees with it pointwise -- so flipping this mirror is honest under the mirror-flip criterion in CLAUDE.md. This lane confirmed the rendered type matches `formal.statement` and closed the fact by evidence only; no new proof was written.",
   "proof_route": "kernel-lean",
   "axiom_footprint": []
 }

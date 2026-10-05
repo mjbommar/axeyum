@@ -60,7 +60,7 @@
   "concept_refs": [],
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "lane `agent-creal-lean-divergence`, crates/axeyum-lean-kernel/tests/real_lean_creal_carrier_kernel_replay.rs; CORRECTED and re-established 2026-08-30 by lane `carrier-replay-overclaim` after L0/S4's census (docs/plan/status/386-l0-s4-independent-replay.md) measured 73 declarations Lean's kernel will not admit as declared",
+    "established_by": "lane `agent-creal-lean-divergence`, crates/axeyum-lean-kernel/tests/real_lean_creal_carrier_kernel_replay.rs; CORRECTED and re-established 2026-08-30 by lane `carrier-replay-overclaim` after L0/S4's census (docs/plan/archive/lanes/386-l0-s4-independent-replay.md) measured 73 declarations Lean's kernel will not admit as declared",
     "source": "Measured while investigating a handover claim that this kernel admits four `CReal` declarations Lean's kernel rejects. It does not: Lean's ELABORATOR refuses them and Lean's kernel accepts them, which is ADR-0517. The whole-carrier replay exists because the refusal had gone unnoticed -- emission is reachability driven, so 122 of the carrier's declarations had never been handed to any Lean.",
     "correction": "2026-08-30. The statement was narrowed from the whole carrier to the representable population, and the residue was made a typed, counted, named boundary (ADR-0775). The previous statement is preserved verbatim in `notes` below, recorded as an amendment in `artifacts/ontology/settled-fact-statement-pins.json`, and kept EXECUTABLE as `the_superseded_whole_carrier_claim_is_refuted_by_the_same_binary` -- so the claim this fact used to make now has a test that fails if it ever becomes true again."
   },

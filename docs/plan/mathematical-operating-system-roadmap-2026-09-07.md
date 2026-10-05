@@ -1,5 +1,7 @@
 # Mathematical operating system: applicability and evidence roadmap
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](CATALOG.md). This was the 2026-09-07 applicability and evidence roadmap for the mathematical operating system.
+
 Date: 2026-09-07
 Status: proposed extension within the accepted L0–L4 programme; no new dispatch authority
 Evidence baseline: `a103b3db37ca976e0cc68acbe28031033ce0c4b2`
@@ -64,7 +66,7 @@ the durable engine requirement is to evaluate the specific lesson above.
   establishes distinct statement families. Its early boundary/refutation claims
   were corrected in subsequent audits. A checked reduction to a sign principle
   must not be reported as an internal proof of that principle's independence.
-- The [current graph dispatcher scope](status/l2-g5-graph-dispatcher.md) is
+- The [current graph dispatcher scope](archive/lanes/l2-g5-graph-dispatcher.md) is
   authoritative only for the measured `mathlib-group-defs-v1` population and
   language-infrastructure/proof-producers queues. Analysis remains a new,
   advisory population until its own measured authorization.

@@ -21,7 +21,7 @@
 //!
 //! The third ingredient — choosing `c`, `d` in `(−m/2, m/2]` and bounding
 //! `m' = (c²+d²)/m < m` — is **not** here; see the "What is not here" section
-//! and `docs/plan/status/two-squares-2026-09-05.md` for the measured size.
+//! and `docs/plan/archive/lanes/two-squares-2026-09-05.md` for the measured size.
 //!
 //! ## Why the identity goes through the ring producer
 //!

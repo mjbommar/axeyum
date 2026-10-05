@@ -1,6 +1,6 @@
 # Notes: 100-ledger-freshness
 
-Detail moved out of [`../status/100-ledger-freshness.md`](../status/100-ledger-freshness.md) so the
+Detail moved out of [`../status/100-ledger-freshness.md`](../archive/lanes/100-ledger-freshness.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

@@ -515,7 +515,7 @@ pub(super) fn declare_emod_eq_zero_iff_dvd(d: &mut IntDev<'_>) -> Result<(), Ker
 // `Int.ediv_emod_unique_general` rather than `Int.ediv_emod_unique`.
 // `Int.emod_nonneg` was ALREADY sign-general (`b ≠ 0`, not `0 < b`), so it
 // carries over unchanged. This is the fourth lemma the `int-emod-negative`
-// lane's handoff (`docs/plan/status/242-int-emod-negative.md`) named as
+// lane's handoff (`docs/plan/archive/lanes/242-int-emod-negative.md`) named as
 // constructible from its two landed pieces but did not itself build.
 
 /// `Int.emod_eq_zero_iff_dvd_general : ∀ a b, Not (Eq Int b zero) →

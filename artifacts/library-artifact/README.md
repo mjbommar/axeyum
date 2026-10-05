@@ -187,7 +187,7 @@ never the tracked file — deletes each guard's code one at a time and asserts
 that **exactly** the matching mutation's test flips from fail to pass while
 the other four stay correctly failing. The guard -> test kill table is
 printed by that script and reproduced in
-`docs/plan/status/l1-c0-artifact-contract.md`.
+`docs/plan/archive/lanes/l1-c0-artifact-contract.md`.
 
 ## What this contract does not capture
 

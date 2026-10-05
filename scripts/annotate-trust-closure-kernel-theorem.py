@@ -11,7 +11,7 @@ three (measured 2026-08-31) and count toward `kernel_facts` without counting
 as `subjects` -- the ratio `resolved/kernel_facts` sits at 0.9586 against a
 floor of 0.9579, one bad landing from red.
 
-Investigating those 90 (docs/plan/status/resolve-kernel-subjects.md) found
+Investigating those 90 (docs/plan/archive/lanes/resolve-kernel-subjects.md) found
 they are NOT one population. Three structurally different reasons a fact
 lands here:
 

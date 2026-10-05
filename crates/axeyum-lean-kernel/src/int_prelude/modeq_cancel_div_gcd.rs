@@ -8,7 +8,7 @@
 //!   (`F:ml430-int-modeq-cancel-right-div-gcd-00cd73fa`):
 //!   `0 < m -> a*c ≡ b*c [ZMOD m] -> a ≡ b [ZMOD m / ↑(m.gcd c)]`.
 //!
-//! `int-dvd-mirrors` (`docs/plan/status/335-int-dvd-mirrors.md`) left these
+//! `int-dvd-mirrors` (`docs/plan/archive/lanes/335-int-dvd-mirrors.md`) left these
 //! open, sized as needing "new machinery relating `c*(b-a)` divisibility by
 //! `m` to `(b-a)` divisibility by `m/gcd(m,c)`, built from
 //! `gcd_div_gcd_div_gcd`". `Int.gcd_div_gcd_div_gcd` already existed

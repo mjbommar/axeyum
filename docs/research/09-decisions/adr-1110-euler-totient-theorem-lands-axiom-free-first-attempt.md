@@ -3,7 +3,7 @@
 Status: accepted
 Date: 2026-08-31
 Index-summary: Closes the Fermat -> Euler handoff
-(`docs/plan/status/374-euler-theorem.md`, ADR-1025). `Int.euler_totient_theorem
+(`docs/plan/archive/lanes/374-euler-theorem.md`, ADR-1025). `Int.euler_totient_theorem
 : forall n a, 0 < n -> Coprime a (ofNat n) -> ModEq (ofNat n) (pow a (totient
 n)) one` is admitted by the trusted kernel gate on the first attempt,
 axiom-free, no new induction in the final assembly -- every ingredient
@@ -98,7 +98,7 @@ argument lists hit it nine separate times.
 Euler's totient theorem — the generalization of Fermat's little theorem this
 session's handoff was named for — is now a proved, axiom-free kernel theorem.
 `docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md`
-§2.2 and `docs/plan/status/374-euler-theorem.md`/`euler-theorem-spine.md`
+§2.2 and `docs/plan/archive/lanes/374-euler-theorem.md`/`euler-theorem-spine.md`
 should be read as superseded by this ADR for that entry: nothing remains open
 in the Fermat -> Euler handoff.
 

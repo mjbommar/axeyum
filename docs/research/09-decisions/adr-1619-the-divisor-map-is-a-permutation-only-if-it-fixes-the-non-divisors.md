@@ -204,4 +204,4 @@ Stated precisely so the next lane does not re-derive the obstruction.
   at FULLY DISCHARGED arguments — positivity from `zero_lt_succ`, divisibility
   from `Nat.dvd_mul` at literals — so the kernel really reduces both sides.
 - Mutation table in
-  [`docs/plan/status/1619-arithmetic-functions.md`](../../plan/status/1619-arithmetic-functions.md).
+  [`docs/plan/archive/lanes/1619-arithmetic-functions.md`](../../plan/archive/lanes/1619-arithmetic-functions.md).

@@ -12,7 +12,7 @@ explicitly **scoped ℂ out**, with a finding: nothing in the solver needed it, 
 the only shipped complex arithmetic is exact ℚ(i) in
 `axeyum-cas/src/geometry_certify.rs`, which wants a ring over ℚ rather than over
 ℝ — so "ℚ(i) before ℂ, if either"
-(`docs/plan/status/reals-design.md`).
+(`docs/plan/archive/lanes/reals-design.md`).
 
 That deferral is about *demand*, not about feasibility, and it leaves the
 foundational tower — integers, reals, complex — with its top floor missing.

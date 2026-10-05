@@ -15,7 +15,7 @@ docs/plan/trusted-library-safety-roadmap-2026-08-30.md, section S6:
 This module is a STANDALONE, self-contained transaction engine over a small
 fixture "ledger" directory shape (facts/, receipts/, pins/, graph/,
 dashboards/) that mirrors the real one's write fan-out without touching it —
-see docs/plan/status/l0-s6-credit-transaction.md for why, and for how a later
+see docs/plan/archive/lanes/l0-s6-credit-transaction.md for why, and for how a later
 lane would wire this into the real `artifacts/facts/` flip.
 
 Design (two-phase commit over a plain filesystem, since POSIX gives us no

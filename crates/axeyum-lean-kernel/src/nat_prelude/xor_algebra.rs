@@ -1,14 +1,14 @@
 //! `Nat.eq_of_testBit_eq` — the general "same bits imply the same number"
 //! extensionality lemma, built toward piece 4 of the 4 pieces
-//! `docs/plan/status/260-nat-lt-xor-cases.md` named as blocking
+//! `docs/plan/archive/lanes/260-nat-lt-xor-cases.md` named as blocking
 //! `F:ml430-nat-lt-xor-cases-c43a1e85` (`Nat.xor_assoc`,
 //! `Nat.xor_xor_cancel_left`/`_right`, `Nat.xor_ne_zero_iff`). See
-//! `docs/plan/status/263-nat-testbit-xor.md` for piece 1 (`Nat.testBit_xor`,
-//! landed), `docs/plan/status/264-nat-xor-algebra.md` for the lane that
+//! `docs/plan/archive/lanes/263-nat-testbit-xor.md` for piece 1 (`Nat.testBit_xor`,
+//! landed), `docs/plan/archive/lanes/264-nat-xor-algebra.md` for the lane that
 //! landed `Nat.eq_of_testBit_eq`/`Nat.xor_assoc` and diagnosed the `y <= 1`
-//! restriction below, `docs/plan/status/268-nat-xor-cancel.md` for the
+//! restriction below, `docs/plan/archive/lanes/268-nat-xor-cancel.md` for the
 //! lane that closed `Nat.xor_xor_cancel_left`/`_right` using it, and
-//! `docs/plan/status/270-nat-xor-ne-zero.md` for the lane that closed
+//! `docs/plan/archive/lanes/270-nat-xor-ne-zero.md` for the lane that closed
 //! `Nat.xor_ne_zero_iff` — the last of piece 4's four sub-targets, now ALL
 //! declared in this file. See "`Nat.xor_ne_zero_iff`" below for its route.
 //!
@@ -104,7 +104,7 @@
 //!
 //! - **`Eq (xor a b) 0 → Eq a b`** (the `mpr` side) — does NOT need
 //!   [`declare_xor_xor_cancel_left`]/`_right` at all, confirming
-//!   `docs/plan/status/268-nat-xor-cancel.md`'s handoff: per bit,
+//!   `docs/plan/archive/lanes/268-nat-xor-cancel.md`'s handoff: per bit,
 //!   `Nat.testBit_xor` plus the hypothesis gives `Eq (xor_bit (testBit a i)
 //!   (testBit b i)) 0`, and a NEW per-bit fact
 //!   ([`xor_bit_eq_zero_implies_eq`]) closes it to `Eq (testBit a i)

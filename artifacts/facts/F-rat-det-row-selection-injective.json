@@ -61,7 +61,7 @@
   "provenance": {
     "date": "2026-09-02",
     "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det_mul.rs)",
-    "source": "Lane det-mul-general-n, closing ADR-1440's obligation 2 (the selection lemma) on the way to determinant multiplicativity at symbolic n. Status note: docs/plan/status/det-mul-general-n.md."
+    "source": "Lane det-mul-general-n, closing ADR-1440's obligation 2 (the selection lemma) on the way to determinant multiplicativity at symbolic n. Status note: docs/plan/archive/lanes/det-mul-general-n.md."
   },
   "notes": "WHAT THIS DOES NOT SAY. It carries `InjectiveOn` as a hypothesis, so it is a strictly weaker statement than `F:rat-det-row-selection`, which does not. It is kept as its own fact because it is a different proposition with a different proof: the injective case is the cursor induction, and the non-injective case is a separate, much cheaper argument through `Rat.det_alternating` (`Rat.det_row_selection_of_duplicate`). Both hypotheses are load-bearing on the STATEMENT: dropping `MapsInto` makes it false (ADR-1470's `n = 1`, `g 0 = 5` counterexample), and dropping `InjectiveOn` makes the cursor induction's pigeonhole step unavailable."
 }

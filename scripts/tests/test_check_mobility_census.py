@@ -628,7 +628,7 @@ class ExitStatus(unittest.TestCase):
     #: The staleness the committed census is KNOWN to carry, as of 2026-08-30.
     #: Every frozen statement export names a fact that has since been proved, so
     #: the census has no subject and regenerating it cannot give it one -- see
-    #: `docs/plan/status/323-mobility-census.md`.
+    #: `docs/plan/archive/lanes/323-mobility-census.md`.
     #:
     #: These are violation KINDS, not sentences, and that is deliberate on both
     #: sides. It keeps the test blunt -- deleting any single freshness guard

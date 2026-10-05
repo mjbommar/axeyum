@@ -1664,7 +1664,7 @@ step creal-migrate-consumer-controls python3 -m unittest scripts.tests.test_crea
 # validate-facts.py's summary. docs/autogenesis/289-import-backlog-artifact.md.
 step import-backlog-tests python3 -m unittest scripts.tests.test_gen_import_backlog
 step import-backlog python3 scripts/gen-import-backlog.py --check
-# docs/plan/status/141-ledger-6-backlog.md's own closing paragraph: nobody
+# docs/plan/archive/lanes/141-ledger-6-backlog.md's own closing paragraph: nobody
 # had ever measured the full diff of prelude_theorem_inventory's theorem
 # list against artifacts/facts/'s registered names -- six ledger batches each
 # hand-picked a short list instead. This is that measurement, permanent
@@ -1739,6 +1739,7 @@ step lcg-raw-state python3 scripts/check-lcg-raw-state.py
 step admission-limit-basis python3 scripts/check-admission-limit-basis.py
 step admission-limit-basis-controls ./scripts/tests/test-admission-limit-basis-control.sh
 step plan-authority python3 scripts/check-plan-authority.py
+step plan-authority-tests python3 -m unittest scripts.tests.test_check_plan_authority
 step links         ./scripts/check-links.sh
 # ADR numbers are a shared append point ACROSS CHECKOUTS, which `adr-index`
 # above cannot see (it only reads this working tree): two lanes in two clones
@@ -1946,7 +1947,7 @@ step tock-log2-cache-v3-tests   python3 -m unittest scripts.tests.test_prepare_t
 step tock-log2-cache-v4-tests   python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v4
 step tock-log2-cache-v5-tests   python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v5
 
-# The 2026-08-29 orphan-script audit (docs/plan/status/308-orphan-script-audit.md)
+# The 2026-08-29 orphan-script audit (docs/plan/archive/lanes/308-orphan-script-audit.md)
 # found these three well-formed, general-purpose checks with NO caller anywhere
 # -- not this file, not the justfile, not a hook, not a fact. Each is exactly
 # the "genuinely useful but never wired up" case CLAUDE.md warns is a gate
@@ -2018,7 +2019,7 @@ step infrastructure-frontier-mutations bash scripts/tests/test-infrastructure-fr
 # is RE-VERIFIED (a cited commit must resolve in this repo's object store, a
 # cited ADR file must exist, a cited source file must exist) rather than
 # trusted from the episode's own JSON. Nine guards, kill table in
-# docs/plan/status/l3-d0-effort-taxonomy.md.
+# docs/plan/archive/lanes/l3-d0-effort-taxonomy.md.
 step effort-taxonomy-gen  python3 scripts/gen-effort-taxonomy.py --check
 step effort-taxonomy      python3 scripts/check-effort-taxonomy.py
 step effort-taxonomy-tests python3 scripts/tests/test-effort-taxonomy.py
@@ -2028,7 +2029,7 @@ step effort-taxonomy-tests python3 scripts/tests/test-effort-taxonomy.py
 # Composes three read-only layers (curriculum.toml, infrastructure-frontier,
 # check-dispatchable-frontier.py) and is authoritative only for the exact
 # (population, queue) pair ADR-0865 measured. Ten guards, kill table in
-# docs/plan/status/l2-g5-graph-dispatcher.md.
+# docs/plan/archive/lanes/l2-g5-graph-dispatcher.md.
 step graph-dispatcher-gen       python3 scripts/gen-graph-dispatcher.py --check
 step graph-dispatcher           python3 scripts/check-graph-dispatcher.py
 step graph-dispatcher-tests     python3 scripts/tests/test-graph-dispatcher.py

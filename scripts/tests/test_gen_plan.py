@@ -8,6 +8,7 @@ requires each deletion to kill a test.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -208,7 +209,17 @@ class CommittedPlanTests(unittest.TestCase):
 
     def test_every_lane_file_contributes_something(self) -> None:
         _, lanes = MODULE.load()
-        self.assertGreater(len(lanes), 1)
+        # Derived from the authority, not a literal: since 2026-10-05 finished
+        # lanes are archived, so the active count is legitimately small (even
+        # zero). What must hold is that the loader sees every tracked lane file.
+        tracked = [
+            line for line in subprocess.run(
+                ["git", "ls-files", "--", "docs/plan/status/*.md"],
+                cwd=ROOT, capture_output=True, text=True, check=True,
+            ).stdout.splitlines()
+            if not line.endswith("/README.md")
+        ]
+        self.assertEqual(len(lanes), len(tracked))
         for entry in lanes:
             self.assertTrue(
                 entry["sections"], f"{entry['path']} contributes no section"

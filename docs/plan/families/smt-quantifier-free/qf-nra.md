@@ -112,7 +112,7 @@ slice; the ratio (59.1%) is reported as-is.
 - Measurement protocol: `scripts/parity-run.sh`
 - Loss census: `bench-results/parity-losses-20260906/README.md`,
   `bench-results/parity-losses-20260906/QF_NRA.census.tsv`
-- Lane status: `docs/plan/status/qf-nra-entry.md`
+- Lane status: `docs/plan/archive/lanes/qf-nra-entry.md`
 
 ## Follow-up: the dominant cause was acted on (lane `nra-admission-bound`, 2026-09-07)
 

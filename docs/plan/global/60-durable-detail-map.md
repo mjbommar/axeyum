@@ -1,24 +1,25 @@
 ## Durable detail map
 
-- **Archived lane status** (43 lanes of the 2026-08-13→15 campaign, each with the
-  next action it left behind): [`docs/plan/archive/README.md`](docs/plan/archive/README.md).
-  `PLAN.md` carries only lanes with work in progress; a finished or cut-off lane
-  keeps its file there verbatim and is restored by moving it back into
-  `docs/plan/status/`.
-- Short public implementation account: [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md)
-- Full plan index: [`docs/plan/README.md`](docs/plan/README.md)
-- Foundation roadmap: [`docs/research/08-planning/roadmap.md`](docs/research/08-planning/roadmap.md)
-- Foundational dependency DAG: [`docs/research/08-planning/foundational-dag.md`](docs/research/08-planning/foundational-dag.md)
-- Open research questions: [`docs/research/08-planning/research-questions.md`](docs/research/08-planning/research-questions.md)
-- ADR index: [`docs/research/09-decisions/README.md`](docs/research/09-decisions/README.md)
-- Capability matrix: [`docs/research/08-planning/capability-matrix.md`](docs/research/08-planning/capability-matrix.md)
-- Scoreboard and parity: [`bench-results/SCOREBOARD.md`](bench-results/SCOREBOARD.md), [`bench-results/PARITY.md`](bench-results/PARITY.md)
-- Proof gaps: [`docs/plan/generated/proof-gap-matrix.md`](docs/plan/generated/proof-gap-matrix.md)
-- SMT-COMP lane: [`docs/plan/smtcomp-full-library-workstream/README.md`](docs/plan/smtcomp-full-library-workstream/README.md)
-- Lean implementation: [`docs/plan/lean-system-implementation-plan-2026-07-21.md`](docs/plan/lean-system-implementation-plan-2026-07-21.md)
-- Library artifact compatibility: [`docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md`](docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md)
-- Graph-directed library construction: [`docs/plan/graph-directed-library-roadmap-2026-08-30.md`](docs/plan/graph-directed-library-roadmap-2026-08-30.md)
-- Trusted theorem-credit safety: [`docs/plan/trusted-library-safety-roadmap-2026-08-30.md`](docs/plan/trusted-library-safety-roadmap-2026-08-30.md)
-- Definition and discovery efficiency: [`docs/plan/definition-discovery-efficiency-roadmap-2026-08-30.md`](docs/plan/definition-discovery-efficiency-roadmap-2026-08-30.md)
-- Exploration proposal: [`docs/plan/exploration-track/README.md`](docs/plan/exploration-track/README.md)
-- CAS pause handoff: [`docs/plan/cas-parity-handoff-2026-07-22.md`](docs/plan/cas-parity-handoff-2026-07-22.md)
+- **History:** [`docs/plan/CATALOG.md`](../CATALOG.md) (every dated plan note, its date, what
+  superseded it); [`docs/plan/archive/`](docs/plan/archive/README.md) (lane files
+  under `lanes/`, the replaced global sections under `global-2026-09-17/`).
+- **Measurements:** [`PARITY.md`](bench-results/PARITY.md) (read the latest
+  entry per division by solver commit), [`SCOREBOARD.md`](bench-results/SCOREBOARD.md),
+  [families](docs/plan/families/README.md),
+  [proof-gap matrix](docs/plan/generated/proof-gap-matrix.md),
+  [capability matrix](docs/research/08-planning/capability-matrix.md).
+- **Foundations:** [roadmap](docs/research/08-planning/roadmap.md),
+  [foundational DAG](docs/research/08-planning/foundational-dag.md),
+  [research questions](docs/research/08-planning/research-questions.md),
+  [ADR index](docs/research/09-decisions/README.md),
+  [2026-08-27 architecture review](docs/research/11-design-review/2026-08-27-architecture-review.md).
+- **Mathematics and Lean:** [math department](docs/math-department/README.md)
+  (chairs, [CAS](docs/math-department/13-computer-algebra.md),
+  [Lean](docs/math-department/14-lean-lang.md)); fact ledger `artifacts/facts/`
+  (`scripts/validate-facts.py`).
+- **Strategy, frozen history:** `docs/refactor-2026-08/`,
+  `docs/mathematics-2026-08/`, [`docs/formalized-math-2026-08/`](docs/formalized-math-2026-08/05-throughput.md)
+  — read for reasoning, not for queue.
+- **Working practice:** [contributor guide](docs/contributor-guide/README.md),
+  [multi-agent operations](docs/contributor-guide/multi-agent-operations.md),
+  public summary [`PROJECT-STATE.md`](docs/PROJECT-STATE.md).

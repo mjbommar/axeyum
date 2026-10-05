@@ -16,7 +16,7 @@ closure"*, and the ADR says plainly that an empty axiom footprint addresses only
 part of it.
 
 The S0 census ([ADR-0746](adr-0746-the-safety-matrix-is-generated-and-gated.md),
-`docs/plan/status/382-l0-safety-matrix.md`) measured how little of the ledger is
+`docs/plan/archive/lanes/382-l0-safety-matrix.md`) measured how little of the ledger is
 protected against that shape. Over 2,117 proved facts:
 
 | protection | facts |

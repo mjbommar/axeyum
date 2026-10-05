@@ -157,4 +157,4 @@ hand examples alone).
   `README.md` beside it — the counts, the controls, the mutants.
 * `scripts/tests/mutation_controls.py` — suites `proptest-box-*` and
   `lcg-raw-state`.
-* `docs/plan/status/ax-proptest.md` — which suites were re-run, with counts.
+* `docs/plan/archive/lanes/ax-proptest.md` — which suites were re-run, with counts.

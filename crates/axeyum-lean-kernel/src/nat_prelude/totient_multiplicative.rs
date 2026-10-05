@@ -16,7 +16,7 @@
 //! ## Why this was worth landing on its own
 //!
 //! `gcd_comm` has been repeatedly flagged as ABSENT from this prelude across
-//! three prior totient triages (`docs/plan/status/287-nat-totient.md`,
+//! three prior totient triages (`docs/plan/archive/lanes/287-nat-totient.md`,
 //! `291-totient-counting.md`, `295-totient-even.md`) and was blocking a
 //! concrete step in `295`'s own `totient_even` plan (the
 //! `gcd (n-k) n = gcd k n`-shaped chain). It turned out to be a three-lemma,
@@ -27,7 +27,7 @@
 //!
 //! It is genuinely needed for the multiplicative-formula plan this file's
 //! sibling handoff doc
-//! (`docs/plan/status/301-totient-multiplicative.md`) describes: totient's
+//! (`docs/plan/archive/lanes/301-totient-multiplicative.md`) describes: totient's
 //! own predicate is `gcd k n` (index first, modulus second — see
 //! `totient.rs`), while the CRT-style mod-invariance step
 //! (`gcd (x mod m) m = gcd x m`, needed to show the residue-pairing map

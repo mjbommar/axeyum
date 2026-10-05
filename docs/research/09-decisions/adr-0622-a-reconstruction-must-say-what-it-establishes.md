@@ -165,5 +165,5 @@ content" indistinguishable — which is the failure being fixed.
 ## Related
 
 - ADR-0601 — three producers, one trust anchor; §2 is the split this refines.
-- `docs/plan/status/332-cas-thales-varignon.md` — the session that found both edges.
-- `docs/plan/status/333-cas-substance-gate.md` — the measurement and this gate.
+- `docs/plan/archive/lanes/332-cas-thales-varignon.md` — the session that found both edges.
+- `docs/plan/archive/lanes/333-cas-substance-gate.md` — the measurement and this gate.

@@ -106,7 +106,7 @@ fn bool_select_bool(
 
 /// `(a+b)+(c+e) = (a+c)+(b+e)`.
 ///
-/// Retired to `crate::ring::nat` (docs/plan/status/460-ring-tactic-1.md): a
+/// Retired to `crate::ring::nat` (docs/plan/archive/lanes/460-ring-tactic-1.md): a
 /// pure ring-rearrangement chain, now searched for and emitted rather than
 /// hand-assembled — one of eight verbatim-duplicated hand proofs of this
 /// exact identity across `nat_prelude` (`binomial.rs`, `div_mod_lemmas.rs`,

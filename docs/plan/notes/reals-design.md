@@ -1,6 +1,6 @@
 # Notes: reals-design
 
-Detail moved out of [`../status/reals-design.md`](../status/reals-design.md) so the
+Detail moved out of [`../status/reals-design.md`](../archive/lanes/reals-design.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

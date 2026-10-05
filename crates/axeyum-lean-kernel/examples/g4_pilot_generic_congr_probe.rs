@@ -6,7 +6,7 @@
 //! (`NatOps::congr`, `congr_nat_to`, `congr_bool_to_nat` x3,
 //! `string_prelude`'s `congr_arg_str`/`congr_append_left`/`congr_append_right`
 //! x4, `characterization::congr_at`) -- see
-//! `docs/plan/status/l2-g4-pilot-clusters.md` for the fresh grep count. This
+//! `docs/plan/archive/lanes/l2-g4-pilot-clusters.md` for the fresh grep count. This
 //! pilot builds a carrier-GENERIC `congr_arg` (explicit `ty`/`level`
 //! parameters instead of a hardcoded `nat_ty()`/`bool_ty()`) using only the
 //! public `Kernel` API, and checks REUSE the strong way: does it produce the

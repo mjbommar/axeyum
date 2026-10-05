@@ -1,6 +1,6 @@
 # Notes: 40-autogenesis-knowledge-overlay
 
-Detail moved out of [`../status/40-autogenesis-knowledge-overlay.md`](../status/40-autogenesis-knowledge-overlay.md) so the
+Detail moved out of [`../status/40-autogenesis-knowledge-overlay.md`](../archive/lanes/40-autogenesis-knowledge-overlay.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

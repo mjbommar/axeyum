@@ -1,6 +1,6 @@
 # Notes: 123-theorem-correspondences
 
-Detail moved out of [`../status/123-theorem-correspondences.md`](../status/123-theorem-correspondences.md) so the
+Detail moved out of [`../status/123-theorem-correspondences.md`](../archive/lanes/123-theorem-correspondences.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

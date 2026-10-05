@@ -1,6 +1,6 @@
 //! L2 phase G4, pilot 1 (category 1: high-degree missing substrate).
 //!
-//! Bounded probe for `docs/plan/status/l2-g4-pilot-clusters.md`: infrastructure
+//! Bounded probe for `docs/plan/archive/lanes/l2-g4-pilot-clusters.md`: infrastructure
 //! frontier row `IF-LANG-dce29ad3f7` (`Semigroup`/`mul_assoc`, over population
 //! `mathlib-group-defs-v1`) argues this kernel cannot STATE a carrier-generic
 //! associativity proposition because it has no bundled `Structure`/typeclass

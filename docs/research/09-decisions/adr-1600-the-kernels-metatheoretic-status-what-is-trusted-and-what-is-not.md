@@ -404,7 +404,7 @@ Of 291 checked mutants this run, 263 were correctly declined by our kernel,
 17 of 17 auxiliary-recursor mutants were discriminated, and exactly this one
 was accepted here and refused by Lean on the wire. This matches, independent
 of it, the account recorded the day the toolchain pin moved in
-`docs/plan/status/495-coordinator-structures-tactics-2026-09-03.md`:
+`docs/plan/archive/lanes/495-coordinator-structures-tactics-2026-09-03.md`:
 `level.max-kind:1322:max-to-imax` rewrites `DecidablePred`'s declared
 `Sort (max u 1)` to `Sort (imax u 1)` on the wire. Our kernel admits it;
 Lean's kernel refuses it **on the wire**, under both 4.30.0 and 4.34.0-rc1,

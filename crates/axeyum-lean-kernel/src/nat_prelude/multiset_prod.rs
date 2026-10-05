@@ -3,7 +3,7 @@
 //!
 //! # What this closes
 //!
-//! `docs/plan/status/nat-multiset.md` hands off exactly one blocker for the
+//! `docs/plan/archive/lanes/nat-multiset.md` hands off exactly one blocker for the
 //! COMPUTED form of prime factorization: `prod (add m₁ m₂) = prod m₁ * prod m₂`,
 //! "a product-regrouping law across three different bounds". The three bounds
 //! are the point — `prod` folds over `bound m`, and `Nat.Multiset.add`'s bound

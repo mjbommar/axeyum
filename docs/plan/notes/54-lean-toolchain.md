@@ -1,6 +1,6 @@
 # Notes: 54-lean-toolchain
 
-Detail moved out of [`../status/54-lean-toolchain.md`](../status/54-lean-toolchain.md) so the
+Detail moved out of [`../status/54-lean-toolchain.md`](../archive/lanes/54-lean-toolchain.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

@@ -8,9 +8,9 @@
 //! - `Int.dvd_gcd_mul_gcd_iff_dvd_mul` (`F:ml430-int-dvd-gcd-mul-gcd-iff-dvd-mul-8ea752a5`):
 //!   `∀ {k n m : ℤ}, k ∣ ↑(k.gcd n) * ↑(k.gcd m) ↔ k ∣ n * m`.
 //!
-//! `docs/plan/status/335-int-dvd-mirrors.md` left these three open, naming the
+//! `docs/plan/archive/lanes/335-int-dvd-mirrors.md` left these three open, naming the
 //! shared blocker: a `Nat`-level distributive law over `gcd`
-//! (`Nat.gcd_mul_right`) that did not exist yet. `docs/plan/status/336-gcd-mul-right.md`
+//! (`Nat.gcd_mul_right`) that did not exist yet. `docs/plan/archive/lanes/336-gcd-mul-right.md`
 //! built it and closed the `Nat` mirrors (`nat_prelude/gcd_mul_right_mirrors.rs`).
 //! This file is the transport, not a re-derivation: no new base algebra, no
 //! new `Int.rec`/`Nat.rec` case split.

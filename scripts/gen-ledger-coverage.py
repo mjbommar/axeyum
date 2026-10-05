@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Measure how far `artifacts/facts/` trails the kernel's own theorem inventory.
 
-WHY THIS EXISTS. `docs/plan/status/141-ledger-6-backlog.md` registered its
+WHY THIS EXISTS. `docs/plan/archive/lanes/141-ledger-6-backlog.md` registered its
 12-fact backlog and then said, explicitly: nobody has run the full diff of
 `prelude_theorem_inventory --include-constructed`'s theorem list against the
 ledger's registered names, and a future lane should -- "report its size as

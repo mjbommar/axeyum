@@ -1,6 +1,6 @@
 //! CAS -> kernel bridge, slice 3: EVT **endpoint exclusion** for
 //! `axeyum-cas`'s `extremum::ExtremumCertificate` — sized by
-//! `docs/plan/status/223-cas-reconstruct.md` as "needing no new kernel
+//! `docs/plan/archive/lanes/223-cas-reconstruct.md` as "needing no new kernel
 //! machinery at all", verified here rather than taken on that write-up's
 //! word.
 //!
@@ -39,7 +39,7 @@
 //! `q := p - p(a)` and `r := p - p(b)` (both computed on the untrusted
 //! producer side, in plain `i128` — if either is wrong the reduced constant
 //! below will not match the asserted bound and `Kernel::add_declaration`
-//! rejects, exactly the guard `docs/plan/status/223-cas-reconstruct.md`
+//! rejects, exactly the guard `docs/plan/archive/lanes/223-cas-reconstruct.md`
 //! mutation-verified for the IVT sibling). Then `p(-1) > p(a)` is the SAME
 //! proposition as `0 < q(-1)`, and `p(-1) > p(b)` as `0 < r(-1)` — so both
 //! reduce to [`cas_ivt_bridge_tests::zero_lt_via_nat_le`], the exact engine
@@ -52,7 +52,7 @@
 //! exactly this reuse, rather than re-derived beside the original — see
 //! `CLAUDE.md`'s note on the cost of two proofs of one fact).
 //!
-//! # Computed by hand, twice (per `docs/plan/status/223-cas-reconstruct.md`'s
+//! # Computed by hand, twice (per `docs/plan/archive/lanes/223-cas-reconstruct.md`'s
 //! own warning that the trusted gate cannot tell a value is wrong)
 //!
 //! `p = x^3 - 6x`: `p(-3) = -27 - 6*(-3) = -27 + 18 = -9`;
@@ -63,7 +63,7 @@
 //! `r(-1) = -1 + 6 + 4 = 9` (`= p(-1) - p(2) = 5 - (-4) = 9`, checks).
 //! Both positive, so `x = -1` beats both endpoints and the maximum on
 //! `[-3, 2]` is interior. These are exactly the constants
-//! `docs/plan/status/223-cas-reconstruct.md` sized (`14`, `9`).
+//! `docs/plan/archive/lanes/223-cas-reconstruct.md` sized (`14`, `9`).
 
 use axeyum_cas::extremum::{ExtremumCertificate, polynomial_extremum};
 use axeyum_ir::Rational;

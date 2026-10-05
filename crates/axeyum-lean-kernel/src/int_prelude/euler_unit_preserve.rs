@@ -1,6 +1,6 @@
 //! `Int.euler_unit_coprime_iff` — the full predicate-preservation step
 //! Euler's theorem needs, closing item 2 of `euler_theorem.rs`'s "what does
-//! NOT land here" list (`docs/plan/status/374-euler-theorem.md` has the same
+//! NOT land here" list (`docs/plan/archive/lanes/374-euler-theorem.md` has the same
 //! handoff in full).
 //!
 //! `Int.euler_unit_coprime` (`euler_totient.rs`) proves only the forward
@@ -53,7 +53,7 @@
 //! hypotheses to the `Nat → Nat` self-map `Int.prodRangeIf_permute`
 //! quantifies over) and 3 (the final product/power assembly) are untouched —
 //! see `euler_theorem.rs`'s module doc and
-//! `docs/plan/status/euler-theorem-spine.md` for the precise remaining gap.
+//! `docs/plan/archive/lanes/euler-theorem-spine.md` for the precise remaining gap.
 
 use super::euler::int_exists_elim;
 use super::euler_totient::coprime_of_modeq_inverse;

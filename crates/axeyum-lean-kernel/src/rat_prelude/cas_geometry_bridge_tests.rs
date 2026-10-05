@@ -147,7 +147,7 @@
 //! sibling fact for it would move the `cas-certificate` ledger's
 //! kernel-reconstructed count without adding one bit of kernel-checked
 //! content — the exact failure this repository's own standing rule warns
-//! against. See `docs/plan/status/332-cas-thales-varignon.md` for the full
+//! against. See `docs/plan/archive/lanes/332-cas-thales-varignon.md` for the full
 //! argument. No `F:varignon-midpoint-parallelogram-kernel-checked` fact
 //! exists, and none should be added on this route.
 

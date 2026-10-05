@@ -314,7 +314,7 @@ def verify_catalog(actual: dict[str, Any], expected: dict[str, Any]) -> None:
 # and, per ADR-0601 ("evidence_checked means re-derives, not portable"), a
 # genuinely proved fact's `formal` is REPLACED wholesale with the kernel's own
 # `render_lean` type (`language` flips "lean4-surface" -> "lean4"), so `formal`
-# is not held invariant either. See docs/plan/status/284-autogenesis-gate-rot.md
+# is not held invariant either. See docs/plan/archive/lanes/284-autogenesis-gate-rot.md
 # for the field-by-field measurement across all 156 currently-settled catalog
 # facts that justified this split: every one of them diverges only in the
 # fields listed above; NONE ever touches the fields checked here.

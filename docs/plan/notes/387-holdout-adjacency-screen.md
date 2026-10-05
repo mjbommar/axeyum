@@ -1,6 +1,6 @@
 # 387 — holdout adjacency screen: every measurement
 
-Detail behind [`../status/387-holdout-adjacency-screen.md`](../status/387-holdout-adjacency-screen.md) and [ADR-0768](../../research/09-decisions/adr-0768-the-adjacency-rule-becomes-r11-and-covers-one-of-three-contamination-shapes.md).
+Detail behind [`../status/387-holdout-adjacency-screen.md`](../archive/lanes/387-holdout-adjacency-screen.md) and [ADR-0768](../../research/09-decisions/adr-0768-the-adjacency-rule-becomes-r11-and-covers-one-of-three-contamination-shapes.md).
 
 ## What it covers, and what it does not
 

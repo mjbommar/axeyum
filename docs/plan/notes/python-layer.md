@@ -1,6 +1,6 @@
 # Notes: python-layer
 
-Detail moved out of [`../status/python-layer.md`](../status/python-layer.md) so the
+Detail moved out of [`../status/python-layer.md`](../archive/lanes/python-layer.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

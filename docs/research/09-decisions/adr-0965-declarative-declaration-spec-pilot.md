@@ -86,7 +86,7 @@ which must stay hand-written Rust reviewed and checked exactly as today.
 - Adding a new pure-definition subsystem this shape covers becomes a spec
   file plus zero new Rust, instead of three separate hand-maintained
   surfaces (struct field, name interning line, dispatch call) — see
-  `docs/plan/status/l3-d1-declaration-spec.md` for the measured reduction
+  `docs/plan/archive/lanes/l3-d1-declaration-spec.md` for the measured reduction
   on the pilot.
 - The interpreter's expression DSL is deliberately narrow (covers exactly
   what the pilot subsystem needs: arrow types, non-dependent lambdas,

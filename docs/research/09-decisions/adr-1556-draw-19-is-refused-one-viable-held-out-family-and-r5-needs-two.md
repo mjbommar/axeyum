@@ -240,7 +240,7 @@ draw-10 block, states:
 > adjacent to the TRAIN family `integer-modular-equivalence`, and it is not
 > worth a mild leak to buy slack.
 
-It is restated in ADR-0645 and in `docs/plan/status/325-nursery-draw.md`. It is
+It is restated in ADR-0645 and in `docs/plan/archive/lanes/325-nursery-draw.md`. It is
 **not** a row in `holdout-adjacency-review-v1.json`, so `barred_modules` cannot
 reach it, and both modules are in all four of today's viable held-out tens —
 they are precisely what makes the one surviving family survive. This is the

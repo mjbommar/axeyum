@@ -1,6 +1,6 @@
 # Notes: 62-creal-reconstruct
 
-Detail moved out of [`../status/62-creal-reconstruct.md`](../status/62-creal-reconstruct.md) so the
+Detail moved out of [`../status/62-creal-reconstruct.md`](../archive/lanes/62-creal-reconstruct.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

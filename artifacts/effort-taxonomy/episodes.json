@@ -1,7 +1,7 @@
 [
   {
     "id": "autogenesis-gate-rot",
-    "source": "docs/plan/status/284-autogenesis-gate-rot.md",
+    "source": "docs/plan/archive/lanes/284-autogenesis-gate-rot.md",
     "lane": "autogenesis-gate-rot",
     "primary_category": "infrastructure_maintenance",
     "secondary_categories": [],
@@ -13,7 +13,7 @@
   },
   {
     "id": "inventory-gate-rot",
-    "source": "docs/plan/status/285-inventory-gate-rot.md",
+    "source": "docs/plan/archive/lanes/285-inventory-gate-rot.md",
     "lane": "inventory-gate-rot",
     "primary_category": "infrastructure_maintenance",
     "secondary_categories": [],
@@ -25,7 +25,7 @@
   },
   {
     "id": "nat-lcm-gcd",
-    "source": "docs/plan/status/286-nat-lcm-gcd.md",
+    "source": "docs/plan/archive/lanes/286-nat-lcm-gcd.md",
     "lane": "nat-lcm-gcd",
     "primary_category": "proof_assembly",
     "secondary_categories": ["retrieval"],
@@ -37,7 +37,7 @@
   },
   {
     "id": "diophantine-blowup",
-    "source": "docs/plan/status/289-diophantine-blowup.md",
+    "source": "docs/plan/archive/lanes/289-diophantine-blowup.md",
     "lane": "diophantine-blowup",
     "primary_category": "kernel_debugging",
     "secondary_categories": [],
@@ -49,7 +49,7 @@
   },
   {
     "id": "nat-stragglers",
-    "source": "docs/plan/status/293-nat-stragglers.md",
+    "source": "docs/plan/archive/lanes/293-nat-stragglers.md",
     "lane": "nat-stragglers",
     "primary_category": "proof_assembly",
     "secondary_categories": [],
@@ -61,7 +61,7 @@
   },
   {
     "id": "mirror-statement-repair",
-    "source": "docs/plan/status/302-mirror-statement-repair.md",
+    "source": "docs/plan/archive/lanes/302-mirror-statement-repair.md",
     "lane": "mirror-statement-repair",
     "primary_category": "statement_repair",
     "secondary_categories": ["safety_evidence"],
@@ -73,7 +73,7 @@
   },
   {
     "id": "already-proved-sweep",
-    "source": "docs/plan/status/310-already-proved-sweep.md",
+    "source": "docs/plan/archive/lanes/310-already-proved-sweep.md",
     "lane": "already-proved-sweep",
     "primary_category": "retrieval",
     "secondary_categories": [],
@@ -85,7 +85,7 @@
   },
   {
     "id": "holdout-amendment",
-    "source": "docs/plan/status/319-holdout-amendment.md",
+    "source": "docs/plan/archive/lanes/319-holdout-amendment.md",
     "lane": "holdout-amendment",
     "primary_category": "safety_evidence",
     "secondary_categories": [],
@@ -97,7 +97,7 @@
   },
   {
     "id": "nat-dist-nth",
-    "source": "docs/plan/status/348-nat-dist-nth.md",
+    "source": "docs/plan/archive/lanes/348-nat-dist-nth.md",
     "lane": "nat-dist-nth",
     "primary_category": "missing_definitions",
     "secondary_categories": ["proof_assembly"],
@@ -109,7 +109,7 @@
   },
   {
     "id": "control-registration-hyphen",
-    "source": "docs/plan/status/367-control-registration-hyphen.md",
+    "source": "docs/plan/archive/lanes/367-control-registration-hyphen.md",
     "lane": "control-registration-hyphen",
     "primary_category": "infrastructure_maintenance",
     "secondary_categories": ["kernel_debugging"],
@@ -121,7 +121,7 @@
   },
   {
     "id": "l0-s1-statement-identity",
-    "source": "docs/plan/status/384-l0-s1-statement-identity.md",
+    "source": "docs/plan/archive/lanes/384-l0-s1-statement-identity.md",
     "lane": "l0-s1-statement-identity",
     "primary_category": "safety_evidence",
     "secondary_categories": [],
@@ -133,7 +133,7 @@
   },
   {
     "id": "l0-s3-semantic-controls",
-    "source": "docs/plan/status/385-l0-s3-semantic-controls.md",
+    "source": "docs/plan/archive/lanes/385-l0-s3-semantic-controls.md",
     "lane": "l0-s3-semantic-controls",
     "primary_category": "semantic_falsification",
     "secondary_categories": [],
@@ -145,7 +145,7 @@
   },
   {
     "id": "l0-s5-kernel-differential",
-    "source": "docs/plan/status/390-l0-s5-kernel-differential.md",
+    "source": "docs/plan/archive/lanes/390-l0-s5-kernel-differential.md",
     "lane": "l0-s5-kernel-differential",
     "primary_category": "kernel_debugging",
     "secondary_categories": ["safety_evidence"],
@@ -157,7 +157,7 @@
   },
   {
     "id": "nursery-partition-leak",
-    "source": "docs/plan/status/nursery-partition-leak.md",
+    "source": "docs/plan/archive/lanes/nursery-partition-leak.md",
     "lane": "nursery-partition-leak",
     "primary_category": "safety_evidence",
     "secondary_categories": [],
@@ -169,7 +169,7 @@
   },
   {
     "id": "kernel-mutant-survivors",
-    "source": "docs/plan/status/kernel-mutant-survivors.md",
+    "source": "docs/plan/archive/lanes/kernel-mutant-survivors.md",
     "lane": "kernel-mutant-survivors",
     "primary_category": "kernel_debugging",
     "secondary_categories": [],
@@ -181,7 +181,7 @@
   },
   {
     "id": "blocked-mirror-divergences",
-    "source": "docs/plan/status/blocked-mirror-divergences.md",
+    "source": "docs/plan/archive/lanes/blocked-mirror-divergences.md",
     "lane": "blocked-mirror-divergences",
     "primary_category": "proof_assembly",
     "secondary_categories": ["retrieval", "statement_repair"],
@@ -193,7 +193,7 @@
   },
   {
     "id": "ledger-duplicate-propositions",
-    "source": "docs/plan/status/ledger-duplicate-propositions.md",
+    "source": "docs/plan/archive/lanes/ledger-duplicate-propositions.md",
     "lane": "ledger-duplicate-propositions",
     "primary_category": "safety_evidence",
     "secondary_categories": [],
@@ -205,7 +205,7 @@
   },
   {
     "id": "l1-g2-join-axeyum-state",
-    "source": "docs/plan/status/l1-g2-join-axeyum-state.md",
+    "source": "docs/plan/archive/lanes/l1-g2-join-axeyum-state.md",
     "lane": "l1-g2-join-axeyum-state",
     "primary_category": "integration",
     "secondary_categories": [],
@@ -217,7 +217,7 @@
   },
   {
     "id": "bridge-elision",
-    "source": "docs/plan/status/342-bridge-elision.md",
+    "source": "docs/plan/archive/lanes/342-bridge-elision.md",
     "lane": "bridge-elision",
     "primary_category": "safety_evidence",
     "secondary_categories": [],
@@ -229,7 +229,7 @@
   },
   {
     "id": "totient-mul",
-    "source": "docs/plan/status/320-totient-bijection.md",
+    "source": "docs/plan/archive/lanes/320-totient-bijection.md",
     "lane": "totient-mul",
     "primary_category": "retrieval",
     "secondary_categories": ["proof_assembly"],
@@ -241,7 +241,7 @@
   },
   {
     "id": "archive-provenance",
-    "source": "docs/plan/status/328-archive-provenance.md",
+    "source": "docs/plan/archive/lanes/328-archive-provenance.md",
     "lane": "archive-provenance",
     "primary_category": "infrastructure_maintenance",
     "secondary_categories": [],
@@ -253,7 +253,7 @@
   },
   {
     "id": "vocabulary-drift",
-    "source": "docs/plan/status/340-vocabulary-drift.md",
+    "source": "docs/plan/archive/lanes/340-vocabulary-drift.md",
     "lane": "vocabulary-drift",
     "primary_category": "safety_evidence",
     "secondary_categories": [],
@@ -265,7 +265,7 @@
   },
   {
     "id": "l1-c0-artifact-contract",
-    "source": "docs/plan/status/l1-c0-artifact-contract.md",
+    "source": "docs/plan/archive/lanes/l1-c0-artifact-contract.md",
     "lane": "l1-c0-artifact-contract",
     "primary_category": "integration",
     "secondary_categories": [],
@@ -277,7 +277,7 @@
   },
   {
     "id": "safety-matrix-semantics",
-    "source": "docs/plan/status/safety-matrix-semantics.md",
+    "source": "docs/plan/archive/lanes/safety-matrix-semantics.md",
     "lane": "safety-matrix-semantics",
     "primary_category": "safety_evidence",
     "secondary_categories": [],
@@ -289,7 +289,7 @@
   },
   {
     "id": "ivt-claim-correction",
-    "source": "docs/plan/status/366-ivt-claim-correction.md",
+    "source": "docs/plan/archive/lanes/366-ivt-claim-correction.md",
     "lane": "ivt-claim-correction",
     "primary_category": "safety_evidence",
     "secondary_categories": [],
@@ -301,7 +301,7 @@
   },
   {
     "id": "session-audit",
-    "source": "docs/plan/status/363-session-audit.md",
+    "source": "docs/plan/archive/lanes/363-session-audit.md",
     "lane": "session-audit",
     "primary_category": "safety_evidence",
     "secondary_categories": [],
@@ -313,7 +313,7 @@
   },
   {
     "id": "s6-wire-real-ledger",
-    "source": "docs/plan/status/s6-wire-real-ledger.md",
+    "source": "docs/plan/archive/lanes/s6-wire-real-ledger.md",
     "lane": "s6-wire-real-ledger",
     "primary_category": "integration",
     "secondary_categories": [],
@@ -325,7 +325,7 @@
   },
   {
     "id": "lnp-implies-em",
-    "source": "docs/plan/status/373-lnp-implies-em.md",
+    "source": "docs/plan/archive/lanes/373-lnp-implies-em.md",
     "lane": "lnp-implies-em",
     "primary_category": "proof_assembly",
     "secondary_categories": [],
@@ -337,7 +337,7 @@
   },
   {
     "id": "l1-g1-declaration-graph",
-    "source": "docs/plan/status/l1-g1-declaration-graph.md",
+    "source": "docs/plan/archive/lanes/l1-g1-declaration-graph.md",
     "lane": "l1-g1-declaration-graph",
     "primary_category": "integration",
     "secondary_categories": [],
@@ -349,7 +349,7 @@
   },
   {
     "id": "l0-s6-credit-transaction",
-    "source": "docs/plan/status/l0-s6-credit-transaction.md",
+    "source": "docs/plan/archive/lanes/l0-s6-credit-transaction.md",
     "lane": "l0-s6-credit-transaction",
     "primary_category": "safety_evidence",
     "secondary_categories": [],
@@ -361,7 +361,7 @@
   },
   {
     "id": "lean-attestation-s5",
-    "source": "docs/plan/status/305-lean-attestation-s5.md",
+    "source": "docs/plan/archive/lanes/305-lean-attestation-s5.md",
     "lane": "lean-attestation-s5",
     "primary_category": "safety_evidence",
     "secondary_categories": [],

@@ -345,7 +345,7 @@ fn lean4_ledger_round_trips_against_the_kernel_body() {
     // kernel, which several fragments -- imported-route facts spelled in
     // Mathlib's own names, and package-level facts with no single subject --
     // structurally cannot satisfy). Measured 2026-09-05; see
-    // docs/plan/status/lean-statement-reader.md and ADR-1680 for the
+    // docs/plan/archive/lanes/lean-statement-reader.md and ADR-1680 for the
     // per-fragment table this floor was set from.
     assert!(
         totals.roundtrip_ok >= 1_850,

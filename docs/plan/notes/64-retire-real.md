@@ -1,6 +1,6 @@
 # agent-retire-real — the last 30 axioms: what moved, what did not, and why
 
-Detail behind [`docs/plan/status/64-retire-real.md`](../status/64-retire-real.md).
+Detail behind [`docs/plan/archive/lanes/64-retire-real.md`](../archive/lanes/64-retire-real.md).
 The decision is [ADR-0509](../../research/09-decisions/adr-0509-the-trusted-surface-is-measured-as-reached-not-only-declared.md);
 the measurement is `F:shipped-front-door-reaches-no-real-axiom`.
 

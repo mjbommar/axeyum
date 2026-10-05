@@ -1332,7 +1332,7 @@ mod tests {
 
     #[test]
     fn handelman_numerator_1_6e57_is_exact() {
-        // docs/plan/status/111-nra-handelman-cert.md: the exact derivation needs
+        // docs/plan/archive/lanes/111-nra-handelman-cert.md: the exact derivation needs
         // a numerator around 1.6e57, which no i128 product can hold.
         let numerator = BigInt::from(16u32) * ten_pow(56);
         let target =

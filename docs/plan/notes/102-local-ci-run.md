@@ -1,6 +1,6 @@
 # Notes: local-ci-run
 
-Detail behind [`../status/102-local-ci-run.md`](../status/102-local-ci-run.md).
+Detail behind [`../status/102-local-ci-run.md`](../archive/lanes/102-local-ci-run.md).
 
 ## The record
 

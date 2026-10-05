@@ -1,6 +1,6 @@
 # Notes: 98-evidence-certification
 
-Detail moved out of [`../status/98-evidence-certification.md`](../status/98-evidence-certification.md) so the
+Detail moved out of [`../status/98-evidence-certification.md`](../archive/lanes/98-evidence-certification.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

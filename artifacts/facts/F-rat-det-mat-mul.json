@@ -33,7 +33,7 @@
   "provenance": {
     "date": "2026-09-02",
     "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/det_mul.rs)",
-    "source": "Lane det-mul-2, closing ADR-1440's obligation 1 and with it determinant multiplicativity at symbolic n. Decision recorded in ADR-1543. Status note: docs/plan/status/det-mul-2.md."
+    "source": "Lane det-mul-2, closing ADR-1440's obligation 1 and with it determinant multiplicativity at symbolic n. Decision recorded in ADR-1543. Status note: docs/plan/archive/lanes/det-mul-2.md."
   },
   "notes": "WHAT THIS DOES NOT SAY. It says nothing about `Rat.det` agreeing with any other notion of determinant beyond what `Rat.det_eq_det2`/`Rat.det_eq_det3` already establish, and nothing about invertibility, rank, or the Cauchy-Binet formula for NON-square products (`Rat.matMul A B k` is used here only at `k = n`, the square case). The `n = 0` leg is included and is trivial -- `det _ 0` reduces to `Rat.one` on both sides. And it is a statement over the CONSTRUCTED rationals (`Rat`), not over `AxReal`: no ordered-field axiom is reached, and the axiom footprint printed by the checker is empty."
 }

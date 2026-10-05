@@ -237,7 +237,7 @@ and is the one command a referee should be pointed at.
   fixed here, since they are other checkers' guards.
 * Four unqualified sentences remain in `docs/math-department/`, which another
   session owns and was actively rewriting on the day this landed. They are
-  listed in `docs/plan/status/ledger-coverage-2026-09-06.md` with line numbers
+  listed in `docs/plan/archive/lanes/ledger-coverage-2026-09-06.md` with line numbers
   and suggested replacements, for that owner to apply.
 
 ## Mutation table — RUN, not predicted

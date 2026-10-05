@@ -409,7 +409,7 @@ pub(crate) fn log_terms(p_bar: &[Rational], q_bar: &[Rational]) -> Option<Vec<(R
 /// callers as a decline, never as acceptance).
 ///
 /// Not yet wired into `lib.rs`'s `integrate_rational` (out of this module's
-/// scope — see `docs/plan/status/163-ratint.md`); exercised directly by this
+/// scope — see `docs/plan/archive/lanes/163-ratint.md`); exercised directly by this
 /// module's own test suite, hence the explicit `dead_code` allow.
 #[cfg_attr(
     not(test),
@@ -510,7 +510,7 @@ pub(crate) fn verify_horowitz(
 /// guard passes, `None` only on internal overflow (never accepted).
 ///
 /// Not yet wired into `lib.rs`'s `integrate_log_part` (out of this module's
-/// scope — see `docs/plan/status/163-ratint.md`); exercised directly by this
+/// scope — see `docs/plan/archive/lanes/163-ratint.md`); exercised directly by this
 /// module's own test suite, hence the explicit `dead_code` allow.
 #[cfg_attr(
     not(test),

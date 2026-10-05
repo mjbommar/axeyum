@@ -74,7 +74,7 @@
   "provenance": {
     "date": "2026-08-30",
     "established_by": "axeyum-lean-kernel nat_prelude::totient_mul (totient-mul-finish lane)",
-    "source": "the remaining piece named by docs/plan/status/344-countrange-bijection.md; statement authored here",
+    "source": "the remaining piece named by docs/plan/archive/lanes/344-countrange-bijection.md; statement authored here",
     "prior_art": [
       {
         "who": "Sun Tzu / Qin Jiushao",

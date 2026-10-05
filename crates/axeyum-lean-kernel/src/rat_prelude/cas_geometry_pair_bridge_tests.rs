@@ -1,6 +1,6 @@
 //! CAS -> kernel bridge: `centroid-divides-medians` and
 //! `parallelogram-diagonals-bisect`, the two `cas-internal` geometry facts
-//! `docs/plan/status/322-cas-partial-fractions.md` named as the cheapest
+//! `docs/plan/archive/lanes/322-cas-partial-fractions.md` named as the cheapest
 //! remaining targets, on the claim that
 //! [`super::cas_partial_fractions_bridge_tests::prove_poly_combination_rat`]
 //! is "already generic enough to cover them ... they just need a

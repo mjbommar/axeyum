@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fail-closed controls for `fact-frontier.py`'s kernel declaration coverage
-check (docs/plan/status/202-frontier-split.md).
+check (docs/plan/archive/lanes/202-frontier-split.md).
 
 The deficiency this guards: `fact-frontier.py` used to print "proof route
 only -- needs a kernel proof" for BOTH a fact whose statement is expressible

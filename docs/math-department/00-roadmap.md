@@ -1,5 +1,7 @@
 # 00 — The roadmap
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../plan/global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../plan/CATALOG.md). Its status board was last reconciled 2026-09-04; the 2026-09-06 five landed (ADRs 1672-1679).
+
 A top-down synthesis of the twelve reviewers' Next Five lists into one ordered
 programme, with a live status board and a history log.
 

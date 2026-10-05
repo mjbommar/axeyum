@@ -1,5 +1,5 @@
 //! **Slice 3 of the decomposition recorded in `ipc_heyting.rs`'s module docs**
-//! (and in `docs/plan/status/273-logic-excluded-middle.md`): a generic
+//! (and in `docs/plan/archive/lanes/273-logic-excluded-middle.md`): a generic
 //! evaluator `eval : Formula -> (Nat -> Nat) -> Nat`, built as a genuine
 //! [`crate::Kernel::add_recursive_datatype_family`]-generated `Formula.rec`
 //! application (motive `fun _ => (Nat -> Nat) -> Nat`) rather than the

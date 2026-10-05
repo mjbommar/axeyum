@@ -1,8 +1,8 @@
 //! `Int.euler_totient_theorem : ∀ n a, 0 < n → Coprime a (ofNat n) →
 //! ModEq (ofNat n) (pow a (totient n)) one` — Euler's totient theorem, the
 //! final assembly of the Fermat -> Euler handoff
-//! (`docs/plan/status/374-euler-theorem.md`,
-//! `docs/plan/status/euler-theorem-spine.md`). Every ingredient item 3
+//! (`docs/plan/archive/lanes/374-euler-theorem.md`,
+//! `docs/plan/archive/lanes/euler-theorem-spine.md`). Every ingredient item 3
 //! needed is landed elsewhere (`euler_theorem.rs`, `euler_unit_range.rs`,
 //! `euler_unit_preserve.rs`, `euler_prod_pow.rs`, `euler_prod_coprime.rs`,
 //! `euler_prod_factor.rs`, `euler_prod_modeq.rs`); this file wires them into

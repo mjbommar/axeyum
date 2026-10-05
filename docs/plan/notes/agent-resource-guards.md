@@ -1,6 +1,6 @@
 # Notes: agent-resource-guards
 
-Detail moved out of [`../status/agent-resource-guards.md`](../status/agent-resource-guards.md) so the
+Detail moved out of [`../status/agent-resource-guards.md`](../archive/lanes/agent-resource-guards.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

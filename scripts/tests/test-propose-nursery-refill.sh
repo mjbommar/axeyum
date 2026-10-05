@@ -120,7 +120,7 @@ PY
 # do with a spurious guard. `scripts/tests/test-dispatchable-frontier.sh` hit
 # the identical shape for its own G7 on 2026-08-30 and fixed it by asserting
 # over ARTIFACT_GUARDS only (see its `real-tree-fires-no-artifact-guard`); this
-# case had the same fix documented in docs/plan/status/321-queue-refill.md but
+# case had the same fix documented in docs/plan/archive/lanes/321-queue-refill.md but
 # it was never actually applied here -- confirmed 2026-09-02 by reproducing the
 # red exit 1 on main, `git log`-ing the guard to `natural-logarithm`/pool-size
 # drift rather than any code change to this file, and finding this test still

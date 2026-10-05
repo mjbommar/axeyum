@@ -142,7 +142,7 @@ trusting the recorded ids. Only then can this be `Evidence`.
 
 **Settled SMT-route facts are gated on `certified=1`, not just on the
 verdict.** The
-[`ledger-integrity`](../plan/status/97-ledger-integrity.md) lane re-measured finding 8 as
+[`ledger-integrity`](../plan/archive/lanes/97-ledger-integrity.md) lane re-measured finding 8 as
 remediated — 177/177 checker runs *can* fail. That is true and it is not
 sufficient: a run can fail on the wrong axis. Every settled `smt-term-level` /
 `smt-clausal` fact carries evidence shaped

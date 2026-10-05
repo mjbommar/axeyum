@@ -141,7 +141,7 @@ class IdempotenceTests(unittest.TestCase):
         # the real rebuilt targets are idempotent by construction even
         # without the guard (a keyed full rebuild, not an append log), so the
         # guard's load-bearing property here is skipping wasted work, not
-        # preventing corruption. See docs/plan/status/s6-wire-real-ledger.md.
+        # preventing corruption. See docs/plan/archive/lanes/s6-wire-real-ledger.md.
         ok, detail = gate.run_guard_skips_recomputation_on_replay()
         self.assertTrue(ok, detail)
         self.assertEqual(detail["pin_rows_for_fact"], 1)

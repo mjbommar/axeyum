@@ -1,7 +1,7 @@
 # Notes: top-three-focus
 
 Detail moved out of
-[`../status/126-top-three-focus.md`](../status/126-top-three-focus.md) so the
+[`../status/126-top-three-focus.md`](../archive/lanes/126-top-three-focus.md) so the
 generated operational authority stays within its per-lane size bound.
 
 ## 2026-08-25 progress

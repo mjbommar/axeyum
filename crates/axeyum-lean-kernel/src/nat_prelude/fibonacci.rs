@@ -548,7 +548,7 @@ fn declare_sum_fib(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError
 
 /// `Eq Nat (add (add a b) (add c e)) (add (add a c) (add b e))`.
 ///
-/// Retired to `crate::ring::nat` (docs/plan/status/460-ring-tactic-1.md): a
+/// Retired to `crate::ring::nat` (docs/plan/archive/lanes/460-ring-tactic-1.md): a
 /// pure ring-rearrangement chain, now searched for and emitted rather than
 /// hand-assembled — one of eight verbatim-duplicated hand proofs of this
 /// exact identity across `nat_prelude` (`binomial.rs`, `div_mod_lemmas.rs`,
@@ -1564,7 +1564,7 @@ fn declare_le_fib_self(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelE
 ///   (`fib_ge_shifted_gen`'s `a_proof`/`b_proof` above). The margin is TIGHT
 ///   (`k = 0`, i.e. plain `le_refl`-shaped) at `i = 2, 3, 4`, which is the
 ///   algebraic fact that rules out a bare pair-induction for this theorem
-///   (`docs/plan/status/228-fib-2.md`).
+///   (`docs/plan/archive/lanes/228-fib-2.md`).
 fn declare_le_fib_add_one(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     let one = d.num(1);

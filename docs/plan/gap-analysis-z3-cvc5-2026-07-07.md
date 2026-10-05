@@ -1,5 +1,7 @@
 # Z3/cvc5 gap analysis (2026-07-07)
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](CATALOG.md). This was the 2026-07-07 Z3/cvc5 gap analysis.
+
 > **Historical / superseded.** The current CAPABILITY map is
 > [gap-analysis-smt-solvers-2026-08-21.md](gap-analysis-smt-solvers-2026-08-21.md);
 > the current scoped EVIDENCE map is

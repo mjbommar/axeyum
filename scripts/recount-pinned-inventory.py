@@ -62,7 +62,7 @@ authority-derived assertion already answers completeness -- e.g.
 not, and is pure merge friction. That is why `creal_tests.rs`'s 432-entry pin
 was deleted rather than kept (see `crates/axeyum-lean-kernel/src/creal/
 inventory.rs`). Survey and per-site judgments:
-`docs/plan/status/248-pin-recount-shapes.md`.
+`docs/plan/archive/lanes/248-pin-recount-shapes.md`.
 
 Exit 0 when every pin in the file is correct, 1 when one is not (rewriting it
 unless --check), 2 when the file has no pinned array at all.

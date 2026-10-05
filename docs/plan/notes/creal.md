@@ -1,6 +1,6 @@
 # Notes: creal
 
-Detail moved out of [`../status/creal.md`](../status/creal.md) so the
+Detail moved out of [`../status/creal.md`](../archive/lanes/creal.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

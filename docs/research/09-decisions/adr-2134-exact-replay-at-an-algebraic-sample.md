@@ -429,4 +429,4 @@ twice and is no longer blind.
 * The eight nonlinear z3 differential fuzzes were NOT RUN on 2026-09-17: they
   are mandatory only when the default moves, and it did not.
 
-`docs/plan/status/nra-algebraic-witness.md` carries the per-criterion state.
+`docs/plan/archive/lanes/nra-algebraic-witness.md` carries the per-criterion state.

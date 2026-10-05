@@ -3,7 +3,7 @@
 //! ModEq n (prodRange (selector pred f) m) (prodRange (selector pred g) m)`
 //! — a restricted product reduces mod `n` factor by factor, the termwise
 //! `ModEq` transport step of item 3 of the Fermat -> Euler handoff
-//! (`docs/plan/status/374-euler-theorem.md`, `euler_theorem.rs`'s module
+//! (`docs/plan/archive/lanes/374-euler-theorem.md`, `euler_theorem.rs`'s module
 //! doc): moves `prodRangeIf pred (fun k => emod (a*ofNat k) n) range` back
 //! to `prodRangeIf pred (fun k => a*ofNat k) range` modulo `n`, via
 //! `Int.euler_unit_coprime_iff`'s residue and

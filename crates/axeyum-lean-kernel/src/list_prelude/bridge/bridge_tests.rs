@@ -173,7 +173,7 @@ fn the_bridge_theorems_declare_no_axioms() {
 }
 
 /// `List.count_toMultiset` landed (`ListNatBridge::count_to_multiset` is
-/// `Some`, not the `None` `docs/plan/status/460-list-carrier-1.md` recorded),
+/// `Some`, not the `None` `docs/plan/archive/lanes/460-list-carrier-1.md` recorded),
 /// is axiom-free, and instantiating the general (symbolic-in-`a`/`l`) proof
 /// at concrete arguments both type-checks and matches independently
 /// evaluated `count`/`Multiset.count (toMultiset …)` values -- the negative

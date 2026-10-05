@@ -3141,7 +3141,7 @@ pub(super) fn declare_has_derivative_uniform_limit(
 //
 // This is the `Converges` sibling of `creal/ivt.rs`'s
 // `CReal.cauchy_of_abs_diff_le`, and it closes the gap
-// `docs/plan/status/175-pi-r2b.md` named as the last structural piece under
+// `docs/plan/archive/lanes/175-pi-r2b.md` named as the last structural piece under
 // pi rung 2: `UniformConvergesOn.spec` (and every `weierstrassMTest`
 // consumer) hands back a `close_within`-shaped fact,
 // `le (abs (add (f n) (neg L))) (ofRat (natDivSucc K n))`, while

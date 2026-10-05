@@ -48,7 +48,7 @@
   "provenance": {
     "date": "2026-09-02",
     "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/injective_decide.rs)",
-    "source": "Lane det-mul-general-n, closing ADR-1440's obligation 2 (the selection lemma) on the way to determinant multiplicativity at symbolic n. Status note: docs/plan/status/det-mul-general-n.md."
+    "source": "Lane det-mul-general-n, closing ADR-1440's obligation 2 (the selection lemma) on the way to determinant multiplicativity at symbolic n. Status note: docs/plan/archive/lanes/det-mul-general-n.md."
   },
   "notes": "WHAT THIS DOES NOT SAY. It is not excluded middle and does not imply it: the disjunction is decided by a bounded search over `[0,n)` with `Nat.beq` at each step, which is exactly the hypothesis `Nat.lnp_bounded_search` requires and exactly what `Nat.lnp_unrestricted_implies_em` shows cannot be dropped in general. It says nothing about an unbounded `g` being injective on all of `Nat`, and it produces no LEAST duplicate pair -- the leastness clause the inner search returns is deliberately discarded, because the injectivity branch has to build a collision witness from an arbitrary pair."
 }

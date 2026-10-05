@@ -56,7 +56,7 @@
 //!
 //! Landing `Nat.xor` with a discriminating evaluation test, with neither
 //! fact closed, is recorded here as the deliverable — see
-//! `docs/plan/status/253-nat-xor-parity.md`.
+//! `docs/plan/archive/lanes/253-nat-xor-parity.md`.
 
 use super::NatPrelude;
 use super::bitwise::xor_fn;

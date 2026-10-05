@@ -1,5 +1,7 @@
 # 12 — The chair
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../plan/global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../plan/CATALOG.md). Its review was last measured 2026-09-06; the 2026-09-06 five landed (ADRs 1672-1679).
+
 Reviewer: the department head, doubling as an external referee
 Verdict, 2026-09-06 (re-measured): **would sign the report, and would strike
 three sentences from it before it goes out — the coverage claim, the
@@ -336,7 +338,7 @@ PY
 this block until 2026-09-06. It counts commit *subjects* containing a word; it is
 not the retirement count and it moves when a lane renames a commit. The
 retirement total lives in the lane ledgers
-(`docs/plan/status/481-structures-ordered-setoid.md`: ADR-1589's 62 plus 5) and
+(`docs/plan/archive/lanes/481-structures-ordered-setoid.md`: ADR-1589's 62 plus 5) and
 should become a derived, gated number — Next Five item 5.
 
 **Also not run here**: `cargo run --release -p axeyum-lean-kernel --example

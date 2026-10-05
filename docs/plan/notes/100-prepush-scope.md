@@ -1,6 +1,6 @@
 # Lane `agent-prepush-scope` — the kernel step of `hooks/pre-push`
 
-Detail behind [`../status/100-prepush-scope.md`](../status/100-prepush-scope.md).
+Detail behind [`../status/100-prepush-scope.md`](../archive/lanes/100-prepush-scope.md).
 
 ## The step, and what was wrong with it
 

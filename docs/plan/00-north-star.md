@@ -1,5 +1,7 @@
 # 00 — North-star reference targets
 
+> **Reference, not a queue — consolidated 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](CATALOG.md). This is a definition-of-done note, not a work queue; its companion is [docs/research/00-orientation/north-star.md](../research/00-orientation/north-star.md).
+
 This file pins down the long-horizon reference targets. "Z3 + Lean parity" is
 legacy shorthand, not one scalar status or one exit criterion. Current reporting
 must keep fragment decision/performance, production solver replacement,

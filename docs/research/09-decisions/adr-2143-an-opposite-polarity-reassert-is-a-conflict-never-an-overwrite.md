@@ -263,4 +263,4 @@ predicts.
 - `crates/axeyum-solver/tests/lia_online.rs`,
   `crates/axeyum-solver/tests/lra_online.rs` — the fuzzes and unit tests.
 - `corpus/incremental/13-shadowed-polarity-lia.smt2`, `14-shadowed-polarity-lra.smt2`.
-- `docs/plan/status/ax-lia-pop.md`.
+- `docs/plan/archive/lanes/ax-lia-pop.md`.

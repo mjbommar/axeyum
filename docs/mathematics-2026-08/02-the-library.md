@@ -27,7 +27,7 @@
 > It is deliberately retained as the negative control every axiom-freedom
 > measurement here is checked against — delete it and no such claim can fail
 > ([ADR-0509](../research/09-decisions/adr-0509-the-trusted-surface-is-measured-as-reached-not-only-declared.md),
-> [`status/64-retire-real.md`](../plan/status/64-retire-real.md)) — and no
+> [`status/64-retire-real.md`](../plan/archive/lanes/64-retire-real.md)) — and no
 > shipped route builds it.
 >
 > **ℝ is `CReal`** ([ADR-0512](../research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)):

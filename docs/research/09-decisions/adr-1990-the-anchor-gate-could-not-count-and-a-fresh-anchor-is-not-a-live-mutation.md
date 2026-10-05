@@ -119,7 +119,7 @@ Seven problems, `stale=1`.
 The cost is not cosmetic. Somebody repairing six of the seven would have watched
 the number not move and concluded they had fixed nothing — and the number has
 already been misread in practice. One lane status doc
-(`docs/plan/status/playfair-2026-09-05.md`, line 127) records it **in one table
+(`docs/plan/archive/lanes/playfair-2026-09-05.md`, line 127) records it **in one table
 row, across two adjacent cells**: the result cell quotes
 `MUTATION_ANCHORS|suites=99|anchors=917|stale=1`, and the findings cell beside
 it reads *"1 (the same 4 pre-existing complaints in

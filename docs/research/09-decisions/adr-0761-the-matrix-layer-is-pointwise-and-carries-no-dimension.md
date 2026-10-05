@@ -144,7 +144,7 @@ fixture keeps its numerals under 20.
   `Rat.det3_cofactor_row1` is the existing base case. That construction needs
   a minor / row-deletion operation on `Nat -> Nat -> Rat`, which is an index
   shift and not a new type — see the handoff in
-  [`docs/plan/status/381-rat-matrix-layer.md`](../../plan/status/381-rat-matrix-layer.md).
+  [`docs/plan/archive/lanes/381-rat-matrix-layer.md`](../../plan/archive/lanes/381-rat-matrix-layer.md).
 - **No inverse.** Nothing constructs `A^-1` or proves `A * A^-1 = matId`.
 - **No monoid structure in any type-theoretic sense.** There is no carrier of
   `n x n` matrices, no `Eq` on it, and no closure statement — only a product,

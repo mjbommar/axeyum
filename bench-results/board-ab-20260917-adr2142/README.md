@@ -205,7 +205,7 @@ one division — and both already showed the final shape (0 flips, the `QF_ABV`
  crates/axeyum-cnf/src/proof_sat.rs                 | 132 +++++++++-
  crates/axeyum-solver/examples/warm_session_age.rs  | 273 +++++++++++++++------
  crates/axeyum-solver/src/incremental.rs            |  16 ++
- docs/plan/status/ax-warm.md                        |  25 ++
+ docs/plan/archive/lanes/ax-warm.md                        |  25 ++
  docs/research/09-decisions/README.md               |   1 +
  ...se-snapshot-re-walked-the-trail-per-decision.md | 226 +++++++++++++++++
  8 files changed, 633 insertions(+), 81 deletions(-)

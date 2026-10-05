@@ -85,7 +85,7 @@ not through a pipeline.
 - **`scripts/analyze_solver_module_graph.py --check` exits 1.** Largest
   dependency cycle grew 58,215 to 59,175 lines; evidence-layer fan-out widened
   67 to 77 modules (`evidence`) and 55 to 60 (`reconstruct`). The
-  [2026-08-29 lane](../../plan/status/280-solver-cycle-regression.md) broke two
+  [2026-08-29 lane](../../plan/archive/lanes/280-solver-cycle-regression.md) broke two
   edges and reported the gate fixed; either something regressed after or the
   baseline was never re-pinned. Enforced at `scripts/check.sh:1456`.
 - **Two committed parity lists have never been run.** `QF_ABV.txt` and

@@ -10,7 +10,7 @@ Index-status: accepted
 
 - **Lane:** `totient-prime-power`
 - **Supersedes:** nothing. **Corrects:** the sizing in
-  `docs/plan/status/349-totient-mul-finish.md` ("that framework does not
+  `docs/plan/archive/lanes/349-totient-mul-finish.md` ("that framework does not
   exist here"), which was right about the *Euler-product* route and was read
   as a statement about the targets.
 

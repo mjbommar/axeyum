@@ -1,7 +1,7 @@
 # S7b — the difference-logic route moves onto the native core, 2026-09-07
 
 Backing data for
-[`docs/plan/status/s7b-engine-unification.md`](../../docs/plan/status/s7b-engine-unification.md).
+[`docs/plan/archive/lanes/s7b-engine-unification.md`](../../docs/plan/archive/lanes/s7b-engine-unification.md).
 Read that file for what the change was and what these numbers do and do not
 establish; this one only maps the artifacts and pins the method.
 

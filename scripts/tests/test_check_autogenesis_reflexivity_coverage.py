@@ -103,7 +103,7 @@ class ReflexivityCoverageResultTests(unittest.TestCase):
         # is pinned, so a later proof -- which rewrites `formal.language`
         # from "lean4-surface" to the kernel's own render_lean output --
         # makes a valid, already-sealed census go red for a change it
-        # predates. See docs/plan/status/284-autogenesis-gate-rot.md.
+        # predates. See docs/plan/archive/lanes/284-autogenesis-gate-rot.md.
         with self.assertRaisesRegex(MODULE.CoverageResultError, "unreachable"):
             MODULE.pinned_fact(
                 "0" * 40, MODULE.ROOT / "artifacts/facts/F-int-modeq-add-left.json"

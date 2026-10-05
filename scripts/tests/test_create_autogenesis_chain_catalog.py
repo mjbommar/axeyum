@@ -81,7 +81,7 @@ class ChainCatalogTests(unittest.TestCase):
         # kernel declaration (measured 2026-08-29: Int.modEq_add_left,
         # Nat.coprime_of_lt_prime, Nat.descFactorial_of_lt all landed as two
         # facts naming one theorem -- see
-        # docs/plan/status/284-autogenesis-gate-rot.md). This must resolve,
+        # docs/plan/archive/lanes/284-autogenesis-gate-rot.md). This must resolve,
         # not raise: the old "reject on any duplicate" behaviour could not
         # tell that pattern apart from a genuine authorship bug and was red
         # for exactly that reason.

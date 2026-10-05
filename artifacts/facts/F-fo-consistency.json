@@ -70,7 +70,7 @@
       "checkers": [
         "Kernel::def_eq"
       ],
-      "notes": "MUTATION-VERIFIED: making FO.sat's ex clause read the outer valuation is one of the two mutations lane model-theory ran. Kill counts are in docs/plan/status/model-theory-2026-09-05.md."
+      "notes": "MUTATION-VERIFIED: making FO.sat's ex clause read the outer valuation is one of the two mutations lane model-theory ran. Kill counts are in docs/plan/archive/lanes/model-theory-2026-09-05.md."
     }
   ],
   "provenance": {

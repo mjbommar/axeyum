@@ -249,7 +249,7 @@ fn parse_moderate_pre_sat_envelope(raw: Option<&str>) -> (usize, usize) {
 /// Explicit, absolute wall-clock cap on the bounded online-probe fallback
 /// [`arith_dpll_admission_preflight`] tries for a non-difference-logic query
 /// that would otherwise decline outright on the boundary above (S2-followup,
-/// `docs/plan/status/s2-followup-lia-probe.md`).
+/// `docs/plan/archive/lanes/s2-followup-lia-probe.md`).
 ///
 /// **Absolute, not proportional.** The two `QF_LIA/bofill-scheduling` files
 /// this recovers refute inside [`crate::lia_theory::check_qf_lia_online_cdclt`]'s
@@ -1695,7 +1695,7 @@ fn arith_dpll_admission_preflight(
     Ok(None)
 }
 
-/// S2-followup (`docs/plan/status/s2-followup-lia-probe.md`): an oversized
+/// S2-followup (`docs/plan/archive/lanes/s2-followup-lia-probe.md`): an oversized
 /// skeleton that [`arith_dpll_admission_preflight`] would otherwise decline
 /// outright still gets one bounded shot at
 /// [`crate::lia_theory::check_qf_lia_online_cdclt`] — **but only when the

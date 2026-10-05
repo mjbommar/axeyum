@@ -688,7 +688,7 @@ fn declare_sum_append(
 
 /// `∀ a l, List.count a l = Nat.Multiset.count (List.toMultiset l) a`.
 ///
-/// The blocker `docs/plan/status/460-list-carrier-1.md` recorded --
+/// The blocker `docs/plan/archive/lanes/460-list-carrier-1.md` recorded --
 /// "a bridge from `Nat.beq head a = false` to `head ≠ a`" -- turned out not
 /// to exist: `Nat.Multiset.count_singleton_of_ne` is already stated directly
 /// in terms of `beq` (`∀ a x, Eq Bool (beq x a) false → Eq (count (singleton

@@ -2,7 +2,7 @@
 //! `F:ml430-nat-lt-xor-cases-c43a1e85`.
 //!
 //! All four blocking pieces landed earlier the same day
-//! (`docs/plan/status/260-nat-lt-xor-cases.md`, `263`, `265`, `268`, `269`,
+//! (`docs/plan/archive/lanes/260-nat-lt-xor-cases.md`, `263`, `265`, `268`, `269`,
 //! `270`, `271`):
 //!
 //! 1. `Nat.testBit_xor` (`testbit_bitwise.rs`)

@@ -1,7 +1,7 @@
 """Shared logic for L3 phase D2's structural theorem index.
 
 Owned by lane `l3-d2-structural-index`
-(`docs/plan/status/l3-d2-structural-index.md`, ADR-0905). Both
+(`docs/plan/archive/lanes/l3-d2-structural-index.md`, ADR-0905). Both
 `scripts/gen-structural-index.py` (builds the committed artifacts) and
 `scripts/check-structural-index.py` (the gate) import this module rather
 than each re-deriving the query engine and the held-out exclusion, the same

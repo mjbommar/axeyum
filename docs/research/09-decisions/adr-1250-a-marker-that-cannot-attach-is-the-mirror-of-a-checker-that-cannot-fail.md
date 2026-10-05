@@ -6,7 +6,7 @@ Index-summary: `scripts/check-absence-claims.py` (ADR-0611) makes a prose
 absence claim expire, and a resolved claim is retired by writing a
 `<!-- was-absent: Root.name -->` marker beside it. A correctly-placed,
 correctly-named marker at
-`docs/plan/status/first-supplementary-law.md:54` did not attach, and the gate
+`docs/plan/archive/lanes/first-supplementary-law.md:54` did not attach, and the gate
 stayed red at **123 bare named claims against a budget of 122**. The cause is
 neither of the two hypotheses that were proposed: the harvested subject IS
 `Int.prodRange_split`, and the marker's scope IS the same block. `MARKER_RE`'s
@@ -136,7 +136,7 @@ cannot quote a multi-line example, so quote one in a **fence**.
 ## Consequences
 
 **The claim is retired and the gate is green.** The marker now parses at
-`docs/plan/status/first-supplementary-law.md:54` and the site at line 50 reads
+`docs/plan/archive/lanes/first-supplementary-law.md:54` and the site at line 50 reads
 `annotated=True`. Bare named claims **123 → 122**; markers 41 → 42.
 
 **The budget is unchanged at 122 and was not touched.** ADR-1190 set it by

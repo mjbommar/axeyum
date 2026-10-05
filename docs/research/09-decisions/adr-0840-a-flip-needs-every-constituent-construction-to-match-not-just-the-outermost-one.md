@@ -16,7 +16,7 @@ fact, and building one is ordinary, unblocked work.
 
 ## Context
 
-`docs/plan/status/250-nat-fastfib-minfac.md` (2026-08-29) sized
+`docs/plan/archive/lanes/250-nat-fastfib-minfac.md` (2026-08-29) sized
 `F:ml430-nat-fastfib-eq-cde11774` and, separately, CLAUDE.md's Gotchas
 record a same-day correction: an earlier over-generalization ("any mirror
 whose Mathlib definition is `WellFounded.fix` with a dependent motive is

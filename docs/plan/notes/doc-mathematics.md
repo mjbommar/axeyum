@@ -1,6 +1,6 @@
 # Notes: doc-mathematics — every claim corrected in `docs/mathematics-2026-08/`
 
-Detail kept out of [`../status/70-doc-mathematics.md`](../status/70-doc-mathematics.md)
+Detail kept out of [`../status/70-doc-mathematics.md`](../archive/lanes/70-doc-mathematics.md)
 so the lane block stays inside the per-lane ceiling (ADR-0520).
 
 ## Method

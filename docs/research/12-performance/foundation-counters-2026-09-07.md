@@ -217,7 +217,7 @@ evidence rather than having their number silently changed.
 - `9b9b6149e` — `feat(egraph): opt-in EGraphCounters for merge/find/process_pending/explain`
 - `dbc901288` — `feat(rewrite): opt-in term-size before/after for the five hot passes`
 - (this doc + `axeyum-smtlib` counters land in the commits that follow; see
-  `docs/plan/status/foundation-counters.md` for the final SHA list)
+  `docs/plan/archive/lanes/foundation-counters.md` for the final SHA list)
 
 ## Left undone
 

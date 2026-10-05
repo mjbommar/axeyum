@@ -1,6 +1,6 @@
 # Notes: 51-induction-dispatch
 
-Detail moved out of [`../status/51-induction-dispatch.md`](../status/51-induction-dispatch.md) so the
+Detail moved out of [`../status/51-induction-dispatch.md`](../archive/lanes/51-induction-dispatch.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

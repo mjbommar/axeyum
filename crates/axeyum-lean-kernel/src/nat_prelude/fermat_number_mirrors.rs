@@ -673,7 +673,7 @@ pub(super) fn declare_fermat_number_mirrors_all(
 
 // ============================================================================
 // `fermat-easy` lane: three closed reductions, `Nat.odd_fermatNumber`, and
-// `Nat.fermatNumber_strictMono` — `docs/plan/status/377-fermat-easy.md`.
+// `Nat.fermatNumber_strictMono` — `docs/plan/archive/lanes/377-fermat-easy.md`.
 // ============================================================================
 
 /// `Nat.fermatNumber_zero : Eq (fermatNumber 0) 3` — `fermatNumber 0 = add

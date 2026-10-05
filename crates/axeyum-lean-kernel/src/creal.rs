@@ -5484,7 +5484,7 @@ pub struct CRealPrelude {
     /// `CReal.ivt_exact_root` construction carries (the left endpoint of
     /// `[1, 8/5]`). The other two — `cos (8/5) < 0`, and a uniform positive
     /// lower bound on `sinFn` over `[1, 8/5]` — are **not** proved anywhere
-    /// in this tree; `docs/plan/status/169-pi.md` sizes both. Nothing here
+    /// in this tree; `docs/plan/archive/lanes/169-pi.md` sizes both. Nothing here
     /// constructs `CReal.pi` or asserts that a root exists. See
     /// `creal/trig_fn.rs`.
     pub cos_fn_wide_one_nonneg: NameId,
@@ -5562,7 +5562,7 @@ pub struct CRealPrelude {
     pub sin_fn_uniformly_continuous: NameId,
     /// `CReal.sinFnLowerBoundOneToR : ∀ z, le one z → le z (ofRat (natDivSucc
     /// 8 4)) → le (ofRat (natDivSucc 1 3)) (sinFn z)` — pi rung 3
-    /// (`docs/plan/status/169-pi.md`): a uniform lower bound `sin z >= 1/4`
+    /// (`docs/plan/archive/lanes/169-pi.md`): a uniform lower bound `sin z >= 1/4`
     /// on `[1, 8/5]`.
     ///
     /// Sine's magnitude sequence `a k := expTerm (2k+1) * z^(2k+1)` is

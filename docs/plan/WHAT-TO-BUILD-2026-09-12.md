@@ -1,5 +1,7 @@
 # What to build to move the number
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](CATALOG.md). This was the 2026-09-12 build queue; items 1, 2, 3 and 6 were worked by 2026-09-17.
+
 **Written 2026-09-12 at `1f36f28b3`.** The board is
 [`bench-results/board-20260912/`](../../bench-results/board-20260912/README.md):
 **2,517 of 4,000 (62.9%)** against best-of-z3/cvc5 at **3,432 (85.8%)**. Gap

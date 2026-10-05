@@ -1,5 +1,5 @@
 //! `Nat.nth`: opens `Mathlib.Data.Nat.Nth` (pinned commit `c5ea0035…`, 11
-//! rows) for the autogenesis screen — `docs/plan/status/348-nat-dist-nth.md`.
+//! rows) for the autogenesis screen — `docs/plan/archive/lanes/348-nat-dist-nth.md`.
 //!
 //! ## Why this is NOT Mathlib's `nth`, and why the mirror stays open
 //!

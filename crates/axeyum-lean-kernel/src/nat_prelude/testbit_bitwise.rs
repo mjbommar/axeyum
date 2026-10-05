@@ -1,8 +1,8 @@
 //! `Nat.testBit_xor` — bridging `testBitAux`'s INDEX recursion with
 //! `bitwiseAux`'s VALUE recursion. Piece (1) of the 4 pieces
-//! `docs/plan/status/260-nat-lt-xor-cases.md` named as blocking
+//! `docs/plan/archive/lanes/260-nat-lt-xor-cases.md` named as blocking
 //! `F:ml430-nat-lt-xor-cases-c43a1e85`; see
-//! `docs/plan/status/263-nat-testbit-xor.md` for the handoff on pieces 2-4.
+//! `docs/plan/archive/lanes/263-nat-testbit-xor.md` for the handoff on pieces 2-4.
 //!
 //! # The statement
 //!
@@ -62,7 +62,7 @@
 //!
 //! This file supplies exactly piece (1). `exists_most_significant_bit`,
 //! `lt_of_testBit`, and `xor_assoc`/`xor_xor_cancel`/`xor_ne_zero_iff` are
-//! untouched — see `docs/plan/status/263-nat-testbit-xor.md`.
+//! untouched — see `docs/plan/archive/lanes/263-nat-testbit-xor.md`.
 
 use super::NatPrelude;
 use super::bitwise::xor_fn;
@@ -486,7 +486,7 @@ fn declare_test_bit_xor(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kernel
 // `Nat.testBit_xor` above, transported to `Nat.landAux`/`Nat.lorAux` rather
 // than `Nat.bitwiseAux`. Both mirrors (`F:ml430-nat-testbit-land-dfef7ca4`,
 // `F:ml430-nat-testbit-lor-7644e067`) are Bool-vs-Nat codomain mismatches
-// (see `docs/plan/status/244-nat-testbit-bitwise.md`) and stay `open`; these
+// (see `docs/plan/archive/lanes/244-nat-testbit-bitwise.md`) and stay `open`; these
 // are new LOCAL `F:nat-*` facts, matching `test_bit_xor`'s own pattern.
 //
 // `land`/`lor` are separate fuel recursions from `bitwiseAux` (no `f`

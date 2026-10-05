@@ -296,11 +296,11 @@ some time. See §4.
 
 **Highest-yield NT target — but NOT one theorem away, and the three-piece
 handoff itself needed correction. Updated 2026-08-31 (`euler-theorem-spine`,
-[`docs/plan/status/euler-theorem-spine.md`](../plan/status/euler-theorem-spine.md)).**
+[`docs/plan/archive/lanes/euler-theorem-spine.md`](../plan/archive/lanes/euler-theorem-spine.md)).**
 Both halves of the residue-permutation argument are landed and axiom-free, and
 that is what made "one theorem away" look right. It is wrong: the lane that
 actually built the cheap half recorded three remaining pieces, all real work,
-in [`docs/plan/status/374-euler-theorem.md`](../plan/status/374-euler-theorem.md)
+in [`docs/plan/archive/lanes/374-euler-theorem.md`](../plan/archive/lanes/374-euler-theorem.md)
 and in `int_prelude/euler_theorem.rs`'s own module doc. All three were
 re-verified in-tree rather than inherited, per the standing "a handoff's
 report of what REMAINS is a hypothesis" rule:

@@ -1,6 +1,6 @@
 //! `Nat.countRange_permute` — **counting over `[0,n)` is invariant under any
 //! injective self-map of `[0,n)`**, the primitive
-//! `docs/plan/status/320-totient-bijection.md` named as the one genuinely
+//! `docs/plan/archive/lanes/320-totient-bijection.md` named as the one genuinely
 //! missing piece under `Nat.totient_mul_of_coprime` (and so under the two
 //! remaining `ml430` totient mirrors).
 //!

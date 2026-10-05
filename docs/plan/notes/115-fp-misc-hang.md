@@ -1,6 +1,6 @@
 # Notes: 115-fp-misc-hang
 
-Detail moved out of [`../status/115-fp-misc-hang.md`](../status/115-fp-misc-hang.md) so the
+Detail moved out of [`../status/115-fp-misc-hang.md`](../archive/lanes/115-fp-misc-hang.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

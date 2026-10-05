@@ -1,6 +1,6 @@
 # Notes: 60-nested-gate
 
-Detail moved out of [`../status/60-nested-gate.md`](../status/60-nested-gate.md) so the
+Detail moved out of [`../status/60-nested-gate.md`](../archive/lanes/60-nested-gate.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

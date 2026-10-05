@@ -1,6 +1,6 @@
 # Notes: 118-nia-diagnosis
 
-Detail moved out of [`../status/118-nia-diagnosis.md`](../status/118-nia-diagnosis.md) so the
+Detail moved out of [`../status/118-nia-diagnosis.md`](../archive/lanes/118-nia-diagnosis.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

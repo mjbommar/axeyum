@@ -1,7 +1,7 @@
 //! Three more `Nat.dist` `ml430` mirrors, on top of `dist.rs`'s seven and
 //! `dist.rs`'s draw-9 `declare_dist_more_all` six: `Nat.dist_pos_of_ne`,
 //! `Nat.dist_eq_intro`, and `Nat.dist_triangle_inequality`.
-//! `docs/plan/status/draw9-second-theorems.md`.
+//! `docs/plan/archive/lanes/draw9-second-theorems.md`.
 //!
 //! # `dist_pos_of_ne`
 //!

@@ -1,6 +1,6 @@
 # 351 — nursery draw 6b: every measurement, and how to re-run it
 
-Detail behind [`../status/351-nursery-draw-6b.md`](../status/351-nursery-draw-6b.md)
+Detail behind [`../status/351-nursery-draw-6b.md`](../archive/lanes/351-nursery-draw-6b.md)
 and [ADR-0653](../../research/09-decisions/adr-0653-declaring-the-unblocking-constant-contaminated-the-family-it-opened.md).
 
 Nothing here is carried from ADR-0620 or ADR-0645. Every number was

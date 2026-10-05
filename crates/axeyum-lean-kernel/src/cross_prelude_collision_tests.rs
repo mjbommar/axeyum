@@ -226,7 +226,7 @@ fn build_groups() -> Vec<Group> {
     // same dependency-order position `prelude_theorem_inventory.rs` and
     // `kernel_declaration_projection.rs` use. This is the group whose
     // omission from THIS file's `build_groups` motivated
-    // `docs/plan/status/146-collision-gap.md`: identical to the gap fixed in
+    // `docs/plan/archive/lanes/146-collision-gap.md`: identical to the gap fixed in
     // `prelude_theorem_inventory.rs` (32 theorems silently invisible), except
     // here the missing coverage was a cross-prelude COLLISION check rather
     // than a theorem count -- 32 declarations that had never been checked

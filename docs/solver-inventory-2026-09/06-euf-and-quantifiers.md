@@ -310,7 +310,7 @@ more recent account that lives in a code comment instead of the plan
 document — worth pulling forward if `P2.6-quantifiers.md` is next
 refreshed.
 
-`docs/plan/status/116-quantifier-triggers.md` (2026-08-21) states user
+`docs/plan/archive/lanes/116-quantifier-triggers.md` (2026-08-21) states user
 `:pattern` triggers are "threaded parse → IR → the E-matching loop" and
 `:weight` is declined; this inventory did not re-derive that path (out of
 the brief's file list — the parser/IR layer is outside
@@ -353,7 +353,7 @@ explanation, and an independent checker matches the current
   scope even though the file itself was named in this lane's brief. Flagged
   here rather than resolved — the decision logic (`RANGE_SIZE_CAP`-bounded
   finite conjunction) is this lane's; the Alethe emission is L8's.
-- `docs/plan/status/116-quantifier-triggers.md`'s `:pattern` → IR → matcher
+- `docs/plan/archive/lanes/116-quantifier-triggers.md`'s `:pattern` → IR → matcher
   path was not independently traced (parser and IR layers are out of this
   lane's file list); flagged as the one claim in the Doc drift section that
   is reported rather than verified.

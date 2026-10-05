@@ -1,5 +1,7 @@
 # Dispatch and instrumentation: a plan
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](CATALOG.md). This was the 2026-09-15 plan for solver dispatch and instrumentation.
+
 **2026-09-15.** Four phases, sequenced by dependency, each with an exit criterion
 that can fail. Written after eleven lanes on the quantified divisions measured
 budget policy at zero from every angle and found, instead, one dispatch bug five

@@ -1,4 +1,20 @@
-# Archived lane status — the 2026-08-13 → 15 campaign
+# Planning archive
+
+Everything here is kept verbatim and is **not** read by `PLAN.md`. Find things
+through the generated [`../CATALOG.md`](../CATALOG.md), or search directly:
+`rg -n '<topic>' docs/plan/archive/`.
+
+| Where | What | Since |
+|---|---|---|
+| [`lanes/`](lanes/) | Every lane status file retired from `docs/plan/status/`: all 770 on the 2026-10-05 consolidation, and each finished lane after that (`scripts/archive-plan-lane.py`, which keeps every inbound link working) | 2026-10-05 |
+| [`global-2026-09-17/`](global-2026-09-17/) | The project-wide `PLAN.md` sections (the A1–A13 queue, L0–L4, workstream table) as they stood before the 2026-10-05 rewrite | 2026-10-05 |
+| the files below | The 43 lanes of the 2026-08-13 → 15 campaign, archived by hand on 2026-08-19 | 2026-08-19 |
+
+Restore a lane by `git mv`-ing its file back into `docs/plan/status/` when work
+on it resumes (keep it under 3,000 bytes), and regenerate with
+`python3 scripts/gen-plan.py`.
+
+## The 2026-08-13 → 15 campaign
 
 `PLAN.md` is an **active work queue**, not a journal. These 43 lane status
 files are the record of lanes that have landed their work or were cut off; they

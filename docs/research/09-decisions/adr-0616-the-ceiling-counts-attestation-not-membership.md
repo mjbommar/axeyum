@@ -219,7 +219,7 @@ is precisely how this contradiction arose.
 - ADR-0601 — "scaffolding, never headline", the rule R3 encodes.
 - ADR-0542 — the amendment ledger, why a `not_elaborable` row is recorded rather
   than repaired or deleted.
-- `docs/plan/status/294-nursery-ceiling-adr.md`,
+- `docs/plan/archive/lanes/294-nursery-ceiling-adr.md`,
   `305-lean-attestation-s5.md`, `309-nursery-draw-four.md` — the three lanes
   whose measurements this rests on.
 - `docs/contributor-guide/lean-surface-attestation.md` — how to run the

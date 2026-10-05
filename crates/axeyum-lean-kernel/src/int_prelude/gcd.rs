@@ -2639,7 +2639,7 @@ pub(super) fn declare_exists_mul_mod_eq_gcd(d: &mut IntDev<'_>) -> Result<(), Ke
 ///
 /// An INDEPENDENT Bézout route, not a corollary of `Int.gcd_div` (this
 /// development has no exact-quotient-uniqueness argument for a general,
-/// possibly negative, divisor — see `docs/plan/status/234-int-gcd-div.md`).
+/// possibly negative, divisor — see `docs/plan/archive/lanes/234-int-gcd-div.md`).
 /// The divisor here, `ofNat (gcd i j)`, is always nonnegative (a `Nat` cast),
 /// so that gap never comes up.
 ///

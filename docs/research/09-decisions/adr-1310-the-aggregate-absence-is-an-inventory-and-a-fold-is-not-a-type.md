@@ -342,7 +342,7 @@ files already use:
   "a finite family is a function plus a bound and nothing else".
 - `crates/axeyum-lean-kernel/src/nat_prelude/permutation.rs` — option (b), the
   `n!`-indexing route, recorded as unattempted-for-scope.
-- `docs/plan/status/general-n-determinant.md` — "not merely unproved but **not
+- `docs/plan/archive/lanes/general-n-determinant.md` — "not merely unproved but **not
   expressible**".
 
 ## What this ADR does NOT claim

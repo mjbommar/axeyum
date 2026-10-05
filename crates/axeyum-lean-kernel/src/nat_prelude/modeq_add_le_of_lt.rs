@@ -7,7 +7,7 @@
 //! composes `add_le_add_left`/`le_of_add_le_add_left`/`le_of_add_le_add_right`
 //! (`order.rs`), `mul_le_mul_left`/`lt_of_mul_lt_mul_left` (`mul_order_lemmas.rs`),
 //! and `add_comm`/`add_assoc` (`add_basics.rs`/`algebra.rs`), all already
-//! declared. A prior handoff (`docs/plan/status/329-nat-modeq-mirrors.md`)
+//! declared. A prior handoff (`docs/plan/archive/lanes/329-nat-modeq-mirrors.md`)
 //! judged this fact to need "2-3 new order/monotonicity lemmas" (an
 //! `Lt`-to-existence bridge plus a `m*u>m*v -> u>v` cancellation); the
 //! cancellation already existed as `lt_of_mul_lt_mul_left`, and the

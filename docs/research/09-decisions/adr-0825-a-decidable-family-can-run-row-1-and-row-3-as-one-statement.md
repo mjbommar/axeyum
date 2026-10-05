@@ -24,7 +24,7 @@ lane verified that claim in-tree before starting (per the standing
 false: `int_prelude/euler_totient.rs`'s own module doc records, in detail,
 that the theorem does NOT land there — a subset-restricted product and its
 permutation-invariance lemma were both missing at the time it was written —
-and a sibling lane's handoff (`docs/plan/status/374-euler-theorem.md`,
+and a sibling lane's handoff (`docs/plan/archive/lanes/374-euler-theorem.md`,
 `int_prelude/euler_theorem.rs`) had already built the cheap half of the fix
 (`Int.prodRangeIf`/`Int.prodRangeIf_permute`, routing around the missing
 `Nat.prodRange` swap induction by working over `Int.prodRange_permute`
@@ -104,5 +104,5 @@ prelude's 727 theorems all axiom-free).
   other lanes had already measured as harder than advertised, or duplicating
   work inside a file three other commits were actively extending the same
   session. Recorded in
-  [`docs/plan/status/graded-families-number-theory.md`](../../plan/status/graded-families-number-theory.md).
+  [`docs/plan/archive/lanes/graded-families-number-theory.md`](../../plan/archive/lanes/graded-families-number-theory.md).
 - Facts: `F:nat-mod-eq-iff-mod-eq`, `F:nat-not-prime-of-pow-mod-ne`.

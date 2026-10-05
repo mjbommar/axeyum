@@ -1,6 +1,6 @@
 # Notes: 117-parity-freshness
 
-Detail moved out of [`../status/117-parity-freshness.md`](../status/117-parity-freshness.md) so the
+Detail moved out of [`../status/117-parity-freshness.md`](../archive/lanes/117-parity-freshness.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

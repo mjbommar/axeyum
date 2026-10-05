@@ -1,6 +1,6 @@
 # Notes: 119-consumer-interface
 
-Detail moved out of [`../status/119-consumer-interface.md`](../status/119-consumer-interface.md) so the
+Detail moved out of [`../status/119-consumer-interface.md`](../archive/lanes/119-consumer-interface.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

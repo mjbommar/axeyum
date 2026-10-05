@@ -5,7 +5,7 @@
 > **This census's `class` column was measured wrong on at least 67 of 70 files
 > in two divisions, and the method that produced it is retired.** Two defects,
 > both confirmed by re-measurement (lane S11a,
-> [status](../../plan/status/s11a-uf-ackermann-cap.md)):
+> [status](../../plan/archive/lanes/s11a-uf-ackermann-cap.md)):
 >
 > 1. **The class is the LAST route's message, not the route that spent the
 >    budget.** On 35 QF_UF files `euf-online` is entered first and consumes

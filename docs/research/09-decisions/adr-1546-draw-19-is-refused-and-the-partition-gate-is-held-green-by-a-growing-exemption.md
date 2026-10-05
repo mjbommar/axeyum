@@ -83,7 +83,7 @@ single violation throughout: the operation
 `authoritative-mathlib-nat-modeq-remainder-family-v1` references three
 development facts and no train fact — a producer authored against the
 evaluation set. This was already recorded as a known pre-existing red in
-`docs/plan/status/198-modeq-producer.md` on 2026-08-28 ("was already failing on
+`docs/plan/archive/lanes/198-modeq-producer.md` on 2026-08-28 ("was already failing on
 `main` … it still is"). **Draw 18 did not measure this gate at all**; its
 baseline table omits it. So the precedent that draw 18 established — "author
 once the partition gates are green" — was never actually satisfied.

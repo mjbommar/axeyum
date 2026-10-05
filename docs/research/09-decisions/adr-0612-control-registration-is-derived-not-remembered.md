@@ -30,7 +30,7 @@ defects — including `test_validate_facts_allowlist`, which was written **becau
 two tests could not fail and was then left wired to nothing.
 
 The 188 were triaged rather than counted (measurement in
-[`docs/plan/status/154-inert-controls.md`](../../plan/status/154-inert-controls.md)).
+[`docs/plan/archive/lanes/154-inert-controls.md`](../../plan/archive/lanes/154-inert-controls.md)).
 Every one was executed. The split was **0 obsolete, 0 needing a slow tier, 188
 live** — 160 passing, 16 written in a dialect the gate's invocation form cannot
 run, 12 red on `main`. Nothing was obsolete, and nothing was too slow: all 169

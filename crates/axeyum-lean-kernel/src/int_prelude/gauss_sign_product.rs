@@ -27,7 +27,7 @@
 //! `∏(a·k) = a^m·m!` identity, the per-term `Nat`/`Int` congruence bridging
 //! `a·k` to `ε_k·gaussFold(pp,a,k)`, `gcd(m!,pp) = 1`, and the final
 //! assembly/cancellation -- are NOT attempted here. See this lane's status
-//! doc (`docs/plan/status/gauss-piece-3.md`) for the precise route and what
+//! doc (`docs/plan/archive/lanes/gauss-piece-3.md`) for the precise route and what
 //! each remaining piece needs.
 
 use super::ops::IntDev;

@@ -2258,7 +2258,7 @@ pub(super) fn declare_lor_comm(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
 
 // ============================================================================
 // `land_aux_eq_zero_of_left_eq_zero` -- "zero propagates through the other
-// operand" -- the one theorem `docs/plan/status/252-nat-assoc-dichotomy.md`
+// operand" -- the one theorem `docs/plan/archive/lanes/252-nat-assoc-dichotomy.md`
 // traced by hand (and cross-checked numerically in Python) but did not
 // build, because it and `land_aux_assoc_of_fuel` both belong here, under
 // active concurrent edit at the time that plan was written. See that file
@@ -2773,7 +2773,7 @@ pub(super) fn declare_land_zero_propagation_all(
 
 // ============================================================================
 // `land_aux_assoc_of_fuel` / `land_assoc` -- see
-// `docs/plan/status/257-nat-land-assoc-impl.md` for the fully hand-traced
+// `docs/plan/archive/lanes/257-nat-land-assoc-impl.md` for the fully hand-traced
 // derivation this transcribes. The step case is split `c`, then `b`, then
 // `a` (corrected from an earlier `a,b,c` plan -- `guarded`'s guard checks
 // its SECOND value argument, i.e. the outer application's own `n`-slot,
@@ -3412,7 +3412,7 @@ pub(super) fn declare_land_assoc_all(
 // ============================================================================
 // `lor_aux_ne_zero_of_right_ne_zero` -- the invariant that plays
 // `land_aux_eq_zero_of_left_eq_zero`'s role for `lor`, and NOT its direct
-// transport. See `docs/plan/status/266-nat-lor-assoc.md` for the full
+// transport. See `docs/plan/archive/lanes/266-nat-lor-assoc.md` for the full
 // derivation (numerically cross-checked in Python before any Rust) and for
 // why the direct analogue ("`lor` propagates zero") is FALSE, not merely
 // harder: `lor a b = 0` forces `a = 0 ∧ b = 0`, so `lor a (lor b c)`
@@ -3802,9 +3802,9 @@ pub(super) fn declare_lor_aux_ne_zero_of_right_ne_zero_all(
 
 // ============================================================================
 // `lor_aux_assoc_of_fuel` / `lor_assoc` / `lor_aux_le_add` -- see
-// `docs/plan/status/266-nat-lor-assoc.md` for the fully hand-traced,
+// `docs/plan/archive/lanes/266-nat-lor-assoc.md` for the fully hand-traced,
 // Python-simulated derivation this transcribes (the `land_assoc` counterpart
-// is `docs/plan/status/257-nat-land-assoc-impl.md`). SIMPLER than `land`'s
+// is `docs/plan/archive/lanes/257-nat-land-assoc-impl.md`). SIMPLER than `land`'s
 // hard leaf once `lor_aux_ne_zero_of_right_ne_zero` exists: the two stuck
 // intermediates are unconditionally positive here, so both dichotomies'
 // `= 0` branches close by direct contradiction rather than a mirrored
@@ -4397,7 +4397,7 @@ fn declare_lor_aux_assoc_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
 /// `(a+b)+(c+d) = (a+c)+(b+d)`, returned as a `(target, proof)` chain step,
 /// the proof's source being `add(add(a,b),add(c,d))`.
 ///
-/// Retired to `crate::ring::nat` (docs/plan/status/460-ring-tactic-1.md): a
+/// Retired to `crate::ring::nat` (docs/plan/archive/lanes/460-ring-tactic-1.md): a
 /// pure ring-rearrangement chain, now searched for and emitted rather than
 /// hand-assembled — one of eight verbatim-duplicated hand proofs of this
 /// exact identity across `nat_prelude` (`binomial.rs`, `div_mod_lemmas.rs`,

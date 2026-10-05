@@ -1,6 +1,6 @@
 # Lane note: shrinking the control, and what it took to verify ADR-0509's route
 
-Detail for [`docs/plan/status/66-shrink-control.md`](../status/66-shrink-control.md).
+Detail for [`docs/plan/archive/lanes/66-shrink-control.md`](../archive/lanes/66-shrink-control.md).
 The decision is [ADR-0515](../../research/09-decisions/adr-0515-a-negative-control-is-one-assumed-law-over-a-constructed-carrier.md).
 
 ## The measurement that discharges the specification

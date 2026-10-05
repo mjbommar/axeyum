@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Self-contained test suite for scripts/lib/module_baseline.py,
 scripts/gen-module-baseline.py, scripts/check-module-baseline.py (L1 phase
-G0 -- see docs/plan/status/l1-g0-module-baseline.md).
+G0 -- see docs/plan/archive/lanes/l1-g0-module-baseline.md).
 
 Builds a small synthetic Mathlib-shaped fixture (never touches the shared
 mathlib4 checkout) and asserts one property per guard in the parser and the

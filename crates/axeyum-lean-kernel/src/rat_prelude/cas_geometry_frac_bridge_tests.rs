@@ -4,7 +4,7 @@
 //! [`super::cas_geometry_bridge_tests`] and [`super::cas_geometry_mul_bridge_tests`]
 //! both decline any certificate with a non-integer coefficient — `int_poly`
 //! calls [`super::cas_ivt_bridge_tests::rational_to_int`], which returns `None`
-//! on anything but a whole number. `docs/plan/status/314-cas-prove-mul.md`
+//! on anything but a whole number. `docs/plan/archive/lanes/314-cas-prove-mul.md`
 //! measured the resulting gap at three certificates and one sibling fact
 //! needing this cast; this module builds it and reconstructs the cheapest of
 //! the three: `medians-concurrent` (32 terms, cofactors constant `-1`, and
@@ -187,8 +187,8 @@ pub(super) fn eval_rat_poly(poly: &[RatTerm], point: &BTreeMap<&str, i128>) -> R
 /// `Rat.normalize (int_lit num) (nat_lit den) (nat_le_lit 1 den)` — the
 /// general fractional-literal cast: a `Rational`'s own canonical
 /// `(numerator, denominator)` pair, embedded directly. This is what
-/// `docs/plan/status/277-cas-multivariate.md` and
-/// `docs/plan/status/314-cas-prove-mul.md` both called the missing
+/// `docs/plan/archive/lanes/277-cas-multivariate.md` and
+/// `docs/plan/archive/lanes/314-cas-prove-mul.md` both called the missing
 /// `Rat.ofRat`-style cast.
 pub(super) fn rat_lit(d: &mut IntDev<'_>, r: Rational) -> ExprId {
     let num_int = int_lit(d, r.numerator());

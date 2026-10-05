@@ -53,7 +53,7 @@ this amendment does not claim they are spent, only that the family as a whole
 cannot stay held-out once two of its ten rows are not blind
 (`whole-family-with-source-review-groups-indivisible`).
 
-Draw 11 (recorded in `docs/plan/status/nursery-refill-draw-11.md` and this
+Draw 11 (recorded in `docs/plan/archive/lanes/nursery-refill-draw-11.md` and this
 tree's commit history) knew about the fermat-numbers precedent and did not
 apply it before drawing `natural-bit-decode`. The standing checker caught it
 after the fact, exactly as designed -- but this is the SECOND time this
@@ -138,7 +138,7 @@ closed-evaluation.py` and R9 already accept.
 
 - `scripts/check-holdout-closed-evaluation.py` returns to
   `verdict=PASS` with `closed_shaped=0` (measured after the amendment,
-  reported in `docs/plan/status/holdout-closed-evaluation-amendment.md`).
+  reported in `docs/plan/archive/lanes/holdout-closed-evaluation-amendment.md`).
 - `scripts/check-autogenesis-nursery.py`,
   `scripts/check-autogenesis-holdout-isolation.py`, and
   `scripts/check-dispatchable-frontier.py` are re-run and their results

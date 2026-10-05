@@ -52,7 +52,7 @@
   "provenance": {
     "date": "2026-09-02",
     "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det_mul.rs)",
-    "source": "Lane det-mul-general-n, closing ADR-1440's obligation 2 (the selection lemma) on the way to determinant multiplicativity at symbolic n. Status note: docs/plan/status/det-mul-general-n.md."
+    "source": "Lane det-mul-general-n, closing ADR-1440's obligation 2 (the selection lemma) on the way to determinant multiplicativity at symbolic n. Status note: docs/plan/archive/lanes/det-mul-general-n.md."
   },
   "notes": "WHAT THIS DOES NOT SAY. It does not say `det (A*B) n = det A n * det B n`. That needs a second obligation this fact does not touch: expanding `det (A*B) n` in the rows of `A*B`, each of which is a `Rat.sumRange` of rows of `B`, which produces a sum indexed by the function space `[0,n) -> [0,n)` and needs a `Rat` analogue of `Int.sumMaps` (absent) plus a `Rat.prodRange` (also absent). It says nothing at a dimension of `0`: the statement is at `succ m`, matching `Rat.det_alternating`'s and `Rat.det_row_swap`'s own convention. And the `MapsInto` hypothesis is part of the proposition, not an artefact of the proof -- without it the statement is false (ADR-1470's counterexample)."
 }

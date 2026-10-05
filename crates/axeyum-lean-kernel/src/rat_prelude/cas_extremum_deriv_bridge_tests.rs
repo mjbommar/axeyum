@@ -67,7 +67,7 @@
 //! building anything kernel-side, so a wrong CAS derivative would fail the
 //! test at that assertion, not silently propagate. `p'(-2) = 3*4-6 = 6` and
 //! `p'(-1) = 3*1-6 = -3`, computed by hand twice (per
-//! `docs/plan/status/223-cas-reconstruct.md`'s warning that
+//! `docs/plan/archive/lanes/223-cas-reconstruct.md`'s warning that
 //! `Kernel::add_declaration` type-checks a proof term but cannot by itself
 //! tell a constant is wrong) and cross-checked against the untrusted `i128`
 //! Horner evaluator below. Both reduce to

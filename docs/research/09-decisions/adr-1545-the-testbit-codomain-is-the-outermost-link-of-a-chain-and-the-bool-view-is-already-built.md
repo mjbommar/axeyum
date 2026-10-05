@@ -332,7 +332,7 @@ files that exist, which is what G9 requires of a `not-removable` claim.
   decision with its own blast radius, not a corollary of the codomain
   question, and this lane deliberately did not take it. **It is a named next
   action, with the measurement above as its input.**
-- **It does not rewrite `docs/plan/status/l3-d4-obstruction-producer.md`**,
+- **It does not rewrite `docs/plan/archive/lanes/l3-d4-obstruction-producer.md`**,
   which records `nat-testbit-bool-codomain` as "(new-construction, 5
   facts)". That is another lane's status file. Its prose — and PLAN.md's
   generated copy of it — is stale as of this ADR; the artifact is the

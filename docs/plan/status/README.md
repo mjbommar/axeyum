@@ -65,6 +65,27 @@ next, what is blocked. This is emitted into PLAN.md's "Next Actions".
   free number; duplicates are resolved by the rest of the name, not by anyone
   editing anyone else's file.
 
+## Lifecycle: open, keep small, archive
+
+A lane file exists only while its work is **active**. Since 2026-10-05
+`scripts/check-plan-authority.py` enforces three bounds, so `PLAN.md` stays a
+queue rather than a journal:
+
+- **≤ 3,000 bytes per file.** Detail goes to `docs/plan/notes/<lane>.md`
+  (`python3 scripts/archive-plan-status.py --apply`).
+- **No finished lanes here.** When your status token says `DONE` (or `LANDED`,
+  `COMPLETE`, …), archive the file in the same commit:
+  `python3 scripts/archive-plan-lane.py <lane>` moves it to
+  [`../archive/lanes/`](../archive/lanes/), rewrites every link to it, and
+  `gen-plan.py` re-indexes it in [`../CATALOG.md`](../CATALOG.md).
+- **≤ 25 active lane files.** A paused or abandoned lane is archived too; its
+  last next action stays searchable in the catalog's "not DONE when archived"
+  table, and a queue item in `PLAN.md` links it when the work resumes.
+
+The reason: nothing ever took a lane back out, so by 2026-10-05 this directory
+held 770 files (601 DONE) and `PLAN.md` had reached 75,717 lines. All 770 were
+archived that day.
+
 ## Adding a lane
 
 Add `NN-your-lane.md`, run `python3 scripts/gen-plan.py`, and commit your lane

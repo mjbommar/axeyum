@@ -3,7 +3,7 @@
 //!
 //! # Why this file exists
 //!
-//! `docs/plan/status/250-nat-fastfib-minfac.md` sized `Nat.fastFib` (Mathlib's
+//! `docs/plan/archive/lanes/250-nat-fastfib-minfac.md` sized `Nat.fastFib` (Mathlib's
 //! log-time Fibonacci) and found it blocked on two pieces of infrastructure
 //! that did not exist here, either of which alone stops the construction:
 //!
@@ -103,7 +103,7 @@
 //! the theorem stated about Mathlib's. Anything built on top of it — a
 //! `fastFib`, in particular — therefore lands as a NEW local fact and leaves
 //! `F:ml430-nat-fastfib-eq-cde11774` open. See
-//! `docs/plan/status/255-nat-binaryrec.md`.
+//! `docs/plan/archive/lanes/255-nat-binaryrec.md`.
 //!
 //! # The arithmetic, and where it was already hiding
 //!

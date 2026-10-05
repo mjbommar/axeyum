@@ -195,6 +195,6 @@ echo "creal-build-ratio: RED -- ${RATIO} > ${BUDGET}" >&2
 echo "  The creal prelude got more expensive to type-check RELATIVE to the rat" >&2
 echo "  prelude, so this is not load. Find WHICH declaration with a per-step" >&2
 echo "  timing pass over creal.rs's STEPS loop -- see" >&2
-echo "  docs/plan/status/218-creal-build-bisect.md for the method and the" >&2
+echo "  docs/plan/archive/lanes/218-creal-build-bisect.md for the method and the" >&2
 echo "  2026-08-28 distribution it produced." >&2
 exit 1

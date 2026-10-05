@@ -2472,7 +2472,7 @@ pub(super) fn declare_cos_fn_wide_uniformly_continuous(
 ///
 /// Route, and it costs nothing beyond one `Rat.normalize_congr` (the CHEAP
 /// kind of `Rat` fact -- an `Eq` between two `normalize`s, per
-/// `docs/plan/status/166-cos-deriv2.md`'s pricing note):
+/// `docs/plan/archive/lanes/166-cos-deriv2.md`'s pricing note):
 ///
 /// 1. `Rat.natDivSucc_le_add_left 5 3 4 : Rat.le (natDivSucc 5 4)
 ///    (natDivSucc (Nat.add 5 3) 4)`. `Nat.add 5 3` is literally the unary
@@ -2543,7 +2543,7 @@ pub(super) fn one_le_r_domain(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
 /// three numeric obligations a π-via-`ivt_exact_root` construction carries;
 /// the other two -- `cos (8/5) < 0` and a uniform positive lower bound on
 /// `sinFn` over `[1, 8/5]` -- are NOT proved here or anywhere in this tree,
-/// and `docs/plan/status/169-pi.md` sizes both. Nothing in this section
+/// and `docs/plan/archive/lanes/169-pi.md` sizes both. Nothing in this section
 /// constructs `CReal.pi`, and nothing here asserts a root exists.
 ///
 /// # Errors
@@ -5151,7 +5151,7 @@ pub(super) fn declare_cos_fn_wide_derivative(
 
 // ============================================================================
 // `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound on
-// `sinFn` over `[1, 8/5]`, `docs/plan/status/169-pi.md`.
+// `sinFn` over `[1, 8/5]`, `docs/plan/archive/lanes/169-pi.md`.
 //
 // Route: sine's magnitude sequence `a k := expTerm (2k+1) * z^(2k+1)` IS
 // globally antitone on `[0, 8/5]` (`z^2 <= 64/25 <= 6 <= (2k+2)(2k+3)` for

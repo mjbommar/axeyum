@@ -1,6 +1,6 @@
 # Notes: agent-string-recon
 
-Detail moved out of [`../status/agent-string-recon.md`](../status/agent-string-recon.md) so the
+Detail moved out of [`../status/agent-string-recon.md`](../archive/lanes/agent-string-recon.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

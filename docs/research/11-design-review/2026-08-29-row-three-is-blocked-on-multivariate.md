@@ -51,7 +51,7 @@ dependency.
 
 - ADR-0601 (three producers, one trust anchor).
 - `docs/research/11-design-review/2026-08-28-ivt-evt-pareto-position-measured.md`
-- `docs/plan/status/274-cas-row-three.md` — per-fact sizing.
+- `docs/plan/archive/lanes/274-cas-row-three.md` — per-fact sizing.
 
 
 ## CORRECTION (same day): "one dependency unblocks 19 of 28" is WRONG

@@ -243,7 +243,7 @@ obligation in `AlgS.*` is a genuine field, carried explicitly, not derived.
 
 ## Evidence
 
-See `docs/plan/status/464-structures-setoid.md` for the measured field
+See `docs/plan/archive/lanes/464-structures-setoid.md` for the measured field
 counts, the `def_eq` result at `CReal.commRingS`, and test/build output —
 recorded there rather than duplicated here since this ADR was written
 alongside the implementation in the same lane.

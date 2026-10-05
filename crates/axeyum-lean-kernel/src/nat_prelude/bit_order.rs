@@ -1,9 +1,9 @@
 //! `Nat.lt_of_testBit` (Nat-valued local analogue) and its supporting
 //! arithmetic toolkit (`self_lt_two_pow`, `self_lt_two_pow_add`) — pieces
 //! toward `F:ml430-nat-lt-xor-cases-c43a1e85`. See
-//! `docs/plan/status/260-nat-lt-xor-cases.md` /
-//! `docs/plan/status/263-nat-testbit-xor.md` for pieces 1 and the overall
-//! plan; `docs/plan/status/265-nat-msb-order.md` for this lane's handoff.
+//! `docs/plan/archive/lanes/260-nat-lt-xor-cases.md` /
+//! `docs/plan/archive/lanes/263-nat-testbit-xor.md` for pieces 1 and the overall
+//! plan; `docs/plan/archive/lanes/265-nat-msb-order.md` for this lane's handoff.
 //!
 //! WORK IN PROGRESS scaffold: dispatch is a no-op until each declaration is
 //! landed below.
@@ -561,7 +561,7 @@ fn declare_lt_of_test_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kern
 /// zero` — piece 2 of 4 toward `F:ml430-nat-lt-xor-cases-c43a1e85`
 /// (`exists_most_significant_bit`'s "cheap half": above a value's own
 /// magnitude bound every bit reads zero). See
-/// `docs/plan/status/265-nat-msb-order.md` / `269-nat-msb-exists.md`.
+/// `docs/plan/archive/lanes/265-nat-msb-order.md` / `269-nat-msb-exists.md`.
 ///
 /// Route: [`value_eq_sum_range`] at `bound := j` (directly from the
 /// hypothesis) gives `sumRange f_n j = n`; the same helper at
@@ -809,9 +809,9 @@ fn msb_intro(
 /// Exists (msb_predicate n)` -- the hard half of
 /// `Nat.exists_most_significant_bit` (piece 2 of 4 toward
 /// `F:ml430-nat-lt-xor-cases-c43a1e85`; see
-/// `docs/plan/status/269-nat-msb-exists.md` for the "every bit above is
+/// `docs/plan/archive/lanes/269-nat-msb-exists.md` for the "every bit above is
 /// zero" cheap half already landed as `Nat.testBit_eq_zero_of_lt`, and
-/// `docs/plan/status/265-nat-msb-order.md`/`docs/plan/status/271-nat-msb-hard.md`
+/// `docs/plan/archive/lanes/265-nat-msb-order.md`/`docs/plan/archive/lanes/271-nat-msb-hard.md`
 /// for why `Nat.size` does NOT shortcut this: `size`'s own development
 /// ([`NatPrelude::size_aux_lt_pow`], `binary.rs`) only ever proves an UPPER
 /// bound (`n < 2^(size n)`), never the LOWER bound this needs, and has no

@@ -50,7 +50,7 @@
 //! of the ten **must** live at `Sort 2`; the same field list at `Sort 1` is
 //! refused. [`declare_record`] runs both as a control for every record (not
 //! only once, as ADR-1495's own probe did for `Field` alone) — see
-//! `docs/plan/status/453-structures-1.md` for all ten pairs.
+//! `docs/plan/archive/lanes/453-structures-1.md` for all ten pairs.
 //!
 //! ## The generic construction
 //!

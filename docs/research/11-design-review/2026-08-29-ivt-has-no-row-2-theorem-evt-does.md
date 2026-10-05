@@ -14,7 +14,7 @@
 > ALGORITHMS and a claim about the STATEMENT, which is still exactly right and
 > is why `ivt.rs`'s two counterexamples were left untouched rather than
 > superseded. Everything below is the diagnosis as it stood before the fix.
-> Lane handoff: `docs/plan/status/249-ivt-row-two.md`.
+> Lane handoff: `docs/plan/archive/lanes/249-ivt-row-two.md`.
 
 **Measured, with a positive control, at `fedc6c70b`.**
 

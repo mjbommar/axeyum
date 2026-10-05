@@ -379,7 +379,7 @@ class CrossPopulationTests(unittest.TestCase):
     check. `check-autogenesis-nursery.py` used to only ever read
     nursery-v1.json, so a crossing entirely within nursery-v2-extension, or
     one formed only by a real dependency edge BETWEEN the two files, was
-    invisible to every gate. See docs/plan/status/nursery-v2-component-coverage.md
+    invisible to every gate. See docs/plan/archive/lanes/nursery-v2-component-coverage.md
     and ADR-0855.
     """
 

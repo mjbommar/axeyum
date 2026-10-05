@@ -12,7 +12,7 @@ Mutation-verify: for each guard_* function in check-effort-taxonomy.py,
 replace its body with `return Violation()` (or, for guard_generated_fresh,
 with `return Violation()` too) one at a time, rerun this file, and confirm
 exactly one test fails. See the kill table in
-docs/plan/status/l3-d0-effort-taxonomy.md.
+docs/plan/archive/lanes/l3-d0-effort-taxonomy.md.
 """
 
 from __future__ import annotations

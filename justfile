@@ -1827,7 +1827,7 @@ generated-trackers:
     # count. docs/autogenesis/289-import-backlog-artifact.md.
     python3 -m unittest scripts.tests.test_gen_import_backlog
     python3 scripts/gen-import-backlog.py --check
-    # docs/plan/status/141-ledger-6-backlog.md's closing paragraph: the full
+    # docs/plan/archive/lanes/141-ledger-6-backlog.md's closing paragraph: the full
     # diff of the kernel's theorem inventory against artifacts/facts/'s
     # registered names had never been measured. Permanent gate, not a
     # one-off count. docs/autogenesis/297-ledger-coverage-gate.md.
@@ -1874,6 +1874,7 @@ prelude-reuse:
 # Prevent PLAN/STATUS/TODO from becoming competing project-level authorities.
 plan-authority:
     python3 scripts/check-plan-authority.py
+    python3 -m unittest scripts.tests.test_check_plan_authority
 
 # Current official construct-matrix product boundary: the direct-recursive
 # control precedes each remaining typed decline, and all five rows repeat.
@@ -1891,7 +1892,7 @@ deny:
 links:
     ./scripts/check-links.sh
 
-# The 2026-08-29 orphan-script audit (docs/plan/status/308-orphan-script-audit.md)
+# The 2026-08-29 orphan-script audit (docs/plan/archive/lanes/308-orphan-script-audit.md)
 # found these three well-formed, general-purpose checks with no caller anywhere.
 # Registered rather than deleted: each ran clean when tested standing it up.
 gate-step-timeout:

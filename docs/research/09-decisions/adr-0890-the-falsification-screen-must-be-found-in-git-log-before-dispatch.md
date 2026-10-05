@@ -32,7 +32,7 @@ phase. Neither exists anywhere in this tree — checked at `HEAD` and at
 `origin/main`, which were the same commit at the time of this ADR, and no
 file anywhere mentions either string. This ADR proceeds from the roadmap
 document and ADR-0752 instead of fabricating content for the missing
-citations; see `docs/plan/status/l3-d3-counterexample-first.md` for the
+citations; see `docs/plan/archive/lanes/l3-d3-counterexample-first.md` for the
 verification.
 
 ## Decision

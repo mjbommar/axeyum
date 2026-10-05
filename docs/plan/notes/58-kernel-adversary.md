@@ -1,6 +1,6 @@
 # Notes: 58-kernel-adversary
 
-Detail moved out of [`../status/58-kernel-adversary.md`](../status/58-kernel-adversary.md) so the
+Detail moved out of [`../status/58-kernel-adversary.md`](../archive/lanes/58-kernel-adversary.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

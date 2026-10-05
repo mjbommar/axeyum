@@ -33,7 +33,7 @@
 //! [`declare_excluded_middle_countermodel`] closes
 //! `F:excluded-middle-not-intuitionistic`. That fact stays `open`, with a
 //! decomposition into slices recorded in its `notes` field and in
-//! `docs/plan/status/273-logic-excluded-middle.md`. What IS closed here is a
+//! `docs/plan/archive/lanes/273-logic-excluded-middle.md`. What IS closed here is a
 //! new, honestly-scoped, self-contained fact:
 //! `F:heyting-3-chain-refutes-excluded-middle` — a semantic (not syntactic)
 //! countermodel result, true and machine-checked on its own terms.

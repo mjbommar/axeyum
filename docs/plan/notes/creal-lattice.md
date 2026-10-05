@@ -1,6 +1,6 @@
 # Notes: creal-lattice
 
-Detail kept out of [`../status/69-creal-lattice.md`](../status/69-creal-lattice.md)
+Detail kept out of [`../status/69-creal-lattice.md`](../archive/lanes/69-creal-lattice.md)
 so the lane block stays inside the per-lane ceiling (ADR-0520). The decision is
 [ADR-0519](../../research/09-decisions/adr-0519-the-real-lattice-is-defined-on-the-representation-and-is-one-lipschitz.md);
 its predecessors, which costed this slice without building it, are

@@ -1,6 +1,6 @@
 # Notes: 113-nat-rule-placement
 
-Detail moved out of [`../status/113-nat-rule-placement.md`](../status/113-nat-rule-placement.md) so the
+Detail moved out of [`../status/113-nat-rule-placement.md`](../archive/lanes/113-nat-rule-placement.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

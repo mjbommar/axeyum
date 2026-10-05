@@ -46,7 +46,7 @@ mirror `prelude_theorem_inventory`'s prelude list but never called
 had never been checked for a cross-prelude NAME COLLISION (a different
 question from "is it in the theorem count", and one this script's `check()`
 above cannot answer, since collision-checking covers every `Declaration`
-kind, not just theorems). See `docs/plan/status/146-collision-gap.md`.
+kind, not just theorems). See `docs/plan/archive/lanes/146-collision-gap.md`.
 
 That file is a `#[test]`, not a binary with a TSV stdout, so it cannot be
 compared by running it and parsing output the way `check()` above compares

@@ -1,6 +1,6 @@
 # Notes: 55-int-categoricity
 
-Detail moved out of [`../status/55-int-categoricity.md`](../status/55-int-categoricity.md) so the
+Detail moved out of [`../status/55-int-categoricity.md`](../archive/lanes/55-int-categoricity.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

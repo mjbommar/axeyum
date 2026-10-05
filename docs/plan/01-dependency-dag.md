@@ -1,5 +1,7 @@
 # 01 — Dependency DAG, keystones, and execution order
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](CATALOG.md). This was the early dependency DAG; it is superseded by [docs/research/08-planning/foundational-dag.md](../research/08-planning/foundational-dag.md).
+
 This is the shape of the work: what unblocks what, where the keystones are, and
 the order to actually do it in. The plan is five parallel tracks, but they are
 not independent — the arrows below are the real constraints.

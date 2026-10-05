@@ -841,7 +841,7 @@ fn declare_eisenstein_lemma_mod_eq(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
 /// `(a+b)+(c+e) = (a+c)+(b+e)`. Exported (with [`two_mul`]) for
 /// `quadratic_reciprocity_count.rs`, which needs the same identity.
 ///
-/// Retired to `crate::ring::nat` (docs/plan/status/460-ring-tactic-1.md): a
+/// Retired to `crate::ring::nat` (docs/plan/archive/lanes/460-ring-tactic-1.md): a
 /// pure ring-rearrangement chain, now searched for and emitted rather than
 /// hand-assembled — one of eight verbatim-duplicated hand proofs of this
 /// exact identity across `nat_prelude` (`binomial.rs`, `div_mod_lemmas.rs`,

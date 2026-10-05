@@ -1,8 +1,8 @@
 //! `Int.prodRangeIf_const_eq_pow_count : ∀ pred a n,
 //! prodRangeIf pred (fun _ => a) n = pow a (countRange pred n)` -- item 3(a)
 //! of the three-piece Fermat -> Euler handoff
-//! (`docs/plan/status/374-euler-theorem.md`), the first slice of item 3
-//! (`docs/plan/status/euler-theorem-spine.md` calls this the one piece of
+//! (`docs/plan/archive/lanes/374-euler-theorem.md`), the first slice of item 3
+//! (`docs/plan/archive/lanes/euler-theorem-spine.md` calls this the one piece of
 //! the whole handoff that is genuinely new mathematics, "an induction this
 //! kernel has not built before").
 //!

@@ -2,7 +2,7 @@
 //! (dvd c1 a) (And (dvd c2 b) (Eq Int (mul c1 c2) c)))` -- Mathlib's
 //! `Int.dvd_mul` (`F:ml430-int-dvd-mul-3a7b94cd`), the ℤ sibling of
 //! `nat_prelude::dvd_mul_split::declare_dvd_mul_split`
-//! (`docs/plan/status/343-dvd-mul-split.md`).
+//! (`docs/plan/archive/lanes/343-dvd-mul-split.md`).
 //!
 //! **Not named `Int.dvd_mul`** for the same reason the `Nat` mirror isn't
 //! named `Nat.dvd_mul`: `dvd_mul_split` is the name that lane checked free in

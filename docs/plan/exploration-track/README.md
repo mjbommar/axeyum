@@ -1,5 +1,7 @@
 # Exploration Track — searched bridge composition, certified evidence, open problems
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../CATALOG.md). This was a proposed track dated 2026-08-01 that was never accepted.
+
 Status: proposed track (2026-08-01). Not yet accepted; every phase below carries
 its own ADR gate. This folder is the plan, not a commitment.
 

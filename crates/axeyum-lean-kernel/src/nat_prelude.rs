@@ -1373,7 +1373,7 @@ pub struct NatPrelude {
     /// was needed.
     pub coprime_mul_of_coprime: NameId,
     /// `Nat.gcd_mod_left_eq_gcd : ∀ x m, Eq (gcd (mod x m) m) (gcd x m)` --
-    /// `docs/plan/status/301-totient-multiplicative.md`'s "Step 1"
+    /// `docs/plan/archive/lanes/301-totient-multiplicative.md`'s "Step 1"
     /// (mod-gcd invariance) toward `totient_mul_of_coprime`. Case split on
     /// `m`: `m = 0` closes by `mod_zero` plus congruence; `m = succ k`
     /// chains `gcd_succ` (`gcd m x = gcd (mod x m) m`) with `gcd_comm`
@@ -1619,7 +1619,7 @@ pub struct NatPrelude {
     /// has the shape `a = 0`; at `b = succ y`, `add a (succ y)` is defeq to
     /// `succ (add a y)`, which `succ_ne_zero` refutes against the hypothesis.
     /// Built for `nat-assoc-dichotomy`'s `land_aux_assoc_of_fuel` attempt
-    /// (`docs/plan/status/247-nat-bitwise-assoc.md`'s item 1): the per-bit
+    /// (`docs/plan/archive/lanes/247-nat-bitwise-assoc.md`'s item 1): the per-bit
     /// successor row is `2 * rec + bit`, and deciding whether that compound
     /// value is zero needs `2 * rec = 0 ∧ bit = 0` from `add_eq_zero`, then
     /// `rec = 0` from the existing `mul_eq_zero` (eliminating the `2 = 0`
@@ -1633,7 +1633,7 @@ pub struct NatPrelude {
     /// `Or`-typed FACT naming that term, usable with `or_elim` without the
     /// caller's motive ever needing to fold the term's internal structure
     /// into a `Nat.rec` motive. Built for `nat-assoc-dichotomy`'s
-    /// `land_aux_assoc_of_fuel` attempt (`docs/plan/status/247-nat-bitwise-assoc.md`
+    /// `land_aux_assoc_of_fuel` attempt (`docs/plan/archive/lanes/247-nat-bitwise-assoc.md`
     /// item 2): the successor row's nested value `X := landAux fuel a b` is a
     /// compound arithmetic expression appearing in an ARGUMENT position, and
     /// deciding whether it is zero needs exactly this — a proof that `X = 0`
@@ -2550,7 +2550,7 @@ pub struct NatPrelude {
     /// the no-fixed-point hypothesis derives `2 < n` contradicts a fixed
     /// point directly (`gcd k n = 1` at a fixed point forces `n = 2k` and
     /// `k | gcd k n = 1`, so `k = 1`, `n = 2`). See `totient_lemmas.rs`'s
-    /// module doc for the full route (`docs/plan/status/295-totient-even.md`,
+    /// module doc for the full route (`docs/plan/archive/lanes/295-totient-even.md`,
     /// `299-totient-even-exec.md`).
     pub totient_even: NameId,
     /// `Nat.odd_totient_iff_eq_one : ∀ n, Iff (Odd (totient n)) (Eq (totient
@@ -3052,7 +3052,7 @@ pub struct NatPrelude {
     /// `Nat.zero_of_testBit_eq_false` (`(∀ i, n.testBit i = false) → n =
     /// 0`), NOT a proof of that Bool-typed statement: our `testBit` returns
     /// `{0,1} : Nat`, a genuinely different codomain (see `binary.rs`'s
-    /// module doc and `docs/plan/status/235-nat-bitwise-facts.md`), so this
+    /// module doc and `docs/plan/archive/lanes/235-nat-bitwise-facts.md`), so this
     /// is registered as its own local fact rather than used to flip the
     /// pinned `ml430` mirror. Proved via [`Self::sum_test_bit_eq`]: the
     /// hypothesis makes every summand `mul (testBit n i) (pow 2 i)`
@@ -4792,7 +4792,7 @@ pub struct NatPrelude {
     /// Eq (landAux fuel a b) 0 → Eq (landAux fuel a (landAux fuel b c)) 0`
     /// — "zero propagates through the other operand": built for
     /// `nat-land-assoc-impl`'s `land_aux_assoc_of_fuel`, the one theorem
-    /// `docs/plan/status/252-nat-assoc-dichotomy.md` traced by hand and
+    /// `docs/plan/archive/lanes/252-nat-assoc-dichotomy.md` traced by hand and
     /// numerically cross-checked but did not build (both belonged in this
     /// file, under active concurrent edit at the time). Proved by a triple
     /// fuel induction (`ops::agree_by_double_fuel_induction`):
@@ -4825,7 +4825,7 @@ pub struct NatPrelude {
     /// `ops::agree_by_double_fuel_induction`, with the
     /// step case split `c`, then `b`, then `a` (verified against
     /// `guarded`'s actual n-outermost guard order, per
-    /// `docs/plan/status/257-nat-land-assoc-impl.md`): 3 of 4 base leaves
+    /// `docs/plan/archive/lanes/257-nat-land-assoc-impl.md`): 3 of 4 base leaves
     /// close by pure computation or [`Self::land_aux_zero_left_any_fuel`],
     /// and the hard leaf (`a,b,c` all positive) dichotomizes the two
     /// nested values via [`Self::zero_or_succ`], using
@@ -4890,7 +4890,7 @@ pub struct NatPrelude {
     /// propagation argument, and the per-bit step uses a new
     /// max-associativity fact (`bool_select_nat`/`ble` shape, three nested
     /// `Nat.mod _ 2` splits, 8 leaves) in place of `Nat.mul_assoc`. See
-    /// `docs/plan/status/266-nat-lor-assoc.md` and
+    /// `docs/plan/archive/lanes/266-nat-lor-assoc.md` and
     /// `nat_prelude::rec_agreement`.
     pub lor_aux_assoc_of_fuel: NameId,
     /// `Nat.lor_aux_le_add : ∀ fuel m n, Le (lorAux fuel m n) (add m n)` —
@@ -4908,7 +4908,7 @@ pub struct NatPrelude {
     /// `(2·half_m+2·half_n)+(bit_m+bit_n)` to `succ_m+succ_n` via the
     /// per-file `add_add_add_comm` four-term regrouping (see
     /// `nat_prelude::binomial`'s own copy) plus the two `Nat.div_mod_exec`
-    /// decompositions. See `docs/plan/status/266-nat-lor-assoc.md` and
+    /// decompositions. See `docs/plan/archive/lanes/266-nat-lor-assoc.md` and
     /// `nat_prelude::rec_agreement`.
     pub lor_aux_le_add: NameId,
     /// `Nat.lor_assoc : ∀ a b c, Eq (lor (lor a b) c) (lor a (lor b c))` —
@@ -5014,7 +5014,7 @@ pub struct NatPrelude {
     pub dvd_mul_split: NameId,
 
     // -- `nat-dist-nth` lane: `dist.rs`/`nth.rs` —
-    // `docs/plan/status/348-nat-dist-nth.md`.
+    // `docs/plan/archive/lanes/348-nat-dist-nth.md`.
     /// `Nat.dist n m := add (sub n m) (sub m n)` — Mathlib's own definition
     /// (`Mathlib.Data.Nat.Dist`), over our `sub`/`add`. See `dist.rs`'s
     /// module doc for why a mirror flip against it is honest.
@@ -5066,7 +5066,7 @@ pub struct NatPrelude {
     /// `lt_or_gt_of_ne_local` (`fermat_number_mirrors.rs`), then in each
     /// branch route through [`Self::dist_eq_sub_of_le`]/
     /// [`Self::dist_eq_sub_of_le_right`] and a direct `sub`-positivity
-    /// argument from the strict order. `docs/plan/status/draw9-second-theorems.md`.
+    /// argument from the strict order. `docs/plan/archive/lanes/draw9-second-theorems.md`.
     pub dist_pos_of_ne: NameId,
     /// `Nat.dist_eq_intro : ∀ n m k l, Eq (add n m) (add k l) → Eq (dist n k)
     /// (dist l m)` — `F:ml430-nat-dist-eq-intro-294b44ad`. Case-split on
@@ -6135,7 +6135,7 @@ pub struct NatPrelude {
     /// is therefore `succ`-shaped for symbolic `k` (`multiset_prod.rs`).
     pub prod_range_add_of_one_above: NameId,
     /// `Nat.Multiset.prod_add : ∀ m1 m2, Eq (prod (add m1 m2))
-    /// (mul (prod m1) (prod m2))` — the blocker `docs/plan/status/nat-multiset.md`
+    /// (mul (prod m1) (prod m2))` — the blocker `docs/plan/archive/lanes/nat-multiset.md`
     /// handed off, and the one law the COMPUTED prime factorization needs
     /// (`multiset_prod.rs`).
     pub multiset_prod_add: NameId,
@@ -9921,7 +9921,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `half_le_predecessor_of_succ` (`rec_agreement.rs`,
         // `declare_land_fuel_irrelevance_all`'s neighbourhood, far above).
         // Draw 9 (`natural-bitwise-basics`,
-        // `docs/plan/status/draw9-second-theorems.md`).
+        // `docs/plan/archive/lanes/draw9-second-theorems.md`).
         declare_land_self_all(&mut d, &p)?;
         // `Nat.land_one_is_mod`/`Nat.land_mod_two_eq_mul`/
         // `Nat.land_mod_two_eq_one`: needs `Nat.landAux`/`Nat.land`
@@ -9931,7 +9931,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.one_mul`/`Nat.mul_zero`/`Nat.zero_add` (order/arithmetic, far
         // above), and `mod_two_mul_add_of_lt` (`parity.rs`, far above).
         // Draw 9 (`natural-bitwise-basics`,
-        // `docs/plan/status/draw9-second-theorems.md`).
+        // `docs/plan/archive/lanes/draw9-second-theorems.md`).
         declare_land_low_bit_all(&mut d, &p)?;
         // `Nat.land_div_two`: needs `Nat.landAux`/`Nat.land` (`declare_land_all`,
         // far above), `Nat.land_zero_left`/`Nat.land_zero_right`
@@ -9941,7 +9941,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.div_mod_unique`/`Nat.zero_div`/`Nat.zero_mul`/`Nat.one_mul`/
         // `Nat.mod_lt`/`Nat.le_refl` (all far above). Draw 9
         // (`natural-bitwise-basics`,
-        // `docs/plan/status/draw9-second-theorems.md`).
+        // `docs/plan/archive/lanes/draw9-second-theorems.md`).
         declare_land_div_two_all(&mut d, &p)?;
         // `Nat.lor_aux_ne_zero_of_right_ne_zero`: needs `Nat.lorAux`
         // (`declare_lor_all`, far above), `Nat.succ_ne_zero`
@@ -9949,7 +9949,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_mul_no_zero_divisors`, far above), and
         // `Nat.div_mod_exec`/`Nat.mod_lt` (far above); nothing needs it yet,
         // so it goes right after the `land` family. See
-        // `docs/plan/status/266-nat-lor-assoc.md` for why this is the
+        // `docs/plan/archive/lanes/266-nat-lor-assoc.md` for why this is the
         // "invariant that replaces zero propagation" for `lor` rather than
         // a transport of `land_aux_eq_zero_of_left_eq_zero`.
         declare_lor_aux_ne_zero_of_right_ne_zero_all(&mut d, &p)?;
@@ -9964,7 +9964,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.add_le_add_right`/`Nat.le_trans`/`Nat.le_add_right`/
         // `Nat.add_comm`/`Nat.add_assoc` (all far above); nothing needs it,
         // so it goes last of the `lor` family. See
-        // `docs/plan/status/266-nat-lor-assoc.md`.
+        // `docs/plan/archive/lanes/266-nat-lor-assoc.md`.
         declare_lor_assoc_all(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`) and `Nat.mul_one`
         // (`declare_multiplicative_theorems`), both far above; nothing needs
@@ -10154,7 +10154,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `add_comm`/`succ_sub_succ` (`declare_order`/`declare_defining_
         // equations`/`declare_additive_theorems`/`declare_subtraction_
         // theorems`, all far above). Nothing needs it, so it goes last —
-        // `docs/plan/status/348-nat-dist-nth.md`.
+        // `docs/plan/archive/lanes/348-nat-dist-nth.md`.
         declare_dist_all(&mut d, &p)?;
         // `Nat.dist_eq_zero`/`Nat.add_sub_add_left`/`Nat.dist_add_add_left`/
         // `Nat.dist_add_add_right`/`Nat.dist_mul_left`/`Nat.dist_mul_right`:
@@ -10174,13 +10174,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.add_sub_cancel_left`/`Nat.sub_add_cancel` (order/additive
         // theorems, far above), and `lt_or_gt_of_ne_local`
         // (`fermat_number_mirrors.rs`, far above). Draw 9
-        // (`natural-distance`, `docs/plan/status/draw9-second-theorems.md`).
+        // (`natural-distance`, `docs/plan/archive/lanes/draw9-second-theorems.md`).
         declare_dist_more2_all(&mut d, &p)?;
         // `Nat.nthAux`/`Nat.nth`: needs only `Nat.beq`/`Nat.pred`/`Nat.succ`
         // (`declare_boolean_equality`/`declare_defining_equations`, far
         // above) and `bool_select_nat` (an inlined `Bool.rec` application,
         // `ops.rs`, no ordering constraint of its own). Nothing needs it, so
-        // it goes last — `docs/plan/status/348-nat-dist-nth.md`.
+        // it goes last — `docs/plan/archive/lanes/348-nat-dist-nth.md`.
         declare_nth_all(&mut d, &p)?;
         // `Nat.totient_mul_of_coprime` and its two CRT self-map facts
         // (`totient_mul.rs`). Needs, all far above: `Nat.countRange_permute`/

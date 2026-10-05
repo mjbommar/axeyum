@@ -1060,7 +1060,7 @@ fn scan_dl(
 ///
 /// [`crate::dpll_lia`]'s admission preflight uses this to decide whether its
 /// own bounded online-probe fallback is safe to attempt: measured
-/// (`docs/plan/status/s2-followup-lia-probe.md`), `dl-online` declines a
+/// (`docs/plan/archive/lanes/s2-followup-lia-probe.md`), `dl-online` declines a
 /// non-difference-logic query in single-digit milliseconds, so the caller's
 /// nominal budget is still intact; a genuine `QF_IDL`/`QF_RDL` query is
 /// difference-logic shaped by construction and `dl-online` (if it ran first)

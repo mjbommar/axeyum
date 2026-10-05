@@ -21,7 +21,7 @@
       "supports": "List.count_toMultiset is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example list_theorem_inventory -- List.count_toMultiset 2>/dev/null | grep -Fc '((x0 : AxNat) -> ((x1 : List.{0} AxNat) -> Eq.{1} AxNat (List.count x0 x1) (AxNat.Multiset.count (List.toMultiset x1) x0)))')\" -ge 1",
-      "notes": "The pattern is the FULL admitted type (rendered by Kernel::render_lean via list_theorem_inventory), not the theorem's name -- a drifted statement would fail this check. This theorem was recorded as NOT landed by list-carrier-1 (docs/plan/status/460-list-carrier-1.md); list-carrier-2 found the blocker it named -- a beq-to-ne bridge lemma -- was unnecessary, since Nat.Multiset.count_singleton_of_ne is already stated directly in terms of beq."
+      "notes": "The pattern is the FULL admitted type (rendered by Kernel::render_lean via list_theorem_inventory), not the theorem's name -- a drifted statement would fail this check. This theorem was recorded as NOT landed by list-carrier-1 (docs/plan/archive/lanes/460-list-carrier-1.md); list-carrier-2 found the blocker it named -- a beq-to-ne bridge lemma -- was unnecessary, since Nat.Multiset.count_singleton_of_ne is already stated directly in terms of beq."
     },
     {
       "id": "footprint-list-count-to-multiset",

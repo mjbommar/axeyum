@@ -321,7 +321,7 @@ clean.
 
 Full detail (field-index tables, the two real bugs the test suite's own
 first run caught, and every SHA) is in
-`docs/plan/status/453-structures-1.md`.
+`docs/plan/archive/lanes/453-structures-1.md`.
 
 ## Consequences
 

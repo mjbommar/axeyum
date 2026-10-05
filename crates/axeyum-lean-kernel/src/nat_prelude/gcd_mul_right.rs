@@ -4,7 +4,7 @@
 //! (`F:ml430-nat-dvd-gcd-mul-iff-dvd-mul-0afe640a`,
 //! `F:ml430-nat-dvd-gcd-mul-gcd-iff-dvd-mul-07fec722`,
 //! `F:ml430-nat-dvd-mul-gcd-iff-dvd-mul-f9517e6b`), all of which reduce to it
-//! plus already-proved gcd/divisibility algebra (`docs/plan/status/331-nat-gcd-dvd-mirrors.md`).
+//! plus already-proved gcd/divisibility algebra (`docs/plan/archive/lanes/331-nat-gcd-dvd-mirrors.md`).
 //! It genuinely does not exist anywhere in this development: neither
 //! `nat_prelude/gcd.rs` nor `nat_prelude/lcm_gcd_lemmas.rs` declares a
 //! `gcd_mul_*` distributive law under any spelling, and

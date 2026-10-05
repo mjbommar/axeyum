@@ -43,7 +43,7 @@
 //! `F:ml430-nat-lt-xor-cases-c43a1e85` needs a highest-differing-bit
 //! induction (Mathlib's own proof inducts on `testBit` disagreement) with no
 //! foothold this file's per-bit-at-the-boundary technique provides — see
-//! `docs/plan/status/254-nat-parity-lowbit.md`.
+//! `docs/plan/archive/lanes/254-nat-parity-lowbit.md`.
 
 use super::NatPrelude;
 use super::bitwise::xor_fn;

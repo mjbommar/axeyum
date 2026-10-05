@@ -1,10 +1,12 @@
 # The five worst divisions, taken stock — 2026-09-16
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](CATALOG.md). This was the 2026-09-16 stock-take of the five worst parity divisions.
+
 The campaign the user opened on 2026-09-15 ("focus on improving these
 divisions; trace our solver end to end and compare against z3, cvc5,
 bitwuzla") ran nineteen lanes over two days and was paused on the afternoon of
 2026-09-16. This is where it stands. The lane-by-lane record is in
-[`status/coordinator-five-divisions-2026-09-15.md`](status/coordinator-five-divisions-2026-09-15.md);
+[`status/coordinator-five-divisions-2026-09-15.md`](archive/lanes/coordinator-five-divisions-2026-09-15.md);
 every number below is copied from a lane's merged ADR or README, and the frame
 is the 16-division board (200 files per division) plus the Tier 1 ledger sweep
 on `db31113fa`, against z3 4.13.3 and cvc5 1.3.4 on the same lists. Bitwuzla

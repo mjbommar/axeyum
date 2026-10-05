@@ -1,5 +1,7 @@
 # Refactor and cleanup plan — August 2026
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../plan/global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../plan/CATALOG.md). Frozen strand from August 2026 -- its reasoning still holds; its counts and 'next' lists are as of 2026-08-19.
+
 > **This is the engineering strand.** Its companion is
 > [`docs/mathematics-2026-08/`](../mathematics-2026-08/README.md), which asks what
 > mathematics the system can do rather than where the code is untidy. Read that

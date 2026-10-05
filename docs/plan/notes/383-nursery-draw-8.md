@@ -1,6 +1,6 @@
 # 383 — nursery draw 8: every measurement, and how to re-run it
 
-Detail behind [`../status/383-nursery-draw-8.md`](../status/383-nursery-draw-8.md)
+Detail behind [`../status/383-nursery-draw-8.md`](../archive/lanes/383-nursery-draw-8.md)
 and [ADR-0762](../../research/09-decisions/adr-0762-draw-8-is-declined-one-constant-cannot-open-a-draw-and-the-guard-has-no-adjacency-screen.md).
 
 Nothing here is carried from ADR-0645, ADR-0653, ADR-0654 or ADR-0695. Every
@@ -336,7 +336,7 @@ Established before attributing anything to this lane. This lane's only diff at
 the time of the run was one new documentation file, so the generator, both
 manifests and every artifact it reads are byte-identical to `main`:
 
-    git diff --stat main HEAD   ->  docs/plan/status/383-nursery-draw-8.md | 24 +
+    git diff --stat main HEAD   ->  docs/plan/archive/lanes/383-nursery-draw-8.md | 24 +
     python3 scripts/gen-autogenesis-nursery-refill.py --check   ->  exit 1
 
     autogenesis-nursery-refill: 2 fact file(s) disagree with the preregistration;

@@ -4,7 +4,7 @@
 reading half of the design deliverable.** The 53-core stacked sweep, the
 800-file pinned A/B, the held-out draw and any Rust **did not run**. Nothing
 here is a verdict measurement. The full write-up is
-[`docs/plan/status/quant-compose.md`](../../docs/plan/status/quant-compose.md).
+[`docs/plan/archive/lanes/quant-compose.md`](../../docs/plan/archive/lanes/quant-compose.md).
 
 ## What the lane was asked
 

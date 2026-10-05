@@ -1,6 +1,6 @@
 # Notes: 122-lemire-integration
 
-Detail moved out of [`../status/122-lemire-integration.md`](../status/122-lemire-integration.md) so the
+Detail moved out of [`../status/122-lemire-integration.md`](../archive/lanes/122-lemire-integration.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

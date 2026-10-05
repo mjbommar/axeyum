@@ -1,6 +1,6 @@
 # Notes: 118-external-coupling
 
-Detail moved out of [`../status/118-external-coupling.md`](../status/118-external-coupling.md) so the
+Detail moved out of [`../status/118-external-coupling.md`](../archive/lanes/118-external-coupling.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

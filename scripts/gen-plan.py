@@ -386,6 +386,33 @@ def partition_tracked(paths: list[Path]) -> tuple[list[Path], list[Path]]:
     return tracked, untracked
 
 
+def sync_catalog(check: bool) -> int:
+    """Write or check docs/plan/CATALOG.md via scripts/gen-planning-catalog.py."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "gen_planning_catalog", Path(__file__).with_name("gen-planning-catalog.py")
+    )
+    if spec is None or spec.loader is None:
+        print("gen-plan: ERROR: cannot load gen-planning-catalog.py", file=sys.stderr)
+        return 1
+    catalog = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(catalog)
+    rendered = catalog.render()
+    current = catalog.OUT.read_text(encoding="utf-8") if catalog.OUT.is_file() else None
+    if current == rendered:
+        return 0
+    if check:
+        print(
+            "gen-plan: ERROR: docs/plan/CATALOG.md is stale; rerun "
+            "`python3 scripts/gen-plan.py`",
+            file=sys.stderr,
+        )
+        return 1
+    catalog.OUT.write_text(rendered, encoding="utf-8")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -415,6 +442,13 @@ def main() -> int:
             return 1
     else:
         OUTPUT.write_text(rendered, encoding="utf-8")
+
+    # The planning catalog indexes the archive this file's lanes retire into, so
+    # it is regenerated (and checked) by the same command: one step for a lane,
+    # not two it can forget.
+    catalog_status = sync_catalog(check=args.check)
+    if catalog_status:
+        return catalog_status
 
     landed = collect_landed(lanes)
     print(

@@ -553,7 +553,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.prime_counting_prime,
         p.prime_counting,
         p.lcm_upto,
-        // `nat-dist-nth` lane (`docs/plan/status/348-nat-dist-nth.md`).
+        // `nat-dist-nth` lane (`docs/plan/archive/lanes/348-nat-dist-nth.md`).
         p.dist,
         p.nth_aux,
         p.nth,
@@ -1695,7 +1695,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_gcd_pos_of_pos_right,
         p.dvd_add_iff_left,
         p.dvd_mul_split,
-        // `nat-dist-nth` lane (`docs/plan/status/348-nat-dist-nth.md`).
+        // `nat-dist-nth` lane (`docs/plan/archive/lanes/348-nat-dist-nth.md`).
         p.dist_comm,
         p.dist_self,
         p.dist_eq_sub_of_le,
@@ -1743,7 +1743,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.omniscience.lpo_implies_llpo,
         p.omniscience.wlpo_and_markov_imply_lpo,
         p.omniscience.lnp_unrestricted_implies_lpo,
-        // `draw9-second-theorems` lane (`docs/plan/status/draw9-second-theorems.md`).
+        // `draw9-second-theorems` lane (`docs/plan/archive/lanes/draw9-second-theorems.md`).
         p.land_aux_self_of_fuel,
         p.land_self,
         p.land_one_is_mod,
@@ -4584,7 +4584,7 @@ fn test_bit_of_zero_holds_symbolically_and_at_concrete_indices() {
 
 /// `Nat.zero_of_testBit_eq_zero` — the Nat-valued analogue of Mathlib's
 /// `Nat.zero_of_testBit_eq_false` (see
-/// `docs/plan/status/244-nat-testbit-bitwise.md` for why this is a NEW local
+/// `docs/plan/archive/lanes/244-nat-testbit-bitwise.md` for why this is a NEW local
 /// fact, not a flip of that pinned Bool-typed mirror). The only concrete
 /// instantiation of its hypothesis (`∀ i, testBit n i = 0`) that is
 /// ACTUALLY PROVABLE is `n := 0` (`test_bit_of_zero` supplies it exactly);
@@ -18084,7 +18084,7 @@ fn bool_fn_comm<D: NatOps>(d: &mut D, f_term: ExprId) -> ExprId {
 /// `or_fn` (`f false true = true`, the same reason `lor`'s own row is not
 /// the absorbing constant), NOT `xor_fn` mechanically copied from `lor`'s
 /// witness -- confirmed discriminating by the same Python simulation
-/// recorded in `docs/plan/status/256-nat-bitwise-comm.md`.
+/// recorded in `docs/plan/archive/lanes/256-nat-bitwise-comm.md`.
 #[test]
 fn bitwise_comm_applies_at_a_concrete_discriminating_instance() {
     let mut f = Fixture::new();
@@ -18520,9 +18520,9 @@ fn land_le_right_applies_at_free_variables_and_a_concrete_instance() {
 }
 
 /// `Nat.add_eq_zero` -- the additive twin of `Nat.mul_eq_zero`, built as the
-/// missing arithmetic piece `docs/plan/status/247-nat-bitwise-assoc.md`
+/// missing arithmetic piece `docs/plan/archive/lanes/247-nat-bitwise-assoc.md`
 /// named for `land_aux_assoc_of_fuel` (`nat-assoc-dichotomy`,
-/// `docs/plan/status/252-nat-assoc-dichotomy.md`). Applies at fully free
+/// `docs/plan/archive/lanes/252-nat-assoc-dichotomy.md`). Applies at fully free
 /// `a`/`b` and at the concrete pair `(0, 0)` -- `Nat` addition has no OTHER
 /// solution to `a + b = 0`, so the discriminating check here is that
 /// `add 3 5` computes to `8` and is NOT `def_eq` to `0`, confirming the
@@ -18596,7 +18596,7 @@ fn add_eq_zero_applies_at_free_and_concrete_arguments() {
 
 /// `Nat.zero_or_succ` -- the equational dichotomy built for
 /// `nat-assoc-dichotomy`'s `land_aux_assoc_of_fuel` attempt
-/// (`docs/plan/status/252-nat-assoc-dichotomy.md`). Applies at a COMPOUND,
+/// (`docs/plan/archive/lanes/252-nat-assoc-dichotomy.md`). Applies at a COMPOUND,
 /// non-atomic term (`mul 2 k` for a free `k`) -- exactly the shape the wall
 /// this was built for needs (`X := landAux fuel a b`, not a bound variable)
 /// -- and is genuinely CONSUMED by an `Or.rec` elimination at a concrete
@@ -19204,7 +19204,7 @@ fn five_le_of_ne_two_of_ne_three_applies_at_a_concrete_instance() {
 }
 
 /// `Nat.land_aux_eq_zero_of_left_eq_zero` -- "zero propagates through the
-/// other operand", the one theorem `docs/plan/status/252-nat-assoc-dichotomy.md`
+/// other operand", the one theorem `docs/plan/archive/lanes/252-nat-assoc-dichotomy.md`
 /// traced by hand and cross-checked in Python but did not build. Applies at
 /// symbolic `fuel`/`a`/`b`/`c` and at a concrete, non-vacuous, MIXED
 /// instance from that plan's own cross-check: `fuel=2, a=1, b=2, c=2`.

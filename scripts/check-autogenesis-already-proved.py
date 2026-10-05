@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Screen open `ml430` mirrors against the kernel environment BY NAME.
 
-Motivation, measured 2026-08-29 in `docs/plan/status/286-nat-lcm-gcd.md`: a
+Motivation, measured 2026-08-29 in `docs/plan/archive/lanes/286-nat-lcm-gcd.md`: a
 lane dispatched 10 `natural-lcm`/`natural-gcd` mirrors and found FIVE already
 proved under the identical statement before doing any new proof work --
 `nat_prelude/lcm.rs` had declared `Nat.lcm_comm`, `Nat.lcm_dvd`,

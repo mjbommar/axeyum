@@ -195,7 +195,7 @@ pub(super) fn declare_additive_theorems(
     })?;
 
     // add_right_comm : ∀ x y z, add (add x y) z = add (add x z) y   (no induction)
-    // Retired to `crate::ring::nat` (docs/plan/status/460-ring-tactic-1.md):
+    // Retired to `crate::ring::nat` (docs/plan/archive/lanes/460-ring-tactic-1.md):
     // a pure ring-rearrangement chain (add_assoc/add_comm/add_assoc), now
     // searched for and emitted rather than hand-assembled. `ring`'s own
     // `sort_items` deliberately does NOT call `Nat.add_right_comm` (it
@@ -743,7 +743,7 @@ pub(super) fn declare_mul_no_zero_divisors(
 /// `Nat.add_eq_zero` — the additive twin of [`declare_mul_no_zero_divisors`].
 ///
 /// Built for `nat-assoc-dichotomy`'s `land_aux_assoc_of_fuel` attempt
-/// (`docs/plan/status/247-nat-bitwise-assoc.md`): the successor row of
+/// (`docs/plan/archive/lanes/247-nat-bitwise-assoc.md`): the successor row of
 /// `landAux`/`lorAux`/`ldiffAux` is `2 * rec + bit`, and deciding whether
 /// that COMPOUND value is zero (needed once it appears in an ARGUMENT
 /// position of an outer application, where the outer guard cannot resolve

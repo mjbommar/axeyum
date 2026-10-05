@@ -538,7 +538,7 @@ YOURS — USE A DETACHED WORKTREE.** The `GIT_INDEX_FILE` remedy above covers
 holds a staged path the merge would touch:
 
     error: Your local changes to the following files would be overwritten by merge:
-      docs/plan/status/117-parity-freshness.md
+      docs/plan/archive/lanes/117-parity-freshness.md
     Merge with strategy ort failed.
 
 Measured 2026-08-21. That file was another lane's, staged and uncommitted, and

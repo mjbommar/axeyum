@@ -851,7 +851,7 @@ def build_cross_population_report(
     a nursery-v1 entry (or vice versa) through a real fact-ledger `depends_on`
     edge, or two v2-only entries can already form a crossing component on
     their own, and NEITHER case is visible to a check that reads one file.
-    Measured 2026-08-30 (see docs/plan/status/nursery-v2-component-coverage.md
+    Measured 2026-08-30 (see docs/plan/archive/lanes/nursery-v2-component-coverage.md
     and ADR-0855): computing components over the union surfaces 3 crossings —
     one entirely within v2, one where v1's three ADR-0850-exempted components
     merge with two v2-internal ones via real cross-file dependency edges, and

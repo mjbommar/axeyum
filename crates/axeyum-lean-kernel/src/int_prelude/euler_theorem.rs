@@ -103,7 +103,7 @@
 //!    product of things coprime to `n` is coprime to `n`).
 //!
 //! None of items 1–3 touches `Nat`, so all of it belongs in `int_prelude`.
-//! `docs/plan/status/374-euler-theorem.md` has the full handoff.
+//! `docs/plan/archive/lanes/374-euler-theorem.md` has the full handoff.
 
 use super::ops::IntDev;
 use super::prod::bool_select_int;

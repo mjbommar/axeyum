@@ -1113,7 +1113,7 @@ pub(super) fn declare_totient_eq_one_iff(
 // `Nat.totient_even : ∀ n, Lt two n → Even (totient n)`.
 //
 // See the module doc's "Update: `totient_even` landed" note (below the
-// pre-existing history) and `docs/plan/status/295-totient-even.md` /
+// pre-existing history) and `docs/plan/archive/lanes/295-totient-even.md` /
 // `299-totient-even-exec.md` for the full route this section implements:
 // peel index `0` off `[0,n)` via `countRange_split`, then apply
 // `countRange_reversal_even` (`count_range_reversal.rs`) to the shifted

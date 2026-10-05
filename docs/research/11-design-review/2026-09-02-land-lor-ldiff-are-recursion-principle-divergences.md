@@ -1,6 +1,6 @@
 # `Nat.land`/`Nat.lor`/`Nat.ldiff` are recursion-principle divergences, and a blanket row is a false claim (2026-09-02)
 
-**The named next action.** `docs/plan/status/testbit-codomain.md` measured
+**The named next action.** `docs/plan/archive/lanes/testbit-codomain.md` measured
 that `Nat.land`, `Nat.lor`, `Nat.ldiff` (and `Nat.bitwise`, which Mathlib
 specializes them from) diverge from Mathlib by the same standard the
 `mirror-divergence-registry` applies to `Nat.minFac`, and that none had a

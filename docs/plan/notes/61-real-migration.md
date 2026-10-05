@@ -1,6 +1,6 @@
 # Notes: 61-real-migration
 
-Detail moved out of [`../status/61-real-migration.md`](../status/61-real-migration.md) so the
+Detail moved out of [`../status/61-real-migration.md`](../archive/lanes/61-real-migration.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

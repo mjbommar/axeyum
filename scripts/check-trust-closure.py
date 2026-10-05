@@ -5,7 +5,7 @@ ADR-0717's risk 4 is **contamination**: *"the target proof, an equivalent
 imported theorem, an axiom, opaque, or quotient enters the dependency
 closure"*, and the ADR says plainly that an empty axiom footprint addresses
 only part of it. The 2026-08-30 safety-matrix census
-(`docs/plan/status/382-l0-safety-matrix.md`) measured how little of the ledger
+(`docs/plan/archive/lanes/382-l0-safety-matrix.md`) measured how little of the ledger
 is protected against that shape: **circularity 38 / 2117**,
 **per_theorem_footprint 59 / 2117**, against **env_footprint 1859 / 2117** — so
 almost all trust evidence is a *batch* claim ("this whole prelude has no

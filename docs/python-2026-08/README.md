@@ -1,5 +1,7 @@
 # Python layer and agentic frontier — August 2026
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../plan/global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../plan/CATALOG.md). Frozen strand from August 2026 -- its reasoning still holds; its counts and 'next' lists are as of 2026-08-26.
+
 > **This is the automation strand.** It sits beside the three existing strands
 > — [`refactor-2026-08/`](../refactor-2026-08/README.md) (engineering floor),
 > [`mathematics-2026-08/`](../mathematics-2026-08/README.md) (mathematical
@@ -62,7 +64,7 @@ and the alternatives are in the study).
 
 ## Status
 
-Lane status lives in [`docs/plan/status/python-layer.md`](../plan/status/python-layer.md)
+Lane status lives in [`docs/plan/archive/lanes/python-layer.md`](../plan/archive/lanes/python-layer.md)
 and is emitted into `PLAN.md` by `scripts/gen-plan.py`. This folder carries the
 plans; that file carries what is true now.
 

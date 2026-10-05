@@ -1,5 +1,7 @@
 # SMT capability gap analysis — axeyum vs Z3, cvc5, Bitwuzla (2026-08-21)
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](CATALOG.md). This was the 2026-08-21 SMT capability gap analysis against Z3, cvc5 and Bitwuzla.
+
 Status: **current capability audit.** Supersedes
 [`gap-analysis-z3-cvc5-2026-07-07.md`](gap-analysis-z3-cvc5-2026-07-07.md) as
 the capability map (which itself superseded

@@ -1,6 +1,6 @@
 # Notes: 114-audit-refresh
 
-Detail moved out of [`../status/114-audit-refresh.md`](../status/114-audit-refresh.md) so the
+Detail moved out of [`../status/114-audit-refresh.md`](../archive/lanes/114-audit-refresh.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

@@ -1,5 +1,7 @@
 # SMT-COMP Full-Library Work Stream — RESUME HERE
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](../global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](../CATALOG.md). This was the SMT-COMP measurement work stream's entry point, last updated 2026-08-06.
+
 **This folder is the single entry point for the SMT-COMP measurement,
 full-library inventory, and gap-closing lane.** Updated 2026-08-06 after the
 stale F2 branch audit and process-free current-main port. Root `PLAN.md` remains

@@ -2,7 +2,7 @@
 //! (∀ k, Lt k n → Eq Bool (pred k) true → Coprime (f k) m) →
 //! Coprime (prodRange (selector pred f) n) m` — a restricted product of
 //! `m`-coprime factors stays coprime to `m`. Part of item 3 of the
-//! Fermat -> Euler handoff (`docs/plan/status/374-euler-theorem.md`,
+//! Fermat -> Euler handoff (`docs/plan/archive/lanes/374-euler-theorem.md`,
 //! `euler_theorem.rs`'s module doc): the ingredient
 //! `Int.modEq_cancel`/`Int.ModEq.cancel` needs before it can cancel
 //! `prodRangeIf pred (fun k => ofNat k) n` from both sides of the final

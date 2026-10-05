@@ -1,7 +1,7 @@
 //! CAS -> kernel bridge, the **univariate partial-fraction** slice:
 //! `F:cas-partial-fractions-mixed-general-case`.
 //!
-//! `docs/plan/status/317-cas-fractional-cast.md` named this fact "the cast
+//! `docs/plan/archive/lanes/317-cas-fractional-cast.md` named this fact "the cast
 //! only -- next lane's cheapest target". That claim does NOT survive reading
 //! the fact: `axeyum_cas::partial_fractions::PartialFractionCertificate` is
 //! not a [`axeyum_cas::geometry_certify::GeometryCertificate`] at all --

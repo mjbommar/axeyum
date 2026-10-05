@@ -1,6 +1,6 @@
 # Lane notes: expect-axioms — the ledger must see a trusted number move both ways
 
-Detail for [`../status/101-expect-axioms.md`](../status/101-expect-axioms.md).
+Detail for [`../status/101-expect-axioms.md`](../archive/lanes/101-expect-axioms.md).
 
 ## What was already true (and what the brief got wrong)
 

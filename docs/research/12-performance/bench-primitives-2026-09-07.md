@@ -1,7 +1,7 @@
 # bench-primitives — a running diary, 2026-09-07
 
 Status: measured
-Lane: `bench-primitives` (`docs/plan/status/1740-bench-primitives.md`)
+Lane: `bench-primitives` (`docs/plan/archive/lanes/1740-bench-primitives.md`)
 
 ## What this is
 

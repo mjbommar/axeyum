@@ -20,7 +20,7 @@
 //!   avoids the converse entirely is **Wilson's theorem**, which IS proved
 //!   here (`Int.wilson`): `(p-1)! ≡ (-1)^m (m!)^2 [p]`, so at even `m` the
 //!   witness is `m!` outright. See this module's `## The Wilson route` section
-//!   and `docs/plan/status/first-supplementary-law.md` for the precise
+//!   and `docs/plan/archive/lanes/first-supplementary-law.md` for the precise
 //!   remaining gap.
 //!
 //! ## Route (this file)

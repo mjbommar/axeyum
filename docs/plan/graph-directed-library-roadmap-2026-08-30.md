@@ -1,5 +1,7 @@
 # Graph-directed mathematical library roadmap
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](CATALOG.md). This was the 2026-08-30 graph-directed library roadmap (phases G0-G5); the scripts that cite its sections still do.
+
 Status: accepted programme under ADR-0717
 Date: 2026-08-30
 

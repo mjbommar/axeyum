@@ -91,7 +91,7 @@
   "provenance": {
     "date": "2026-08-30",
     "established_by": "axeyum-lean-kernel nat_prelude::totient_mul (totient-mul-finish lane)",
-    "source": "the final assembly named by docs/plan/status/344-countrange-bijection.md, on top of that lane's countRange_permute / countRange_product / div_mod_block; statement authored here",
+    "source": "the final assembly named by docs/plan/archive/lanes/344-countrange-bijection.md, on top of that lane's countRange_permute / countRange_product / div_mod_block; statement authored here",
     "prior_art": [
       {
         "who": "Leonhard Euler",

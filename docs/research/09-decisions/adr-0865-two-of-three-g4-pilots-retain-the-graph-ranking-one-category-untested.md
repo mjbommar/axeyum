@@ -70,7 +70,7 @@ So:
    real result, not a lane failure.
 
 So **two pilots ran, not three**, both preregistered
-(`docs/plan/status/l2-g4-pilot-clusters.md`, committed before any pilot code,
+(`docs/plan/archive/lanes/l2-g4-pilot-clusters.md`, committed before any pilot code,
 verifiable via `git log`) before any code was written.
 
 ### Pilot 1 (bounded substrate probe)
@@ -152,7 +152,7 @@ Per the roadmap's own instruction, this verdict is not rationalized after
 the fact: both pilots' metrics, baselines, and the local-ready comparator
 were committed (`021c884de`) before either pilot's code existed, and the
 honest counterfactual — what would have changed the verdict — is recorded in
-`docs/plan/status/l2-g4-pilot-clusters.md`: a REJECT from
+`docs/plan/archive/lanes/l2-g4-pilot-clusters.md`: a REJECT from
 `add_declaration` on pilot 1, or a merely-similar (non-identical) proof term
 from pilot 2, would each have been a pilot that failed to move its metric
 cheaply, and with only one pilot left standing the exit criterion would not

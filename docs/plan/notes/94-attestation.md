@@ -1,6 +1,6 @@
 # Notes: 94-attestation
 
-Detail moved out of [`../status/94-attestation.md`](../status/94-attestation.md) so the
+Detail moved out of [`../status/94-attestation.md`](../archive/lanes/94-attestation.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

@@ -229,7 +229,7 @@ def _fixture_stale_graph(fact_id: str):
     # this fixture only edited an unrelated fact's `notes` field, which
     # changes neither the settled-id-set nor pins.json -- a vacuous control
     # that passed `commit()` for the wrong reason; caught by this gate's own
-    # first run, see docs/plan/status/s6-wire-real-ledger.md.)
+    # first run, see docs/plan/archive/lanes/s6-wire-real-ledger.md.)
     pins_path = mod.csfs.PINS
     data = json.loads(pins_path.read_text())
     data["_concurrent_lane_probe"] = "gate fixture: pins rewritten while this transaction was staged"
@@ -315,7 +315,7 @@ def run_idempotence_check(fact_id: str = TEST_FACT_ID):
 
 
 def run_guard_skips_recomputation_on_replay(fact_id: str = TEST_FACT_ID):
-    """MEASURED, not assumed (docs/plan/status/s6-wire-real-ledger.md): unlike
+    """MEASURED, not assumed (docs/plan/archive/lanes/s6-wire-real-ledger.md): unlike
     the FIXTURE's `dashboards/settled.md` (append-only text), every real
     target this transaction rebuilds -- pins.json, the safety-matrix TSV/MD --
     is a FULL REBUILD KEYED BY fact_id (a dict/list built fresh from current

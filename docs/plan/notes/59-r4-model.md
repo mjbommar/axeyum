@@ -1,6 +1,6 @@
 # Notes: 59-r4-model
 
-Detail moved out of [`../status/59-r4-model.md`](../status/59-r4-model.md) so the
+Detail moved out of [`../status/59-r4-model.md`](../archive/lanes/59-r4-model.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

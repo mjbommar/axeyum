@@ -1,7 +1,7 @@
 //! `Nat.injectiveOn`/`Nat.mapsInto` for the Euler unit-permutation self-map
 //! `sigma(k) := natAbs (emod (a * ofNat k) (ofNat n))` -- item 1 of the
-//! three-piece Fermat -> Euler handoff (`docs/plan/status/374-euler-theorem.md`,
-//! re-sized in `docs/plan/status/euler-theorem-spine.md`/ADR-1025).
+//! three-piece Fermat -> Euler handoff (`docs/plan/archive/lanes/374-euler-theorem.md`,
+//! re-sized in `docs/plan/archive/lanes/euler-theorem-spine.md`/ADR-1025).
 //!
 //! `Int.prodRangeIf_permute` (`euler_theorem.rs`) needs a `Nat -> Nat`
 //! self-map of the FULL range `[0,n)` -- `Nat.injectiveOn sigma n` and

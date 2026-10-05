@@ -140,6 +140,6 @@ not attempt it — the closed form was the full scope of the routed work.
 - `python3 scripts/check-autogenesis-holdout-isolation.py` — PASS
   (`artifacts/autogenesis/` untouched this session).
 - No fact-ledger entries added this session (see
-  `docs/plan/status/gauss-lemma-closed-form.md` for the naming-collision
+  `docs/plan/archive/lanes/gauss-lemma-closed-form.md` for the naming-collision
   note against `F:nat-gauss-lemma`, an unrelated divisibility-cancellation
   theorem also called "Gauss's lemma").

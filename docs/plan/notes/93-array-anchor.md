@@ -1,6 +1,6 @@
 # Notes: 93-array-anchor
 
-Detail moved out of [`../status/93-array-anchor.md`](../status/93-array-anchor.md) so the
+Detail moved out of [`../status/93-array-anchor.md`](../archive/lanes/93-array-anchor.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

@@ -187,7 +187,7 @@
 #   aborts the whole binary, not just one thread) -- a `#[test]` that tries
 #   to demonstrate the margin by spawning an undersized thread reproduces
 #   the exact defect this entry fixes rather than catching it cleanly. See
-#   `docs/plan/status/500-det-mul-debug-stack-2.md` for the guard proposal
+#   `docs/plan/archive/lanes/500-det-mul-debug-stack-2.md` for the guard proposal
 #   this ruled out and what to do instead.
 #
 # ## When a row goes red

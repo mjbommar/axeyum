@@ -213,7 +213,7 @@ With it gone the suite is **10 of 10 killed**.
 
 Two claims elsewhere in the repository now say 11 and are the owning lane's to
 correct: `PLAN.md`'s generated row and
-`docs/plan/status/101-expect-axioms.md` (*"81 s, 11"*).
+`docs/plan/archive/lanes/101-expect-axioms.md` (*"81 s, 11"*).
 
 ## Also measured, not caused here
 

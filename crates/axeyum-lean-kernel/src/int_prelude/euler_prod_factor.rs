@@ -3,7 +3,7 @@
 //!   (mul (prodRange (selector pred (fun _ => a)) n) (prodRange (selector pred f) n))`
 //! — pointwise factoring of a constant `a` out of a restricted product, part
 //! of item 3 of the Fermat -> Euler handoff
-//! (`docs/plan/status/374-euler-theorem.md`, `euler_theorem.rs`'s module
+//! (`docs/plan/archive/lanes/374-euler-theorem.md`, `euler_theorem.rs`'s module
 //! doc): the step that turns `prodRangeIf pred (fun k => a * ofNat k) n`
 //! (the product of shifted residues after `Int.euler_unit_coprime_iff`'s
 //! `ModEq` transport) into `pow a (countRange pred n) * prodRangeIf pred

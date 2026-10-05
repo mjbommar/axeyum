@@ -1,7 +1,7 @@
 # coordinator-math, 2026-09-06 — detail behind the five topics
 
 Companion to
-[status/coordinator-math-five-topics-2026-09-06.md](../status/coordinator-math-five-topics-2026-09-06.md).
+[status/coordinator-math-five-topics-2026-09-06.md](../archive/lanes/coordinator-math-five-topics-2026-09-06.md).
 
 ## Results worth re-reading
 

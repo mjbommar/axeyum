@@ -1,6 +1,6 @@
 # Notes: 99-capability-assurance
 
-Detail moved out of [`../status/99-capability-assurance.md`](../status/99-capability-assurance.md) so the
+Detail moved out of [`../status/99-capability-assurance.md`](../archive/lanes/99-capability-assurance.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

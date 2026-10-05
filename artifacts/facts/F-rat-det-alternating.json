@@ -64,7 +64,7 @@
   "provenance": {
     "date": "2026-09-01",
     "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs)",
-    "source": "Lane det-alternating, closing ADR-1310's step 2 of the determinant-multiplicativity dependency chain. Status note: docs/plan/status/det-alternating.md."
+    "source": "Lane det-alternating, closing ADR-1310's step 2 of the determinant-multiplicativity dependency chain. Status note: docs/plan/archive/lanes/det-alternating.md."
   },
   "notes": "Distinctness is carried as Nat.beq i j = Bool.false throughout rather than as a Prop-level negation, matching this file's existing convention (Rat.beq_matSkip and siblings). No Rat.det_congr anywhere in the proof, contrary to ADR-1310's sizing note that this step 'will need det_congr wherever it relates a minor to a matrix named elsewhere' -- every branch applies the induction hypothesis directly to the literal minor term. Sign under a row swap (ADR-1310's step 3) was not attempted in this lane."
 }

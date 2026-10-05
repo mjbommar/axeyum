@@ -1,5 +1,7 @@
 # Z3/cvc5 gap analysis (2026-06-22; amended 2026-06-23)
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](CATALOG.md). This was the 2026-06-22 Z3/cvc5 gap analysis (amended 2026-06-23).
+
 Status: current audit, amended after the online-combination / vivification /
 route-telemetry push  
 Scope: top-down, practical delta between axeyum's current capability ledger and

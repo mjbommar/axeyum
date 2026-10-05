@@ -96,7 +96,7 @@ value.
   either the final theorem type or value (checked with `Kernel::has_fvars`).
   All five are mutation-verified in `proof_plan::tests` — each guard
   deleted, exactly one test observed to die, then reverted — see
-  `docs/plan/status/l3-d5-proof-plan-ir.md` for the kill table.
+  `docs/plan/archive/lanes/l3-d5-proof-plan-ir.md` for the kill table.
 - Unlike ADR-0965's pilot, this phase needed no `gen-proof-plan.py`
   code-generation counterpart: a `Plan` value is built directly in the Rust
   `declare_*` functions that use it (an ordinary Rust value, not a wire

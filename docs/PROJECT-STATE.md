@@ -1,5 +1,7 @@
 # Axeyum project state
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](plan/global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](plan/CATALOG.md). Public summary as of 2026-08-07; current numbers are in PLAN.md section Status.
+
 **As of 2026-08-07:** Axeyum is a working, research-grade automated-reasoning
 stack with competitive results on selected fragments and substantial checked
 proof coverage. It is not a drop-in Z3 replacement or a replacement for the

@@ -1,6 +1,6 @@
 # Notes: agent-lra-diagnosis
 
-Detail moved out of [`../status/agent-lra-diagnosis.md`](../status/agent-lra-diagnosis.md) so the
+Detail moved out of [`../status/agent-lra-diagnosis.md`](../archive/lanes/agent-lra-diagnosis.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

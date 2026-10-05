@@ -235,7 +235,7 @@ Nothing needed that stronger statement.
   (`docs/plan/generated/theorem-production-ledger.md`); the ledger's own
   `distinct` figure rises 2340 → 2539 (17 of that from `list`, the rest from
   concurrent lanes' merges to `main` since the ledger was last regenerated —
-  see `docs/plan/status/460-list-carrier-1.md`'s own note that this number
+  see `docs/plan/archive/lanes/460-list-carrier-1.md`'s own note that this number
   was already stale independent of the `List` work).
 - `Nat.Multiset` and `Nat.Finset` are unaffected: neither is redefined,
   neither loses a theorem, and `Nat.Finset.allBelow`/its two reflection

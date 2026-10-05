@@ -125,7 +125,7 @@ for this phase: the fields the roadmap's own motivating example needs
 existing `theorem_dependencies`/`declaration_dependencies`, and a term-tree
 hash adds real kernel-unfolding cost and risk for a signal this phase does
 not yet have a query that needs. Left as an explicitly named follow-on in
-`docs/plan/status/l3-d2-structural-index.md`.
+`docs/plan/archive/lanes/l3-d2-structural-index.md`.
 
 **Build a Lean-source parser for Mathlib goal features instead of reading
 `formal.statement`.** Rejected: the fact ledger already carries exactly the

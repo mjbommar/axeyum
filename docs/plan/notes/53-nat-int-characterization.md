@@ -1,6 +1,6 @@
 # Notes: 53-nat-int-characterization
 
-Detail moved out of [`../status/53-nat-int-characterization.md`](../status/53-nat-int-characterization.md) so the
+Detail moved out of [`../status/53-nat-int-characterization.md`](../archive/lanes/53-nat-int-characterization.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

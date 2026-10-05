@@ -140,7 +140,7 @@ class MathlibFactCatalogTests(unittest.TestCase):
         # its evidence/notes/depends_on/axiom_footprint/proof_route/formal are
         # rewritten by the flywheel -- exactly what happened to 156 of 214
         # committed mathlib facts on 2026-08-29 (see
-        # docs/plan/status/284-autogenesis-gate-rot.md). That must NOT read as
+        # docs/plan/archive/lanes/284-autogenesis-gate-rot.md). That must NOT read as
         # catalog tampering.
         review, components = self.inputs()
         catalog, facts = self.build(review, components)

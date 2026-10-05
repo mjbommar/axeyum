@@ -24,7 +24,7 @@ are loaded and their existing pure functions reused directly (`validate_one`,
 `render_summary`/`run_controls`) -- never reimplemented -- so this wrapper
 cannot drift from what those gates actually enforce.
 
-MEASURED REAL WRITE SET (see docs/plan/status/s6-wire-real-ledger.md and
+MEASURED REAL WRITE SET (see docs/plan/archive/lanes/s6-wire-real-ledger.md and
 ADR-0810 for the full measurement)
 -------------------------------------------------------------------------
 

@@ -40,10 +40,10 @@ names are cited as *present* evidence in a neighbouring sentence.
 
 Three sites, none of which is an absence claim about the names attached to it:
 
-- `docs/plan/status/draw-15.md:40` — *"`--concl Nat.countRange` is ABSENT
+- `docs/plan/archive/lanes/draw-15.md:40` — *"`--concl Nat.countRange` is ABSENT
   despite 21 matching declarations"*, which documents a **tool trap** and says
   the declarations exist.
-- `docs/plan/status/gauss-assembly.md:94` — a landed-declarations table row.
+- `docs/plan/archive/lanes/gauss-assembly.md:94` — a landed-declarations table row.
 - `docs/plan/notes/40-autogenesis-program.md:9` — one archived-rows table,
   contributing a single site with **93** candidates.
 <!-- was-absent: Nat.countRange -- quoted stale text, kept under the gate: this ADR reproduces another document's sentence, and if the declaration it names is ever renamed the quotation stops pointing at anything -->
@@ -131,13 +131,13 @@ of `335cb3661^` at the block the checker segments, into
 `scripts/tests/fixtures/absence-stale-claims/`, and driven by
 `StaleClaimRegression`:
 
-    CReal.uniform_converges_add        docs/plan/status/133-ledger-uc.md
-    Nat.even_or_odd                    docs/plan/status/133-ledger-uc.md
-    CReal.alternatingBracketUpper      docs/plan/status/133-ledger-uc.md
-    CReal.alternatingLowerBound        docs/plan/status/133-ledger-uc.md
-    CReal.alternatingUpperBound        docs/plan/status/133-ledger-uc.md
-    Nat.ascFactorial, Nat.descFactorial  docs/plan/status/200-nat-factorial.md
-    Nat.clog                           docs/plan/status/206-nat-log-tier.md
+    CReal.uniform_converges_add        docs/plan/archive/lanes/133-ledger-uc.md
+    Nat.even_or_odd                    docs/plan/archive/lanes/133-ledger-uc.md
+    CReal.alternatingBracketUpper      docs/plan/archive/lanes/133-ledger-uc.md
+    CReal.alternatingLowerBound        docs/plan/archive/lanes/133-ledger-uc.md
+    CReal.alternatingUpperBound        docs/plan/archive/lanes/133-ledger-uc.md
+    Nat.ascFactorial, Nat.descFactorial  docs/plan/archive/lanes/200-nat-factorial.md
+    Nat.clog                           docs/plan/archive/lanes/206-nat-log-tier.md
     Rat.ofInt                          crates/.../complex.rs
     CReal.sqrt                         crates/.../nat_prelude/irrational.rs
     Nat.gcd_comm                       crates/.../int_prelude/gcd.rs
@@ -149,7 +149,7 @@ to end at a zero budget — the eighth already carried a `was-absent:` marker at
 that commit.
 
 **Break/restore, through the real gate on the real tree.**
-`docs/plan/status/206-nat-log-tier.md` was rewritten to its pre-correction
+`docs/plan/archive/lanes/206-nat-log-tier.md` was rewritten to its pre-correction
 content and restored:
 
     stale text restored   exit 1   census 1049 sites, 123 bare, budget 122

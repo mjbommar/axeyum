@@ -34,7 +34,7 @@
   "provenance": {
     "date": "2026-09-02",
     "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/det_mul.rs)",
-    "source": "Lane det-mul-2, closing ADR-1440's obligation 1 and with it determinant multiplicativity at symbolic n. Decision recorded in ADR-1543. Status note: docs/plan/status/det-mul-2.md."
+    "source": "Lane det-mul-2, closing ADR-1440's obligation 1 and with it determinant multiplicativity at symbolic n. Decision recorded in ADR-1543. Status note: docs/plan/archive/lanes/det-mul-2.md."
   },
   "notes": "WHAT THIS DOES NOT SAY. It is not the Leibniz formula: there is no permutation type, no sign, and no injectivity predicate anywhere in the statement -- `Rat.sumMaps` is a summation SCHEDULE over the function space, and the non-injective maps are killed later by `Rat.det_row_selection`, not here. The dimension is `succ m`, not a bare `n`: `Rat.det_row_multilinear` and `Rat.det_row_replaced` are both stated at `succ m`, and the `n = 0` case of multiplicativity is handled separately in `Rat.det_matMul`. The inner bound `n` of `Rat.matMul` is left independent of the dimension, so this is more general than the instance multiplicativity uses."
 }

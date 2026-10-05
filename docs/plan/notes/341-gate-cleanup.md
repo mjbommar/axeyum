@@ -1,6 +1,6 @@
 # Lane 341 — the 43 `check-fast` failures, per step
 
-Detail behind [`docs/plan/status/341-gate-cleanup.md`](../status/341-gate-cleanup.md).
+Detail behind [`docs/plan/archive/lanes/341-gate-cleanup.md`](../archive/lanes/341-gate-cleanup.md).
 
     before   CHECK_FAST|NOT-A-FULL-GATE|declared=404|ok=248|failed=43|deferred=113|budget=3s
     after    CHECK_FAST|NOT-A-FULL-GATE|declared=405|ok=273|failed=17|deferred=115|budget=3s

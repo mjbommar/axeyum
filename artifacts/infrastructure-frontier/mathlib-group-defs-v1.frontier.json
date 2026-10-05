@@ -18,7 +18,7 @@
   "cross_check": {
     "dispatchable_frontier": {
       "ran": false,
-      "note": "Not re-run this generation; see docs/plan/status/l2-g3-infrastructure-frontier.md for the last captured run. scripts/check-dispatchable-frontier.py is out of this lane's edit scope and is read-only input here."
+      "note": "Not re-run this generation; see docs/plan/archive/lanes/l2-g3-infrastructure-frontier.md for the last captured run. scripts/check-dispatchable-frontier.py is out of this lane's edit scope and is read-only input here."
     },
     "population_overlap_note": "None of this population's 446 declaration names is an `F:ml430-*` mirror subject outside the 9 already resolved in this join (checked: no Mathlib name in this population matches scripts/check-dispatchable-frontier.py's own reported dispatchable/held-out/blocked subjects, which are drawn from unrelated Nat/number-theory mirror families). No disagreement is possible on overlapping subjects because there are none; the agreement is thematic: both this population's queues and the ledger-wide dispatchable count independently land on 'almost nothing is actually ready to dispatch right now', for related but distinct reasons (this population: unstatable without new infrastructure; ledger-wide: held-out/blocked/controls)."
   },

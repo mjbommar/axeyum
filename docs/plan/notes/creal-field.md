@@ -1,6 +1,6 @@
 # Notes: creal-field
 
-Detail kept out of [`../status/65-creal-field.md`](../status/65-creal-field.md)
+Detail kept out of [`../status/65-creal-field.md`](../archive/lanes/65-creal-field.md)
 so the lane block stays inside the per-lane ceiling (ADR-0520). The decision
 itself is
 [ADR-0510](../../research/09-decisions/adr-0510-the-real-inverse-is-partial-and-its-modulus-is-data.md).

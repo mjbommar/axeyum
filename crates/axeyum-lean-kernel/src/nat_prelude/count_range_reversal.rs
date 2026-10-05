@@ -4,7 +4,7 @@
 //! of that reflection, then `countRange h L` is even.
 //!
 //! This is the one genuinely new piece
-//! `docs/plan/status/295-totient-even.md` identified for `Nat.totient_even`
+//! `docs/plan/archive/lanes/295-totient-even.md` identified for `Nat.totient_even`
 //! (the reflection `k <-> n-k` over residues coprime to `n` has no fixed
 //! point once `n > 2`, since a fixed point forces `n = 2*k` and `gcd k n = k
 //! = 1`). It is declared here, independent of `gcd`/`totient`, because
@@ -67,7 +67,7 @@
 //!
 //! ## What was traced but turned out unnecessary
 //!
-//! `docs/plan/status/295-totient-even.md` sketches the front-peel via a
+//! `docs/plan/archive/lanes/295-totient-even.md` sketches the front-peel via a
 //! `shift`-by-`add m k` (matching `totient.rs`'s private `shifted_pred`) and
 //! separately worried about "picking the right induction principle". Both
 //! concerns were real but resolved cheaply: `shifted_pred`'s `add`-based
@@ -157,7 +157,7 @@ fn shifted_by_one(d: &mut NatDev<'_>, f: ExprId) -> ExprId {
 
 /// `(a+b)+(c+d) = (a+c)+(b+d)`, returned as `(target, proof)`.
 ///
-/// Retired to `crate::ring::nat` (docs/plan/status/460-ring-tactic-1.md): a
+/// Retired to `crate::ring::nat` (docs/plan/archive/lanes/460-ring-tactic-1.md): a
 /// pure ring-rearrangement chain, now searched for and emitted rather than
 /// hand-assembled — one of eight verbatim-duplicated hand proofs of this
 /// exact identity across `nat_prelude` (`binomial.rs`, `div_mod_lemmas.rs`,

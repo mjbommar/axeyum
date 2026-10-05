@@ -175,7 +175,7 @@ fact's notes and in the new `F:rado-r2-schur-two` row.
   not do it; it records that nothing blocks it.
 - Cost: the module adds 17 declarations to a prelude every kernel test builds.
   The measured build delta is recorded in
-  [`docs/plan/status/501-rado-in-kernel.md`](../../plan/status/501-rado-in-kernel.md);
+  [`docs/plan/archive/lanes/501-rado-in-kernel.md`](../../plan/archive/lanes/501-rado-in-kernel.md);
   the largest magnitude any *proof* here forms is `5`.
 
 ## Alternatives rejected

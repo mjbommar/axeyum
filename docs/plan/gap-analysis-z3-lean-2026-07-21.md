@@ -1,5 +1,7 @@
 # Scoped Z3 and Lean gap analysis — 2026-07-21
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](CATALOG.md). This was the 2026-07-21 scoped Z3 and Lean gap analysis.
+
 > **Scope note (added 2026-08-21).** This is the **evidence** map — proof
 > denominators, dominance audits, trust holes — and remains current for that.
 > The **capability** map (what axeyum can decide, against Z3/cvc5/Bitwuzla) is

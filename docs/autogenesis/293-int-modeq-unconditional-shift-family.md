@@ -252,7 +252,7 @@ new named declaration, not itself inside `int_prelude/` but unavoidable),
 `crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs`,
 `crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs`, the five
 fact JSON files, the five decline JSON files (amendment only), this doc, and
-`docs/plan/status/int-modeq-kernel.md`.
+`docs/plan/archive/lanes/int-modeq-kernel.md`.
 
 Not touched: `crates/axeyum-lean-kernel/src/creal/`, `complex/`,
 `crates/axeyum-cas/`, `scripts/`, either producer contract instance,

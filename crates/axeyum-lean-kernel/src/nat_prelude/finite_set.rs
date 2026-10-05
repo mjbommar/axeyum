@@ -317,7 +317,7 @@ pub(super) fn declare_subset(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
 
 /// `Eq Nat (add (add a b) (add c e)) (add (add a c) (add b e))`.
 ///
-/// Retired to `crate::ring::nat` (docs/plan/status/460-ring-tactic-1.md): a
+/// Retired to `crate::ring::nat` (docs/plan/archive/lanes/460-ring-tactic-1.md): a
 /// pure ring-rearrangement chain, now searched for and emitted rather than
 /// hand-assembled — one of eight verbatim-duplicated hand proofs of this
 /// exact identity across `nat_prelude` (`binomial.rs`, `div_mod_lemmas.rs`,

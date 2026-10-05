@@ -1,6 +1,6 @@
 //! `Nat.dist`: the distance function on ℕ, opening `Mathlib.Data.Nat.Dist`
 //! (pinned commit `c5ea0035…`, 18 rows) for the autogenesis screen —
-//! `docs/plan/status/348-nat-dist-nth.md`.
+//! `docs/plan/archive/lanes/348-nat-dist-nth.md`.
 //!
 //! Mathlib: `def dist (n m : ℕ) := n - m + (m - n)`. This is the SAME
 //! definition over our own `Nat.sub`/`Nat.add` — not merely a construction

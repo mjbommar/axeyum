@@ -1,4 +1,4 @@
-//! Toward `cos (8/5) < 0` — π's rung 2 (`docs/plan/status/169-pi.md`).
+//! Toward `cos (8/5) < 0` — π's rung 2 (`docs/plan/archive/lanes/169-pi.md`).
 //!
 //! This file carries the general theorems that rung 2 needs and that nothing
 //! in the tree had. Neither mentions cosine.
@@ -701,7 +701,7 @@ pub(super) fn declare_alternating_upper_bound_tail(
 }
 
 // ---------------------------------------------------------------------------
-// π rung 2, items 1-2 of `docs/plan/status/174-pi-rung2.md`'s four-item
+// π rung 2, items 1-2 of `docs/plan/archive/lanes/174-pi-rung2.md`'s four-item
 // list: `CReal.cosWideTailNonneg` and `CReal.cosWideTailAntitone`, the
 // `hnn`/`htail` premises [`declare_alternating_upper_bound_tail`]'s
 // `CReal.alternatingUpperBoundTail` needs when instantiated at cosine's
@@ -709,7 +709,7 @@ pub(super) fn declare_alternating_upper_bound_tail(
 // `R := ofRat (natDivSucc 8 4) = 8/5`.
 //
 // Items 3-4 (the `Converges` witness at `cosFnWide R` and the final numeric
-// evaluation) are NOT built here. See `docs/plan/status/174-pi-rung2.md` for
+// evaluation) are NOT built here. See `docs/plan/archive/lanes/174-pi-rung2.md` for
 // why: bridging `cosFnWideUniformConverges`'s `UniformConvergesOn`-shaped
 // `close_within` output down to `Converges`'s own `Within`-on-rationals
 // shape has no existing lemma anywhere in this tree (confirmed by reading
@@ -1141,8 +1141,8 @@ pub(super) fn declare_cos_wide_tail_antitone(
 }
 
 // ---------------------------------------------------------------------------
-// pi rung 2, items 3-4 (`docs/plan/status/174-pi-rung2.md`,
-// `docs/plan/status/175-pi-r2b.md`, `docs/plan/status/176-cw-bridge.md`):
+// pi rung 2, items 3-4 (`docs/plan/archive/lanes/174-pi-rung2.md`,
+// `docs/plan/archive/lanes/175-pi-r2b.md`, `docs/plan/archive/lanes/176-cw-bridge.md`):
 // `CReal.cosWideSeriesConverges` (the `Converges` witness
 // `alternatingUpperBoundTail` needs) and `CReal.cosWideNonpositive` -- `le
 // (cosFnWide R) zero`, the rung's actual target.
@@ -1198,7 +1198,7 @@ fn cos_fn_partial_sums_fn_local(
 /// `CReal.cosWideSeriesConverges : Converges (sumRange t) (cosFnWide R)` --
 /// pi rung 2 item 3. Composes `CReal.converges_of_abs_diff_le` with
 /// `CReal.cosFnWideUniformConverges`'s own `.spec` at the fixed point `x :=
-/// R` -- `docs/plan/status/176-cw-bridge.md`'s predicted route, no transport
+/// R` -- `docs/plan/archive/lanes/176-cw-bridge.md`'s predicted route, no transport
 /// for the `close_within` shape itself -- bridged, per index, from
 /// `cosFnTerm`'s `mul (cosTerm j) (pow R (2j))` shape to `t`'s `mul (pow
 /// (neg one) j) (mul (expTerm (2j)) (pow R (2j)))` shape by exactly ONE
@@ -1960,7 +1960,7 @@ pub struct CosSignNames {
     /// k)) (succ (succ k)))) (pow R (add (succ (succ k)) (succ (succ k)))))
     /// (mul (expTerm (add (succ k) (succ k))) (pow R (add (succ k) (succ
     /// k))))`, `R := 8/5` -- π rung 2's `htail` premise (the sized blocker
-    /// `docs/plan/status/174-pi-rung2.md` names). Reduces to `R² <=
+    /// `docs/plan/archive/lanes/174-pi-rung2.md` names). Reduces to `R² <=
     /// (m+1)(m+2)` at `m := add (succ k) (succ k) >= 2`, via two
     /// [`super::CRealPrelude::exp_term_succ_scale`] applications and `R² <= 3` (`Rat.ble`
     /// computation on `8/5 * 8/5` vs `3/1`). See `creal/cos_sign.rs`.

@@ -1,6 +1,6 @@
 # Notes: 92-binding-tail
 
-Detail moved out of [`../status/92-binding-tail.md`](../status/92-binding-tail.md) so the
+Detail moved out of [`../status/92-binding-tail.md`](../archive/lanes/92-binding-tail.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

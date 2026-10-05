@@ -1,33 +1,23 @@
 ## Resume protocol
 
-1. Read this file first. Do not reconstruct current priority from historical
-   result notes, old status journals, branch names, or worktree age.
-2. Verify live state:
-
-   ```sh
-   git status --short --branch
-   git fetch origin
-   git rev-parse HEAD origin/main
-   git worktree list
-   gh run list --limit 10
-   ```
-
-3. If `main` is dirty, diverged, or owned by another lane, create an isolated
-   worktree from current `origin/main`. One writer, one branch, one worktree.
-4. Select the first unblocked item in **Next Actions**. Read its detailed phase,
-   ADR, result notes, foundational DAG implications, and named handoff before
+1. Read this file first. Do not reconstruct priority from dated notes, archived
+   lane files, branch names, or worktree age.
+2. Verify live state (`git status --short --branch`, `git fetch origin`,
+   `git rev-parse HEAD origin/main`, `git worktree list`). Re-derive any
+   baseline you will score against; the boards quoted in Status are snapshots.
+3. Pick the first unblocked item of the relevant track in **Next Actions**
+   (P0 work preempts). Read its linked detail and the
+   [foundational DAG](docs/research/08-planning/foundational-dag.md) before
    editing.
-5. During iteration, run the narrowest relevant crate or script tests. Run the
-   aggregate pre-merge gate once on the finished branch. Confirm nonzero test
-   counts and retain real exit codes.
-6. Commit and push owned paths only. Integration requires conflict preview,
-   green branch gates, merge, green main gates, pushed main, and remote-ref/CI
-   verification.
-7. Update this file in the same bounded increment:
-   - status and exact evidence;
-   - next executable action;
-   - blocker or stop condition;
-   - committed/pushed/integrated/remote states separately.
-
-For concurrency and resource rules, follow
-[`docs/contributor-guide/multi-agent-operations.md`](docs/contributor-guide/multi-agent-operations.md).
+4. Open a lane file `docs/plan/status/<lane>.md` naming the item ID (e.g.
+   `SOL-2`), with a `lane-status` block and landed rows
+   ([format](docs/plan/status/README.md)). Work in an isolated worktree; one
+   writer per branch.
+5. Iterate on the narrowest relevant tests; run the aggregate gate once on the
+   finished branch and confirm nonzero test counts. Commit with
+   `scripts/lane-commit.sh`; merge and push per
+   [multi-agent-operations](docs/contributor-guide/multi-agent-operations.md).
+6. When the item meets its exit criterion (or is refuted), mark the lane `DONE`,
+   **move the file to `docs/plan/archive/lanes/`**, update the item's line in
+   the track here if its state changed, and run `python3 scripts/gen-plan.py`.
+   Keep at most ~25 active lane files.

@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-08-31
-Index-summary: Of the three pieces `docs/plan/status/374-euler-theorem.md`
+Index-summary: Of the three pieces `docs/plan/archive/lanes/374-euler-theorem.md`
 named as remaining between the landed residue-permutation lemmas and Euler's
 theorem, this lane closed item 2 (`Int.euler_unit_coprime_iff`, the full
 predicate-preservation iff, admitted axiom-free with no new induction),
@@ -18,7 +18,7 @@ assembly) untouched.
 §2.2 records Euler's theorem (`a^phi(n) = 1 (mod n)` for coprime `a,n`) as
 the highest-yield remaining number-theory target, with a corrected sizing
 from 2026-08-30: not "one theorem away", but three named pieces, all real
-work, handed off in `docs/plan/status/374-euler-theorem.md` and in
+work, handed off in `docs/plan/archive/lanes/374-euler-theorem.md` and in
 `int_prelude/euler_theorem.rs`'s own module doc. This lane
 (`euler-theorem-spine`) was dispatched to verify all three in-tree before
 trusting the handoff — the standing "a handoff's report of what REMAINS is
@@ -98,5 +98,5 @@ qualification — that phrase now overstates its cost.
   `ofNat`/`ofNat`; any future `Nat`/`Int` bridging work in this kernel
   should check for the same shortcut before writing a new lemma.
 - `docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md`
-  §2.2 and `docs/plan/status/euler-theorem-spine.md` carry the same
+  §2.2 and `docs/plan/archive/lanes/euler-theorem-spine.md` carry the same
   correction in full; this ADR is the durable decision-record copy.

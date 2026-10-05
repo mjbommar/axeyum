@@ -1,6 +1,6 @@
 # Notes: 120-checker-independence
 
-Detail moved out of [`../status/120-checker-independence.md`](../status/120-checker-independence.md) so the
+Detail moved out of [`../status/120-checker-independence.md`](../archive/lanes/120-checker-independence.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

@@ -1,6 +1,6 @@
 # Notes: 112-prelude-perf
 
-Detail moved out of [`../status/112-prelude-perf.md`](../status/112-prelude-perf.md) so the
+Detail moved out of [`../status/112-prelude-perf.md`](../archive/lanes/112-prelude-perf.md) so the
 lane-status block stays inside the per-lane ceiling. Nothing here was
 deleted; it was moved.
 

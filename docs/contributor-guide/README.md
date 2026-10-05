@@ -104,6 +104,8 @@ matches your change:
 | Classify SAT replay and UNSAT checking | [Proof and evidence obligations](proof-and-evidence-obligations.md) |
 | Produce a reproducible performance/capability record | [Benchmark artifacts](benchmark-artifacts.md) |
 | Confirm Lean accepts a preregistered statement (needs a BUILT Mathlib — s5) | [Lean surface attestation](lean-surface-attestation.md) |
+| Look up a gate command, its mandatory feature flag, and why it exists | [Gate commands reference](gate-commands-reference.md) |
+| Read the long-form agent instructions (incident history) cut from CLAUDE.md / AGENTS.md on 2026-10-05 | [Agent instructions history](agent-instructions-history.md) |
 
 For concurrent work, read both the [worktree model](multi-agent-worktrees.md)
 and [multi-agent operating discipline](multi-agent-operations.md) before

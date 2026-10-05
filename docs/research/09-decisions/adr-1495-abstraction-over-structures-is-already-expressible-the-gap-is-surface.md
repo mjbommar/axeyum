@@ -72,7 +72,7 @@ wrong about the tree.
 
 [`crates/axeyum-lean-kernel/examples/g4_pilot_generic_assoc_probe.rs`](../../../crates/axeyum-lean-kernel/examples/g4_pilot_generic_assoc_probe.rs)
 (2026-08-30, recorded in [ADR-0865](adr-0865-two-of-three-g4-pilots-retain-the-graph-ranking-one-category-untested.md)
-and `docs/plan/status/l2-g4-pilot-clusters.md`) already built and admitted
+and `docs/plan/archive/lanes/l2-g4-pilot-clusters.md`) already built and admitted
 
 ```
 ∀ (α : Sort 1) (op : α → α → α),

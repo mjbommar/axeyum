@@ -30,7 +30,7 @@ ADR-1015 and the `gauss-mapsinto-bound` lane closed piece 2 (`gaussFold` is
 (`∏(a·k) = a^m·m!`) and the sign-product identity; the `gauss-assembly` lane
 landed item 2 (`gcd(m!,pp) = 1`, both carriers).
 
-That left two items, and `docs/plan/status/gauss-assembly.md` said so
+That left two items, and `docs/plan/archive/lanes/gauss-assembly.md` said so
 explicitly: **(1)** the per-term congruence, and **(3)** the final assembly,
 blocked on (1).
 
@@ -201,5 +201,5 @@ disjoint defect classes. Both concrete tests are chosen to discriminate:
   a residue until `gaussNegCount pp a m` is evaluated, and only the `a := 2`
   closed form exists. Full quadratic reciprocity needs a lattice-point count
   this kernel does not have.
-- `docs/plan/status/gauss-assembly.md`'s two-item list is now empty. The
+- `docs/plan/archive/lanes/gauss-assembly.md`'s two-item list is now empty. The
   five-item sizing that began at ADR-0990 is closed across four sessions.

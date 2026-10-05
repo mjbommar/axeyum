@@ -1,5 +1,7 @@
 # Improvement list, 2026-09-16: the solver as a security tool
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](CATALOG.md). This was the 2026-09-16 improvement list for the solver as a security tool.
+
 Written the same afternoon the cindergraph defects example landed
 (`python/examples/cindergraph_defects/`, commit `defc4f806`) and the five-worst-
 divisions campaign was paused
@@ -90,7 +92,7 @@ names the measurement or the round trip that produced it.
     (its `__version__` is item 8 on its list). Until then it is a runnable
     example with an exit status, not a check anyone runs.
 
-    **Done 2026-09-17 (lane AX-GATE, see `docs/plan/status/ax-gate.md` for the
+    **Done 2026-09-17 (lane AX-GATE, see `docs/plan/archive/lanes/ax-gate.md` for the
     commit).** `cindergraph` is pinned in `pyproject.toml`'s dev group at
     `8bd20512158d19d4cf632caba4bbed629271a3e5` (`uv.lock` updated; `uv sync
     --dev` installs it, `__version__` 0.1.0) and `check.py`'s first line

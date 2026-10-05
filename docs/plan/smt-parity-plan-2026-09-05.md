@@ -1,5 +1,7 @@
 # SMT/SAT parity plan: root causes across all eleven divisions, 2026-09-05
 
+> **Historical — superseded 2026-10-05.** The live queue is [PLAN.md](../../PLAN.md) (tracks in [`docs/plan/global/20-next-actions.md`](global/20-next-actions.md)); history is indexed in [`docs/plan/CATALOG.md`](CATALOG.md). This was the 2026-09-05 root-cause parity plan (slices S1 onward); the gap figures in it are as of that date.
+
 Status: **active**. This is the plan the user asked for after the 2026-09-05
 board: address the root cause of every division's gap, then execute until each
 division reaches its reference or better. It is a plan of record for lanes;

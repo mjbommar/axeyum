@@ -2,8 +2,8 @@
 //! `Nat.bit`-constructed argument (`fuel = bit a m`, non-canonical) back to
 //! the recursive step at the DECODED `(m, n)`.
 //!
-//! Two prior lanes (`docs/plan/status/237-nat-fuel-irrelevance.md`,
-//! `docs/plan/status/239-nat-fuel-transport.md`) each independently named
+//! Two prior lanes (`docs/plan/archive/lanes/237-nat-fuel-irrelevance.md`,
+//! `docs/plan/archive/lanes/239-nat-fuel-transport.md`) each independently named
 //! this as the blocker for `land_bit`/`lor_bit`/`ldiff_bit` and stopped
 //! short of attempting it. This file lands it for `Nat.land` in full and
 //! documents exactly how far the `Nat.lor`/`Nat.ldiff` transport gets.

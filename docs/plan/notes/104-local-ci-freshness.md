@@ -1,6 +1,6 @@
 # Notes: local-ci-freshness
 
-Detail behind [`../status/104-local-ci-freshness.md`](../status/104-local-ci-freshness.md).
+Detail behind [`../status/104-local-ci-freshness.md`](../archive/lanes/104-local-ci-freshness.md).
 
 ## What "fresh" means, decided
 

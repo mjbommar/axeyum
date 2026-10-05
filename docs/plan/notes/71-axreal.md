@@ -1,6 +1,6 @@
 # agent-axreal — `Real` -> `AxReal`, and the assertion it caught
 
-Detail behind [`docs/plan/status/71-axreal.md`](../status/71-axreal.md). The
+Detail behind [`docs/plan/archive/lanes/71-axreal.md`](../archive/lanes/71-axreal.md). The
 decision is
 [ADR-0522](../../research/09-decisions/adr-0522-the-axiomatized-reals-are-renamed-before-they-are-retired.md);
 the scoping is [`64-retire-real.md`](64-retire-real.md).
