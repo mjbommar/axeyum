@@ -131,12 +131,12 @@ ship. Detail: [architecture review](docs/research/11-design-review/2026-08-27-ar
    unrecognised); the `AlgS` shape duplicates red the hygiene gate on hosts with
    a fresh `shape_search`. Land the DONE-lane archive gate. *Exit:* each exits
    0 on main and each has a mutation control that kills exactly one test.
-2. **ENG-2 Worktrees and branches.** `git worktree list` shows 203 entries
-   (198 agent worktrees); 14 branches are unmerged into `main` (13 dated
+2. **ENG-2 Worktrees and branches.** `git worktree list` showed 201 entries on
+   2026-10-05 before this consolidation (198 under `.claude/worktrees/`); 14 branches are unmerged into `main` (13 dated
    2026-08-22…31, one 2026-09-01). *Exit:* a read-only inventory classifies
    each (dirty/merged/unmerged/target size); unmerged work is merged or
    recorded abandoned; then exact-target removal.
-3. **ENG-3 ADR status sweep.** 72 ADRs read `Status: proposed`, including
+3. **ENG-3 ADR status sweep.** 81 of 1,003 ADRs read `proposed` (counted 2026-10-05 from each file's first status line), including
    shipped decisions (ADR-2121, ADR-2126, ADR-2142). *Exit:* every decision on
    `main` reads `accepted`; every OFF lever reads `proposed` or `deferred` with
    its A/B.

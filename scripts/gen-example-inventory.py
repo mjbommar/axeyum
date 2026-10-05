@@ -37,7 +37,6 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 #: (path, regex with one capture group around the integer)
 MARKERS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("docs/documentation-plan.md", re.compile(r"all (\d+) checked-in Cargo examples")),
-    ("docs/plan/global/30-workstream-state.md", re.compile(r"all (\d+) Cargo examples")),
 )
 
 

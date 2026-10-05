@@ -9,7 +9,7 @@ set -uo pipefail
 cd "$(dirname "$0")/../.." || exit 2
 
 GEN=scripts/gen-example-inventory.py
-FILES=(docs/documentation-plan.md docs/plan/global/30-workstream-state.md)
+FILES=(docs/documentation-plan.md)
 BACKUP=$(mktemp -d "${TMPDIR:-/tmp}/gen-example-inventory-XXXXXX")
 restore() { for f in "${FILES[@]}"; do cp "$BACKUP/$(basename "$f")" "$f"; done; rm -rf "$BACKUP"; }
 trap restore EXIT
