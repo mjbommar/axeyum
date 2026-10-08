@@ -64,7 +64,7 @@ axeyum-solver = { path = "../axeyum-solver", version = "0.1.0", default-features
 # both of which moved recently. `pyo3/extension-module` is deliberately NOT a
 # default feature here -- as a Cargo default it makes `cargo test --workspace`
 # fail to link, so it is supplied only by `[tool.maturin] features`.
-pyo3 = { version = "=0.29.2", features = ["abi3-py312"] }
+pyo3 = { version = "=0.29.3", features = ["abi3-py312"] }
 
 # Typed `.pyi` generation from the Rust signatures (feature `stub-gen`, off by
 # default). `default-features = false` drops `numpy`, `either`, `ordered-float`
@@ -96,7 +96,7 @@ anyhow = { version = "1", optional = true }
 # symbols from its host interpreter and must not link a second one), and they
 # are never in one build here.
 [dev-dependencies]
-pyo3 = { version = "=0.29.2", features = ["auto-initialize"] }
+pyo3 = { version = "=0.29.3", features = ["auto-initialize"] }
 
 [lints]
 workspace = true
