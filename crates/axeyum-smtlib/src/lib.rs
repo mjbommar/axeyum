@@ -51,7 +51,7 @@ pub use parse::{
     parse_script_with_string_bound_within, parse_script_within,
 };
 pub use regex_membership::{MemberConcatDefinition, MemberVar, MembershipProblem};
-pub use sexpr::{SExpr, read_all};
+pub use sexpr::{SExpr, read_all, read_all_within};
 pub use write::{sort_text, write_script};
 
 use axeyum_ir::IrError;

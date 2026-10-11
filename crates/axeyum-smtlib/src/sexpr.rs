@@ -145,6 +145,32 @@ fn needs_quoting(inner: &str) -> bool {
 // self-gated call.
 #[allow(clippy::too_many_lines)]
 pub fn read_all(input: &str) -> Result<Vec<SExpr>, SmtError> {
+    read_all_within(input, None)
+}
+
+/// Read expressions with a shared ingest deadline, sampled every 4096 bytes.
+/// With no deadline this performs no clock reads.
+///
+/// # Errors
+/// As [`read_all`], plus [`SmtError::DeadlineExceeded`] during lexical intake.
+#[allow(clippy::too_many_lines)]
+pub fn read_all_within(
+    input: &str,
+    deadline: Option<std::time::Instant>,
+) -> Result<Vec<SExpr>, SmtError> {
+    let mut next_poll = 0;
+    let mut poll = |offset: usize| -> Result<(), SmtError> {
+        if let Some(at) = deadline
+            && offset >= next_poll
+        {
+            if std::time::Instant::now() >= at {
+                return Err(SmtError::DeadlineExceeded("s-expression intake".into()));
+            }
+            next_poll = offset.saturating_add(4096);
+        }
+        Ok(())
+    };
+    poll(0)?;
     let mut top = Vec::new();
     // Stack of open lists; pushes/pops instead of recursion.
     let mut stack: Vec<Vec<SExpr>> = Vec::new();
@@ -162,11 +188,13 @@ pub fn read_all(input: &str) -> Result<Vec<SExpr>, SmtError> {
     };
 
     while i < n {
+        poll(i)?;
         let c = bytes[i];
         match c {
             b' ' | b'\t' | b'\r' | b'\n' => i += 1,
             b';' => {
                 while i < n && bytes[i] != b'\n' {
+                    poll(i)?;
                     i += 1;
                 }
             }
@@ -186,6 +214,7 @@ pub fn read_all(input: &str) -> Result<Vec<SExpr>, SmtError> {
                 let start = i;
                 i += 1;
                 loop {
+                    poll(i)?;
                     if i >= n {
                         return Err(SmtError::Syntax(format!(
                             "unterminated string at byte {start}"
@@ -212,6 +241,7 @@ pub fn read_all(input: &str) -> Result<Vec<SExpr>, SmtError> {
                 let start = i;
                 i += 1;
                 while i < n && bytes[i] != b'|' {
+                    poll(i)?;
                     i += 1;
                 }
                 if i >= n {
@@ -254,6 +284,7 @@ pub fn read_all(input: &str) -> Result<Vec<SExpr>, SmtError> {
                 while i < n
                     && !matches!(bytes[i], b' ' | b'\t' | b'\r' | b'\n' | b'(' | b')' | b';')
                 {
+                    poll(i)?;
                     i += 1;
                 }
                 emit(

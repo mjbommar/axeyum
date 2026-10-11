@@ -941,7 +941,7 @@ fn parse_script_bounded_inner(
     deadline: Option<std::time::Instant>,
     distinct_linear: DistinctLinear,
 ) -> Result<Script, SmtError> {
-    let mut exprs = read_all(input)?;
+    let mut exprs = crate::sexpr::read_all_within(input, deadline)?;
     check_deadline(deadline, "after read_all")?;
     // Finite-set theory: model every `(Set E)` as a `BitVec(W)` over the finite
     // element domain and rewrite the sound subset of set operations to bit-vector
