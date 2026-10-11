@@ -203,3 +203,11 @@ Logs `/var/tmp/axeyum-nested-conditional-congruence-mutation.log` and
 `/var/tmp/axeyum-nested-conditional-guard-{baseline,mutant}.log`. No result yet.
 Parent Rust workers2343744/2348469 confirmed filesystem folio wait; live jobs
 retained. All new nested checks remain host-admission queued, not passes.
+
+Added sixth current-source Rust control for congruence through multiplication,
+power and outer division, including an unchanged zero outer denominator: checked
+local rewriting preserves partial domains and never claims a total endpoint.
+Independent evaluations compare exact values or undefinedness at nonzero
+assignments. New-source checks remain host-admission queued at edit time.
+Private snapshotd7d0a8d3e is complete and keeps its original five-test population;
+its exact-one congruence guard helper therefore still requires5->4/1.

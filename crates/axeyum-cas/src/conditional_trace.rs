@@ -327,6 +327,69 @@ mod tests {
         assert!(check_conditional_trace(&trace, &input, &trace.result, &[], limits).is_err());
     }
     #[test]
+    fn congruence_preserves_values_and_partial_outer_domains() {
+        let limits = TraceLimits::default();
+        let local = cancel_nested_with_trace(&quotient(), &[x()], limits).unwrap();
+        let constant = |n: i128| PolynomialExpr::Const {
+            numerator: n.to_string(),
+            denominator: "1".into(),
+        };
+        let wrappers: Vec<(PolynomialExpr, PolynomialExpr)> = vec![
+            (
+                PolynomialExpr::Mul(vec![quotient(), x()]),
+                PolynomialExpr::Mul(vec![x(), x()]),
+            ),
+            (
+                PolynomialExpr::Pow {
+                    base: Box::new(quotient()),
+                    exponent: 2,
+                },
+                PolynomialExpr::Pow {
+                    base: Box::new(x()),
+                    exponent: 2,
+                },
+            ),
+            (
+                PolynomialExpr::Div {
+                    numerator: Box::new(quotient()),
+                    denominator: Box::new(constant(2)),
+                },
+                PolynomialExpr::Div {
+                    numerator: Box::new(x()),
+                    denominator: Box::new(constant(2)),
+                },
+            ),
+            (
+                PolynomialExpr::Div {
+                    numerator: Box::new(quotient()),
+                    denominator: Box::new(constant(0)),
+                },
+                PolynomialExpr::Div {
+                    numerator: Box::new(x()),
+                    denominator: Box::new(constant(0)),
+                },
+            ),
+        ];
+        for (input, result) in wrappers {
+            let mut step = local.steps[0].clone();
+            step.before = input.clone();
+            step.after = result.clone();
+            step.location = vec![0];
+            let trace = ConditionalTrace {
+                version: local.version.clone(),
+                input: input.clone(),
+                result: result.clone(),
+                nonzero_assumptions: vec![x()],
+                steps: vec![step],
+            };
+            check_conditional_trace(&trace, &input, &result, &[x()], limits).unwrap();
+            for n in [-3, 1, 5] {
+                let assignment = crate::Rational::checked_new(n, 2).unwrap();
+                assert_eq!(evaluate(&input, assignment), evaluate(&result, assignment));
+            }
+        }
+    }
+    #[test]
     fn contextual_replacement_rejects_changed_surrounding_subtree() {
         let input = PolynomialExpr::Add(vec![quotient(), x()]);
         let limits = TraceLimits::default();
