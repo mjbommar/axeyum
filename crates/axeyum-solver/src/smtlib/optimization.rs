@@ -45,6 +45,8 @@ pub struct ObjectiveResult {
     objective: TermId,
     assertions: Vec<TermId>,
     model: Option<Model>,
+    context: Vec<TermId>,
+    no_better: Option<crate::lra::FarkasCertificate>,
 }
 
 /// Owns the original terms and per-objective contexts required for model replay.
@@ -76,6 +78,40 @@ impl OptimizationReport {
             .map_err(|e| SolverError::Backend(e.to_string()))?;
         Ok(Some(row.value.as_ref() == Some(&actual)))
     }
+    /// Independently bind and replay the strict-better refutation. None means
+    /// no certificate was retained; it never means checked optimality.
+    ///
+    /// # Errors
+    /// Returns source relaxation or certificate binding errors.
+    pub fn replay_optimality(&self, index: usize) -> Result<Option<bool>, SolverError> {
+        let Some(row) = self.objectives.get(index) else {
+            return Ok(None);
+        };
+        let Some(certificate) = &row.no_better else {
+            return Ok(None);
+        };
+        let Some(Value::Int(value)) = &row.value else {
+            return Ok(Some(false));
+        };
+        let mut arena = self.script.arena.clone();
+        let bound = arena.int_const(*value);
+        let better = if row.maximize {
+            arena.int_gt(row.objective, bound)?
+        } else {
+            arena.int_lt(row.objective, bound)?
+        };
+        let mut query = row.context.clone();
+        query.push(better);
+        let Some((relaxed, assertions)) =
+            crate::int_real_relax::relax_int_assertions_to_real(&arena, &query)?
+        else {
+            return Ok(Some(false));
+        };
+        certificate
+            .verify_against_within(&relaxed, &assertions, None)
+            .map(Some)
+    }
+
     /// User-declared model entries in declaration order; absent witnesses yield
     /// an empty list, and callers must inspect model availability separately.
     #[must_use]
@@ -288,6 +324,8 @@ pub fn optimize_with_models(
             objective,
             assertions: assertions.clone(),
             model: None,
+            context: assertions.clone(),
+            no_better: None,
         };
         if let OptOutcome::Optimal(value) = row.outcome {
             let (term, exact) = constant(&mut script.arena, sort, value)?;
@@ -312,6 +350,37 @@ pub fn optimize_with_models(
                         return Err(SolverError::Backend(
                             "optimizer optimum has no feasible witness".into(),
                         ));
+                    }
+                }
+            }
+            // Refute better values against the original context, excluding
+            // the current optimum pin. Including that pin would be circular.
+            if sort == Sort::Int && row.model.is_some() {
+                let remaining = text_optimization_config(config, started);
+                if !remaining.timeout.is_some_and(|t| t.is_zero()) {
+                    let better = if maximize {
+                        script.arena.int_gt(objective, term)?
+                    } else {
+                        script.arena.int_lt(objective, term)?
+                    };
+                    let mut query = row.context.clone();
+                    query.push(better);
+                    if let Some((relaxed, constraints)) =
+                        crate::int_real_relax::relax_int_assertions_to_real(&script.arena, &query)?
+                    {
+                        let deadline = config.timeout.and_then(|t| started.checked_add(t));
+                        row.no_better = match crate::lra::lra_farkas_certificate_within(
+                            &relaxed,
+                            &constraints,
+                            deadline,
+                        ) {
+                            Ok(certificate) => certificate,
+                            Err(SolverError::Unsupported(_)) => None,
+                            Err(error) => return Err(error),
+                        };
+                        if deadline.is_some_and(|d| Instant::now() >= d) {
+                            row.no_better = None;
+                        }
                     }
                 }
             }
@@ -368,6 +437,20 @@ mod tests {
         assert_eq!(r.objectives[0].value, Some(Value::Int(0)));
         assert_eq!(r.replay(0).unwrap(), Some(true));
     }
+    #[test]
+    fn strict_better_certificate_excludes_the_optimum_pin() {
+        for direction in ["maximize", "minimize"] {
+            let mut report = run(
+                &format!("{BOUNDS}({direction} x)(check-sat)"),
+                OptimizationMode::Box,
+            );
+            assert_eq!(report.replay_optimality(0).unwrap(), Some(true));
+            report.objectives[0].value =
+                Some(Value::Int(if direction == "maximize" { 9 } else { 1 }));
+            assert_eq!(report.replay_optimality(0).unwrap(), Some(false));
+        }
+    }
+
     #[test]
     fn original_objective_value_tampering_fails_replay() {
         let mut r = run(

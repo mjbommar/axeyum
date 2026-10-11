@@ -25,6 +25,18 @@ search, not an independently implemented parser or linearizer. Targeted guard
 mutations and changed-source controls are required. Existing internal cached
 certificate dispatch remains unchanged; it retains its current controls.
 
+## First OMT integration
+
+Retain each objective's original active context separately from its feasible
+model query, which includes the current optimum pin. Build `objective > v`
+for maximize or `< v` for minimize against that original context and earlier
+lexicographic pins. Reuse deterministic Int-to-Real relaxation, retain the
+refutation, and independently rebuild the relaxation and atom binding during
+`OptimizationReport::replay_optimality`. A missing refutation returns None.
+This covers integer optima whose strict-better real relaxation is infeasible;
+integer-only cuts and Boolean composition remain subsequent producers.
+Python gold eligibility remains disabled until this route is validated.
+
 ## Remaining work
 
 Bind original Int-to-Real relaxation and any Boolean/theory lowering before
