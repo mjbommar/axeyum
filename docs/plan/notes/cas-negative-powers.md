@@ -41,3 +41,19 @@ ignored, 1314.04 seconds. Sole failure is untouched matgroup test
 psl2_f7_isomorphic_to_gl3_f2 at 6.095 seconds against its five-second debug budget.
 No threshold was changed. Its workspace phase remains live (59537); this is not
 a completed aggregate gate. Parent or quiet rerun investigation remains required.
+
+Revised-core validation recovered and rechecked: isolated extension at
+`/var/tmp/axeyum-signed-power-revised-python-ts0v0k0h`, SHA-256
+`6872f5415d1edb745d5b4eb6187dc6c123353bb6ea8688adcce18e8518495dee`,
+passes 223 Python tests (223 collected; repeated 0.50 seconds). The new seeded
+Fraction differential test includes guaranteed zero-negative and undefined-base
+cases. Build/stub/lint runner 76704 completed successfully: 645 stub items in
+27 modules and focused clippy with warnings denied. Docstrings now quote Python
+exception names and generate without trailing whitespace; diff check passes.
+
+Private snapshot domain-guard mutation logs are retained at
+`/var/tmp/axeyum-signed-domain-mutation-3kappfdc`: baseline four pass, mutant
+three pass/one fail. Replacing required base evaluation with a zero fallback
+kills exactly `zero_and_missing_bases_do_not_acquire_reciprocal_values`.
+No mutation was made in the shared checkout. These focused results do not close
+workspace gates, conditional trace certification, kernel admission or integration.

@@ -53,3 +53,18 @@ def test_signed_exponent_limits_and_types_are_explicit():
         pow(one, -1, 7)
     with pytest.raises(BudgetExceeded):
         (cas.Expr.int(2) ** -20000).eval({})
+
+
+def test_seeded_fraction_fuzz_includes_degenerate_power_domains():
+    import random
+    rng = random.Random(0x3000)
+    cases = [(Fraction(0), -1), (Fraction(0), -10), (Fraction(0), 0)]
+    cases += [(Fraction(rng.randint(-20, 20), rng.randint(1, 20)), rng.randint(-10, 10)) for _ in range(256)]
+    assert any(base == 0 and exponent < 0 for base, exponent in cases)
+    for base, exponent in cases:
+        expression = cas.Expr.rat(base.numerator, base.denominator) ** exponent
+        expected = None if base == 0 and exponent < 0 else base ** exponent
+        assert expression.eval({}) == expected
+    # Guaranteed seed classes beyond a concrete zero base.
+    assert ((cas.Expr.int(1) / 0) ** 0).eval({}) is None
+    assert (cas.Expr.var("missing") ** 0).eval({}) is None
