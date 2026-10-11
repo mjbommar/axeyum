@@ -219,3 +219,15 @@ five-test guard snapshot remains d7d0a8d3e. Compile32748/Python42846/private
 guard73515 handles re-polled live, no results credited. Next verification
 requires actual six-test execution, fresh native nine-test Python run,
 warning-denied lint, generated stubs, exact-one mutation and final broad gates.
+
+Preserved reference-miter native7437a1356 compatibility20585 terminal0:
+24 existing CAS/Rules/OMT/proof/SAT files collect1154 and pass1154, zero skips,
+170.80s. Population manifest
+`/var/tmp/axeyum-reference-miter-existing-consumer-population.json`, results
+`/var/tmp/axeyum-reference-miter-existing-consumers.log`. Native identity
+`/data0/axeyum/artifacts/python/reference-miter-replay-rqkla299/identity.json`
+binds7437a1356 and SHA dab497034b3f4b733d3fc70c49d89ba702f14946e9b6882deeb76b6595451356.
+This qualifies existing consumer compatibility after reference-miter changes,
+not new nested conditional Rust/Python code absent from that binary. Nested
+compile/runtime/private mutations and parent stub/lint/full workspace remain
+pending. No duplicate jobs started on observation timeout.

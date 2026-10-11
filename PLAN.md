@@ -706,7 +706,8 @@ wide NRA signs and datatype declaration/operator export are committed.
 Private decimal/FP/NRA guards each kill one test; datatype original6 fail vs
 fixed6 pass. SMT396 passes0 failures/ignores; parser frontdoors158 pass;
 MSRV1.88 workspace check and default Wasm build pass; facts2971 check0 errors.
-Pi evidence ratchet153 holds. Earlier fresh consumer1133 tests pass0 skips.
+Pi evidence ratchet153 holds. Preserved reference-miter native:24 consumer files,1154 pass0 skips170.80s;
+this excludes new nested conditional code.
 
 Python saved clausal text/source replay committed (ADR8000): native
 10021c3dfa772267b520db5c9744fd96c602717043a5e4da3edd97eaf57b84cc.
