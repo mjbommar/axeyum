@@ -28,6 +28,9 @@ def test_thirty_year_payment_uses_negative_power_directly():
     payment = cas.Expr.int(principal) * rate / (1 - (cas.Expr.rat(241, 240) ** -360))
     assert payment.eval({}) == expected
     assert expected.numerator.bit_length() > 128
+    witness = cas.equal(payment, cas.Expr.rat(expected.numerator, expected.denominator))
+    assert witness.equal is True
+    assert witness.kind in ("certified", "certified-big")
 
 
 def test_signed_exponent_limits_and_types_are_explicit():

@@ -76,6 +76,36 @@ fn signed_exponent_boundaries_decline_without_overflow() {
     let maximum = i64::from(u32::MAX);
     assert!(CasExpr::one().pow_signed(maximum).is_some());
     assert!(CasExpr::one().pow_signed(-maximum).is_some());
+    for exponent in [maximum, -maximum] {
+        assert_eq!(
+            CasExpr::one()
+                .pow_signed(exponent)
+                .unwrap()
+                .eval(&BTreeMap::new()),
+            Some(Rational::integer(1))
+        );
+    }
+    assert_eq!(
+        CasExpr::int(-1)
+            .pow_signed(-maximum)
+            .unwrap()
+            .eval(&BTreeMap::new()),
+        Some(Rational::integer(-1))
+    );
+    assert_eq!(
+        CasExpr::int(2)
+            .pow_signed(maximum)
+            .unwrap()
+            .eval(&BTreeMap::new()),
+        None
+    );
+    assert_eq!(
+        CasExpr::int(i128::MIN)
+            .pow_signed(1)
+            .unwrap()
+            .eval(&BTreeMap::new()),
+        Some(Rational::integer(i128::MIN))
+    );
     for exponent in [maximum + 1, -maximum - 1, i64::MIN, i64::MAX] {
         assert!(CasExpr::one().pow_signed(exponent).is_none());
     }

@@ -9,7 +9,10 @@ Expose Rust `CasExpr::pow_signed(i64) -> Option<CasExpr>` and signed Python
 `Expr.pow`/`**`. Keep the existing unsigned Rust constructor. Magnitudes must
 fit u32, preserving its positive range; unsigned_abs handles i64::MIN without
 negation overflow. Rust declines larger magnitudes; Python reports ValueError
-for that range and OverflowError for integers outside i64.
+for that range and OverflowError for integers outside i64. Replace the narrow
+Rust evaluator's linear exponent loop with checked repeated squaring, preserving
+its i128 declines and evaluating the base even at exponent zero. Neutral bases
+at the accepted magnitude ceiling must not perform billions of iterations.
 
 For a negative exponent -n, construct exactly `Div(1, Pow(base,n))`, retaining
 the existing partial rational-expression semantics. No new term head, SMT

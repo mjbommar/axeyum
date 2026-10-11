@@ -1189,11 +1189,17 @@ class Expr:
         r"""
         The imaginary unit `i`.
         """
-    def pow(self, exp: builtins.int) -> Expr:
+    def pow(self, exp: int) -> Expr:
         r"""
-        `self ** exp` for a non-negative integer `exp`.
+        Integer power with magnitude at most 4294967295.
         
-        The exponent is a `u32`: the fragment has no negative or symbolic powers.
+        A negative exponent constructs `1 / self^abs(exp)`. Its domain requires
+        a nonzero base; exact evaluation returns None at zero or missing bindings.
+        A defined zero to exponent zero is one. Symbolic construction is not a
+        certificate that the base is nonzero.
+        
+        Raises ValueError outside the magnitude range and OverflowError outside
+        i64. Exact evaluation has separate coefficient/work limits.
         """
     def nth_root(self, q: builtins.int) -> Expr:
         r"""
@@ -1385,7 +1391,7 @@ class Expr:
     def __truediv__(self, other: Expr  |  builtins.int  |  fractions.Fraction) -> Expr: ...
     def __rtruediv__(self, other: Expr  |  builtins.int  |  fractions.Fraction) -> Expr: ...
     def __neg__(self) -> Expr: ...
-    def __pow__(self, exponent: builtins.int, modulo: typing.Optional[typing.Any] = None) -> Expr:
+    def __pow__(self, exponent: int, modulo: typing.Optional[typing.Any] = None) -> Expr:
         r"""
         `self ** exp`; the three-argument (modular) form is not defined here.
         

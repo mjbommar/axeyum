@@ -879,10 +879,20 @@ impl CasExpr {
                 u.eval(env)?.checked_div(denom)
             }
             CasExpr::Pow(base, exp) => {
-                let b = base.eval(env)?;
+                let mut base = base.eval(env)?;
+                if *exp == 1 {
+                    return Some(base);
+                }
+                let mut exponent = *exp;
                 let mut acc = Rational::integer(1);
-                for _ in 0..*exp {
-                    acc = acc.checked_mul(b)?;
+                while exponent != 0 {
+                    if exponent & 1 == 1 {
+                        acc = acc.checked_mul(base)?;
+                    }
+                    exponent >>= 1;
+                    if exponent != 0 {
+                        base = base.checked_mul(base)?;
+                    }
                 }
                 Some(acc)
             }
