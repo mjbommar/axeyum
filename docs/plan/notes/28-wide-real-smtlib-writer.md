@@ -145,3 +145,14 @@ CLI exits0 with six clausal/two reference fixtures; artifact
 `/data0/axeyum/artifacts/python/reference-miter-census-39dd_n61/export`.
 Private guard script, stub generation, PyClippy and older workspace remain
 pending; current full-source workspace still required before integration.
+
+Current-source workspace library gate started session18900 atf2df12236, log
+`/var/tmp/axeyum-reference-miter-workspace.log`, serialized target
+`/data0/axeyum/target/omt-ingest-deadline`. Older datatype workspace is retained
+as its own older-source receipt; it cannot qualify reference-miter changes.
+Stub generator41978 advanced to compiling axeyum-py; Clippy82361 waits on its
+build lock. Private guard script remains live. No terminal result assumed.
+Inspected guarded_trace and rewrite_trace: conditional cancellation is currently
+source/context-bound at the quotient root; unconditional polynomial steps bind
+full surrounding expressions and paths. Nested conditional composition remains
+an explicit open item requiring a versioned public contract and checker controls.

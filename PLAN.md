@@ -730,7 +730,7 @@ source; predates newer code. Current full solver77505 passes2033 tests0 failures
 Census/end-to-end15 pass0 skips; CLI six clausal/two reference fixtures exits0.
 Older datatype workspace87947 still running, no pass credited. Earlier workspace81069/58007
 terminal143/-15, not passes. Next: exact guard controls, fresh Python checks,
-full gates, integration, and remaining arithmetic/conditional trace evidence.
+current workspace18900 live; integration and conditional trace evidence remain.
 Overall goal remains active.
 
 ### SOL — Solver parity
