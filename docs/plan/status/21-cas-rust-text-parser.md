@@ -10,8 +10,7 @@ Pi/unary/signed powers and byte errors. Final lowered AST also checks64 nodes/
 depth32 because subtraction/negative powers add syntax nodes. Initial compiles
 caught NthRoot(3) and fallible Rational conversion; corrected, no tests credited.
 Compile4076 passed9.82s: `/var/tmp/axeyum-cas-rust-parser-check-v3.log`.
-Next: structural/negative/resource
-controls, Python differential corpus, canonical wire agreement and broad gates.
+Next: broad gates and integration; shared native Python parsing migration.
 Entire feedback goal remains active; parent consolidated build remains separate.
 
 Added5 behavioral tests with constructor/precedence/wide/Pi/wire agreement,
@@ -26,5 +25,7 @@ Parser lint passed after one semicolon formatting fix: `/var/tmp/axeyum-cas-rust
 Combined Python run originally failed collection(missing pinned SymPy); installed
 SymPy1.14.0/mpmath1.3.0, rerun45817 passed1100/0 skipped,68.95s against sealed combined binary
 SHA2560f638f71c1cd68b3e6cf35260f1f10e945938c3137a982ea2c2072fd9dd2cf76.
-AddedRust parse_text example exporting canonical wire; example run launched,
-`/var/tmp/axeyum-cas-rust-parser-example.log`, uncredited.
+Rust parse_text example completed2 expression exports; example lint passed1.38s.
+Cross-language payment roundtrip passed:9 replayed steps/40141 bytes, Fraction
+agreement and4 malformed refusals, `/var/tmp/axeyum-cas-rust-parser-roundtrip.log`.
+[User guide](../../user-guide/cas-text.md) documents grammar, spans and limits.
