@@ -402,14 +402,17 @@ fn render_node(arena: &TermArena, root: TermId, names: &HashMap<TermId, String>)
                 // Render so the literal re-parses as `Real` (never `Int`):
                 // an integer value as `n.0`, otherwise `(/ n d)`; `(- ...)` for
                 // negatives.
-                let num = value.numerator();
-                let den = value.denominator();
-                let magnitude = if den == 1 {
-                    format!("{}.0", num.unsigned_abs())
+                // Promoted exact rationals must never pass through narrowing
+                // accessors: numerator()/denominator() panic outside i128.
+                let num = value.numerator_big().to_string();
+                let den = value.denominator_big().to_string();
+                let magnitude_num = num.strip_prefix('-').unwrap_or(&num);
+                let magnitude = if den == "1" {
+                    format!("{magnitude_num}.0")
                 } else {
-                    format!("(/ {}.0 {den}.0)", num.unsigned_abs())
+                    format!("(/ {magnitude_num}.0 {den}.0)")
                 };
-                if num < 0 {
+                if num.starts_with('-') {
                     memo.insert(t, format!("(- {magnitude})"));
                 } else {
                     memo.insert(t, magnitude);
