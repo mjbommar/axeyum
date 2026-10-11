@@ -470,3 +470,15 @@ only the owned older scope. Session18900 is terminal143 (cancelled), notpass.
 No result is credited or retried; the retained final full workspace must
 succeed. Datatype87947 was already terminal143 and remains uncredited.
 Current full-run source remains frozen; queued targets/Clippy/CLI unchanged.
+
+### User-requested old build-cache cleanup
+
+Removed21 obsolete lane caches under main checkout target after verifying
+no tracked files, active process cwd/exe/fd/mappings or CARGO_TARGET_DIR references.
+Allocated space removed:231.68GiB; filesystem
+free-space gain:231.68GiB. Main target now683MiB;
+root filesystem379GiB available,57%used. Retained release and
+carcara-source-bound; patched checker32422f24 verified unchanged. Installed
+native, source, sealed runtime packages, logs, private sources and active
+/data0 targets untouched. Audit:/var/tmp/axeyum-target-cleanup-audit.json.
+Current workspace3092650 independently remains live after cleanup.
