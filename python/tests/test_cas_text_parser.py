@@ -70,3 +70,11 @@ def test_native_final_ast_limits_include_subtraction_nodes():
     assert cas.parse('-'.join(['x'] * 22)) is not None
     with pytest.raises(cas.ParseError, match='node'):
         cas.parse('-'.join(['x'] * 23))
+
+
+def test_source_cap_precedes_utf8_allocation():
+    class OversizedText(str):
+        def encode(self, *args, **kwargs):
+            raise AssertionError('oversized source reached UTF8 allocation')
+    with pytest.raises(cas.ParseError, match='source limit'):
+        cas.parse(OversizedText(' ' * 8193))

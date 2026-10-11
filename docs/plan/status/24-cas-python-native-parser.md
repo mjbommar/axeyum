@@ -12,4 +12,6 @@ vs37 reference fixtures, UTF8 byte/character/surrogate controls and final AST
 subtraction caps. Fixture generator now uses the independent private reference.
 User guide documents tightened native bounds. Next: fresh sealed package/test
 runs, stubs and required gates. Source binding frozen during compilation.
-Entire feedback goal remains incomplete.
+Python source length guard now rejects before UTF8 allocation; discriminating
+control passed1 test against local wrapper/sealed prior native (no new binding
+called). Full native runtime suite still pending. Entire goal remains incomplete.

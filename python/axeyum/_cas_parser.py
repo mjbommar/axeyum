@@ -13,6 +13,8 @@ def parse(text: str) -> Expr:
     """Parse exact text with native byte/AST limits (ADR-6900)."""
     if not isinstance(text, str):
         raise TypeError("CAS text must be a string")
+    if len(text) > 8192:
+        raise ParseError("source limit exceeded", 8192, len(text))
     try:
         encoded = text.encode('utf-8')
     except UnicodeEncodeError as error:

@@ -2,7 +2,7 @@
 
 This module exists so ``import axeyum.cas`` and ``from axeyum.cas.certify import
 geometry`` both resolve. Native names project the Rust API; ``parse`` adds bounded exact text input
-using the same expression constructors. ``Expr.to_json`` / ``Expr.from_json``
+using the shared native grammar and Python character-span diagnostics. ``Expr.to_json`` / ``Expr.from_json``
 provide bounded tagged source transport, preserving Pi and exact wide rationals
 without treating human display as an encoding.
 
