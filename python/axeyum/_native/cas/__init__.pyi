@@ -3537,9 +3537,10 @@ def normalize(expr: Expr) -> typing.Optional[MultiPoly]:
     the polynomial fragment (or overflows).
     """
 
-def normalize_trace(expr: Expr, *, max_steps: builtins.int = 128, max_work: builtins.int = 1000000) -> TraceOutcome:
+def normalize_trace(expr: Expr, *, max_steps: builtins.int = 128, max_work: builtins.int = 1000000, wide: builtins.bool = False) -> TraceOutcome:
     r"""
-    Produce an opt-in polynomial step trace with explicit refusal status.
+    Produce an opt-in step trace with explicit refusal status.
+    wide=True selects v2 promoted arithmetic and checked constant division.
     """
 
 def nsimplify(value: builtins.float, max_denominator: builtins.int) -> typing.Optional[Expr]:

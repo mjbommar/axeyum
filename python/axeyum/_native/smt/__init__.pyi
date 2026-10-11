@@ -74,7 +74,7 @@ class OptimizationObjective:
     @property
     def sort(self) -> builtins.str:
         r"""
-        Int or BitVec; bit-vector optimization uses unsigned order.
+        Int or `BitVec`; bit-vector optimization uses unsigned order.
         """
     @property
     def bit_width(self) -> typing.Optional[builtins.int]:

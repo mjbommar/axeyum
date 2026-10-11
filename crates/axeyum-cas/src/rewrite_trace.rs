@@ -263,6 +263,35 @@ impl Work {
     fn expression(&mut self, expr: &PolynomialExpr) -> Result<CasExpr, TraceError> {
         self.convert(expr, 0, &mut 0).map(|(expr, _, _)| expr)
     }
+    fn convert_division(
+        &mut self,
+        numerator: &PolynomialExpr,
+        denominator: &PolynomialExpr,
+        depth: usize,
+        nodes: &mut usize,
+    ) -> Result<(CasExpr, u64, u32), TraceError> {
+        if !self.wide {
+            return Err(TraceError::Unsupported("division outside trace v1".into()));
+        }
+        let (numerator, terms, degree) = self.convert(numerator, depth + 1, nodes)?;
+        let (denominator, _, divisor_degree) = self.convert(denominator, depth + 1, nodes)?;
+        if divisor_degree != 0 {
+            return Err(TraceError::Unsupported(
+                "symbolic divisor requires external nonzero context".into(),
+            ));
+        }
+        // Validate the original subject's domain even for an empty trace.
+        let divisor = self.normal_form(&denominator)?;
+        if !matches!(divisor, CasExpr::Const(value) if !value.is_zero()) {
+            return Err(reject(None, "division requires a nonzero constant divisor"));
+        }
+        Ok((
+            CasExpr::Div(Box::new(numerator), Box::new(denominator)),
+            terms,
+            degree,
+        ))
+    }
+
     fn convert(
         &mut self,
         expr: &PolynomialExpr,
@@ -343,29 +372,7 @@ impl Work {
             PolynomialExpr::Div {
                 numerator,
                 denominator,
-            } => {
-                if !self.wide {
-                    return Err(TraceError::Unsupported("division outside trace v1".into()));
-                }
-                let (numerator, terms, degree) = self.convert(numerator, depth + 1, nodes)?;
-                let (denominator, _, divisor_degree) =
-                    self.convert(denominator, depth + 1, nodes)?;
-                if divisor_degree != 0 {
-                    return Err(TraceError::Unsupported(
-                        "symbolic divisor requires external nonzero context".into(),
-                    ));
-                }
-                // Validate the original subject's domain even for an empty trace.
-                let divisor = self.normal_form(&denominator)?;
-                if !matches!(divisor, CasExpr::Const(value) if !value.is_zero()) {
-                    return Err(reject(None, "division requires a nonzero constant divisor"));
-                }
-                (
-                    CasExpr::Div(Box::new(numerator), Box::new(denominator)),
-                    terms,
-                    degree,
-                )
-            }
+            } => self.convert_division(numerator, denominator, depth, nodes)?,
             PolynomialExpr::Pow { base, exponent } => {
                 // Charge even powers of constants; a huge exponent cannot bypass
                 // the work/degree contract just because its formal degree is zero.
