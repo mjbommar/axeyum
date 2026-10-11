@@ -52,3 +52,11 @@ Full CAS library validation has now started on source `074dde371` with one
 test thread via handle 74901; retained log
 `/var/tmp/axeyum-cas-exact-gates-upyai0w9/cas_lib.log`. It is not
 credited until terminal output and nonzero counts are verified.
+
+## Full CAS library terminal result
+
+Handle 74901 completed exit 0: 2140 passed, 0 failed, 11 ignored, in 619.83 s
+with one test thread. Log `/var/tmp/axeyum-cas-exact-gates-upyai0w9/cas_lib.log`.
+This validates the exact-input patch's library population; three new integration
+tests passed separately. It is not a workspace gate and does not validate the
+new trace module, which is on a child branch in a separate worktree.

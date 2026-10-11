@@ -7,6 +7,7 @@ promoted coefficients, but the big zero-test fallback narrowed them with getters
 that panic. Fix uses exact big numerator/denominator conversion. Three fresh
 integration controls passed: equality/replay/tamper, big refutation, and the
 360-period payment against an independent Python Fraction (2859/2849 bits).
-Python transport remains bounded. Private-snapshot guard mutation killed exactly one test. Next: audit other promoted-value
+Python transport remains bounded. Private-snapshot guard mutation killed exactly one test. Full CAS library
+passed 2,140 tests (11 ignored); workspace integration remains pending. Next: audit other promoted-value
 boundaries, implement exact expression/Python arithmetic and amortization,
 negative powers, pi and bounded text parsing. No LIB-6 completion is claimed.
