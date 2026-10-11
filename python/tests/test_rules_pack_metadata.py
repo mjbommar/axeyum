@@ -40,8 +40,6 @@ def test_pack_load_accepts_leap_day_interval(tmp_path):
 @pytest.mark.parametrize('filename,text', [
     ('metadata.json', '[]'),
     ('expected.json', 'null'),
-    ('metadata.json', '{"schema_version":1,"schema_version":1}'),
-    ('expected.json', '{"schema_version":1,"schema_version":1}'),
 ])
 def test_pack_load_rejects_malformed_document(tmp_path, filename, text):
     shutil.copytree(SOURCE, tmp_path / 'pack')
@@ -58,4 +56,14 @@ def test_pack_load_rejects_boolean_version(tmp_path, filename):
     document['schema_version'] = True
     path.write_text(json.dumps(document))
     with pytest.raises(ValueError):
+        Pack(tmp_path / 'pack')
+
+
+@pytest.mark.parametrize('filename', ['metadata.json', 'expected.json'])
+def test_pack_load_rejects_duplicate_document_field(tmp_path, filename):
+    shutil.copytree(SOURCE, tmp_path / 'pack')
+    path = tmp_path / 'pack' / filename
+    text = json.dumps(json.loads(path.read_text()))
+    path.write_text(text[:-1] + ',"schema_version":1}')
+    with pytest.raises(ValueError, match='duplicate'):
         Pack(tmp_path / 'pack')

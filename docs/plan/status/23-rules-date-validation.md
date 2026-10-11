@@ -22,13 +22,17 @@ order removal each turns2 passing tests into1 failed/1 passed; originals restore
 Logs /var/tmp/axeyum-rules-runtime-control-{type,canonical,order}.log.
 Pack intake now rejects duplicate JSON keys, non-object documents and bool
 schema versions. Local facade with sealed native passed52 metadata/pack/date/
-statute tests,3.81s. New intake guard mutations pending, no coverage credited.
+statute tests,3.81s. Intake controls: duplicate/object/version removals each kill exactly1 of2
+paired tests in private405b55811 snapshot with revised otherwise-valid duplicate
+fixture; restored originals. /var/tmp/axeyum-rules-intake-control-*.log.
 Next: source/calendar authority and applicability evidence, general obligation
 proof routes, intake controls and full feedback closure.
 Parent targeted gamma tests passed19/0 failed/ignored,3.90s;
 /var/tmp/axeyum-feedback-cas-lint-tests.log. Complete lint15399 terminated101 after930/932 targets: four duplicate
 doc_markdown diagnostics at CAS expr.rs275 (ValueError/BudgetExceeded).
-Corrected both backticks; complete rerun still required.
+Corrected both backticks; complete rerun13564 passed932/932 targets in27
+crates,0 diagnostics,14576 fresh inputs;
+/var/tmp/axeyum-rules-runtime-full-clippy.log (Rust source47c91033e).
 Parent full CAS3957 passed2147/0 failed/11 ignored,411.14s;
 /var/tmp/axeyum-cas-rust-parser-full-cas.log. Workspace81069 and complete
-lint13564 confirmed live. Entire objective remains incomplete; no legal claim.
+workspace remains live; complete lint passed as above. Entire objective remains incomplete; no legal claim.
