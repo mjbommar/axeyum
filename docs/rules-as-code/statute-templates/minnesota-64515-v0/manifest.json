@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "minnesota_64515_day_period_v0",
+  "jurisdiction": "Minnesota",
+  "sources": [
+    {
+      "section": "645.15",
+      "uri": "https://www.revisor.mn.gov/statutes/2025/cite/645.15",
+      "edition": 2025,
+      "retrieved_on": "2026-10-11",
+      "normalized_section_sha256": "a910006c1f802935f4a2f5629984786e5f860a6739902eee4d634a6a5c22ae1f",
+      "normalization": "section before history; strip tags, HTML-unescape, collapse whitespace; UTF-8"
+    },
+    {
+      "section": "645.13",
+      "uri": "https://www.revisor.mn.gov/statutes/2025/cite/645.13",
+      "edition": 2025,
+      "retrieved_on": "2026-10-11",
+      "normalized_section_sha256": "388b9d16c17d5f470cf0f155f04171dbfad59a48bd7ea258ed57910e63dba20a",
+      "normalization": "section before history; strip tags, HTML-unescape, collapse whitespace; UTF-8"
+    },
+    {
+      "section": "645.14",
+      "uri": "https://www.revisor.mn.gov/statutes/2025/cite/645.14",
+      "edition": 2025,
+      "retrieved_on": "2026-10-11",
+      "normalized_section_sha256": "afb672dc742e3aea04b29f2a4bcb23f481add14f608616db1ff0694c1a33e648",
+      "normalization": "section before history; strip tags, HTML-unescape, collapse whitespace; UTF-8"
+    },
+    {
+      "section": "645.44",
+      "uri": "https://www.revisor.mn.gov/statutes/2025/cite/645.44",
+      "edition": 2025,
+      "retrieved_on": "2026-10-11",
+      "normalized_section_sha256": "16519fbfafa3998c05bc0b36d8f43a1a87131730194e69dc24d908e47635f03f",
+      "normalization": "section before history; strip tags, HTML-unescape, collapse whitespace; UTF-8"
+    }
+  ],
+  "effective_interval": {
+    "status": "not-established",
+    "reason": "edition and retrieval do not establish historical applicability"
+  },
+  "modeled_clauses": [
+    "645.15 first/last day",
+    "645.15 weekend/holiday endpoint omission"
+  ],
+  "excluded_clauses": [
+    "645.13 successive-week publication",
+    "645.14 month computation"
+  ],
+  "assumptions": [
+    "caller establishes applicability",
+    "positive day period",
+    "complete sourced holiday classification for candidate window"
+  ],
+  "evidence_status": "computed; finite-window certificate replays native ground facts; native UNSAT obligations remain uncertified"
+}

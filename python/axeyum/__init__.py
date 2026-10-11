@@ -1,8 +1,8 @@
 """Python bindings for the Axeyum automated reasoning stack.
 
-The surface is a *projection* of the Rust API: nothing here exists that does not
-exist in Rust, and nothing here can admit a fact, write a ledger, relax a
-checker, or change an axiom footprint.
+The native surface projects the Rust API. Python facades can retain source
+types while lowering to native terms; none can admit a fact, write a ledger,
+relax a checker, or change an axiom footprint.
 
 Submodules, by trust tier:
 

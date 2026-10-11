@@ -25,7 +25,7 @@ binary identity, actual nonzero test counts, and outputs.
 | `(* (- 1.0) x)` proof | Tiny contradictory positive-product example solves UNSAT but diagnostic proof is `None`; cause not yet bisected. | EVD-6: normalization versus leaf-emitter regression. |
 | `-1` literal | Generic atom parser accepts digit-only numerals; signed parsing in helper routes does not establish front-door support. Diagnostic raises `unknown identifier -1`. | CON-6: deliberate convenience syntax, canonical output and route consistency. |
 | `abs` and `distinct` | Generic parser arms exist; diagnostic `(distinct (abs (- 1)) 1)` is UNSAT. Existing distinct coercion tests exist. | Correct any current unsupported claims; broaden semantic regression coverage. |
-| Rationals beyond `i128` | Rust `Rational` already carries promoted values, but checked arithmetic and narrow getter callers limit CAS routes; Python construction remains bounded. Internal big normalization and `ZeroTest::CertifiedBig` already exist. | LIB-6: extend input/result transport and selected operations. |
+| Rationals beyond `i128` | Rust `Rational` already supports promoted arbitrary-precision values, including CAS constants. Python construction/getters and some CAS conversion paths remain `i128`-bounded; internal big normalization and `ZeroTest::CertifiedBig` already exist. | LIB-6: extend input/result transport and selected operations. |
 | π | `enclose_constant("pi", ...)` and `StepHead::Pi` exist; `CasExpr` has no distinguished π constructor. | LIB-6: symbolic constant with existing enclosure evidence. |
 | Negative powers / text parser | Python `Expr.pow` takes `u32`; expression module explicitly has no text parser. Division already exists. | LIB-6: reciprocal lowering with domain obligations; bounded parser. |
 | `maximize` silently ignored | Parser stores objectives; Rust has separate boxed and lexicographic optimizer APIs, absent from Python SMT registration. Diagnostic maximize/get-value returns `x=0` for `[0,10]`. | CON-5: objective handling, budgets and optimality evidence. |
@@ -103,9 +103,9 @@ model under an optimization objective is not an optimality certificate.
   syntax: [SMT-LIB Ints](https://smt-lib.org/theories-Ints.shtml) represents
   negative values using unary subtraction.
 - [CAS core](../../crates/axeyum-cas/src/lib.rs): `CasExpr`, `ZeroTest`,
-  `normalize_rational_big_within`, `check_zero_test`; the IR rational carrier already stores big values, but the big fallback
-  reads input constants with narrow getters, so promoted inputs can panic.
-  CAS input transport, arithmetic routes, and output handling need separate audits.
+  `normalize_rational_big_within`, `check_zero_test`; the carrier already supports promoted values. Audit each route for narrow
+  `numerator()`/`denominator()` access, which panics on promoted values; use
+  checked access or big accessors before claiming wide-input support.
 - [CAS Python expression API](../../crates/axeyum-py/src/cas/expr.rs) and
   [rational conversion](../../crates/axeyum-py/src/cas/rational.rs) identify the
   public parser, exponent and input-width limits.

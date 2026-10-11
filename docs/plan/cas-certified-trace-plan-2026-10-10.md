@@ -91,9 +91,12 @@ separately. Do not raise a certified-function inventory merely for adding loggin
 
 ### X0 — public arbitrary-precision rationals
 
-Existing internal `BigRational`/`CertifiedBig` support is a starting point.
-Inventory bounded `Rational` input, result, serialization, Python `Fraction`
-conversion and coefficient containers before choosing a small/big carrier.
+The Rust `Rational` carrier already has small/promoted arbitrary-precision
+representations; reuse it rather than introducing a replacement carrier.
+Inventory input, result, serialization, Python `Fraction` conversion and
+coefficient containers for route-specific width limits. In particular, narrow
+`numerator()`/`denominator()` access panics on promoted values; conversion and
+checking paths need checked access or the existing big accessors.
 Avoid a repository-wide arithmetic rewrite as the first delivery: choose the
 exact rational expression path and operations needed by amortization.
 
