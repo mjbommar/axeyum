@@ -300,8 +300,10 @@ Copied the exact generated proof stub bytes from verified parent d826846b9 into 
 
 ## Small polynomial trace cost evidence
 
-New executable example python/examples/cas_trace_cost.py completed exit0 against preserved reference-miter native source7437a1356, SHA dab497034b3f4b733d3fc70c49d89ba702f14946e9b6882deeb76b6595451356. Three workloads each assert nonempty produced traces, equal ordinary/traced normal forms and source-bound serialized replay. Five trials of ten calls record separate median ordinary/trace timings and JSON byte sizes. Full machine output /var/tmp/axeyum-small-cas-trace-cost.json. This is host-sensitive narrow polynomial evidence, not new nested-route qualification or a performance parity claim.
+Companion executable example python/examples/cas_polynomial_trace_cost.py completed exit0 against preserved reference-miter native source7437a1356, SHA dab497034b3f4b733d3fc70c49d89ba702f14946e9b6882deeb76b6595451356. Three workloads each assert nonempty produced traces, equal ordinary/traced normal forms and source-bound serialized replay. Five trials of ten calls record separate median ordinary/trace timings and JSON byte sizes. Full machine output /var/tmp/axeyum-small-cas-trace-cost.json. This is host-sensitive narrow polynomial evidence, not new nested-route qualification or a performance parity claim.
 
 - rational_polynomial: 2 steps, 2549 JSON bytes; median ns/call {'ordinary_ns': 12501.9, 'trace_ns': 174665.9}.
 - power_expansion: 3 steps, 3856 JSON bytes; median ns/call {'ordinary_ns': 20056.6, 'trace_ns': 266479.0}.
 - two_variables: 4 steps, 5597 JSON bytes; median ns/call {'ordinary_ns': 25257.5, 'trace_ns': 405342.7}.
+
+The original cas_trace_cost.py already includes wide amortization and byte-replay measurements. Its exact previous bytes were restored after detecting replacement during commit review; the new polynomial workload is retained in a separate companion.

@@ -1,55 +1,74 @@
-"""Measure small trace workloads; run against an explicitly selected native build."""
-from __future__ import annotations
+"""Measure bounded CAS trace production/replay; print reproducible JSON results.
 
+Use a fresh extension. Timings are local diagnostics, not solver parity results.
+The wide workload compares exact evaluation with certified normalization because
+ordinary polynomial normalization still has narrower coefficient limits.
+"""
 import hashlib
 import json
+import statistics
+import time
+from fractions import Fraction
 from pathlib import Path
-from statistics import median
-from time import perf_counter_ns
 
-from axeyum import _native, cas
+from axeyum import cas
+import axeyum._native as native
 
 
-def measure():
-    x, y = cas.Expr.var("x"), cas.Expr.var("y")
-    workloads = {
-        "rational_polynomial": (x + cas.Expr.rat(1, 2) + cas.Expr.rat(1, 3)) * (x + 1),
-        "power_expansion": ((x + 1) * (x - 1)) ** 3,
-        "two_variables": (x + y + 1) * (x - y + 2),
-    }
-    rows = []
-    for name, source in workloads.items():
-        ordinary = cas.normalize(source)
-        assert ordinary is not None, name
-        produced = cas.normalize_trace(source)
-        assert produced.status == "produced" and produced.trace is not None, name
-        trace = produced.trace
-        assert trace.step_count > 0, name
-        assert cas.normalize(trace.result) == ordinary, name
-        encoded = trace.to_json()
-        assert cas.replay_trace(encoded, source, trace.result).status == "checked", name
-        samples = {"ordinary_ns": [], "trace_ns": []}
-        for _ in range(5):
-            start = perf_counter_ns()
-            for _ in range(10):
-                assert cas.normalize(source) == ordinary, name
-            samples["ordinary_ns"].append((perf_counter_ns() - start) / 10)
-            start = perf_counter_ns()
-            for _ in range(10):
-                outcome = cas.normalize_trace(source)
-                assert outcome.status == "produced" and outcome.trace is not None, name
-            samples["trace_ns"].append((perf_counter_ns() - start) / 10)
-        rows.append({"name": name, "steps": trace.step_count,
-                     "json_bytes": len(encoded.encode("utf-8")),
-                     "median_ns_per_call": {key: median(values) for key, values in samples.items()},
-                     "samples_ns_per_call": samples})
-    native = Path(_native.__file__).resolve()
-    return {"schema": "cas-small-trace-cost-v1", "native_path": str(native),
-            "native_sha256": hashlib.sha256(native.read_bytes()).hexdigest(),
-            "trials": 5, "calls_per_trial": 10,
-            "scope": "small narrow polynomial normalization; host-sensitive diagnostics",
-            "rows": rows}
+def measure(operation, samples=7):
+    operation()  # Warm once; correctness is checked by each operation below.
+    values = []
+    for _ in range(samples):
+        start = time.perf_counter_ns()
+        operation()
+        values.append(time.perf_counter_ns() - start)
+    return {"samples": samples, "median_ns": int(statistics.median(values)),
+            "min_ns": min(values), "max_ns": max(values)}
+
+
+def workload(name, expression, expected, wide):
+    outcome = cas.normalize_trace(expression, wide=wide)
+    assert outcome.status == "produced", outcome.detail
+    trace = outcome.trace
+    assert trace is not None
+    encoded = trace.to_json()
+    expected_expression = cas.Expr.rat(expected.numerator, expected.denominator)
+
+    def evaluate():
+        assert expression.eval({}) == expected
+
+    def produce():
+        result = cas.normalize_trace(expression, wide=wide)
+        assert result.status == "produced", result.detail
+        assert result.trace is not None
+        assert result.trace.result.eval({}) == expected
+        assert result.trace.to_json() == encoded
+
+    def replay():
+        result = cas.replay_trace(encoded, expression, expected_expression)
+        assert result.status == "checked", result.detail
+
+    ordinary = None
+    if not wide:
+        def normalize_without_trace():
+            result = cas.normalize(expression)
+            assert result is not None
+            assert result.to_expr().eval({}) == expected
+        ordinary = measure(normalize_without_trace)
+    wire = json.loads(encoded)
+    return {"normalization_without_trace": ordinary,"name": name, "wide": wide, "json_bytes": len(encoded.encode()),
+            "steps": len(wire["steps"]), "exact_evaluation": measure(evaluate),
+            "trace_production": measure(produce), "byte_replay": measure(replay)}
 
 
 if __name__ == "__main__":
-    print(json.dumps(measure(), indent=2, sort_keys=True))
+    small = (cas.Expr.rat(2, 3) + cas.Expr.rat(7, 5)) ** 4
+    rate = Fraction(1, 240)
+    payment = cas.Expr.int(300000) * rate / (1 - cas.Expr.rat(241, 240) ** -360)
+    expected = 300000 * rate / (1 - (1 + rate) ** -360)
+    path = Path(native.__file__).resolve()
+    print(json.dumps({"native_path": str(path),
+                      "native_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                      "workloads": [workload("closed-rational", small, Fraction(31, 15) ** 4, False),
+                                    workload("amortization-360", payment, expected, True)]},
+                     indent=2, sort_keys=True))
