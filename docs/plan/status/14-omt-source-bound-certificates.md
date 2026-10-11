@@ -32,6 +32,8 @@ space restored to14GiB. Parent replay mutations restart72743 on/data0.
 Gold stub generator89655 is live; active target is untouched.
 Required gates runner54092 live (five z3 fuzzes, five front doors, full solver,
 workspace); logs `/var/tmp/axeyum-omt-gold-required-_volk68z/`. Rust frozen.
-Next: stubs and checker guard mutations; Boolean lowering binding,
+Source-binding mutations42006 pass: baseline2; each atom/origin/column guard
+removal gives exactly one intended failure; private source restored.
+Next: stubs and parent model replay mutations; Boolean lowering binding,
 strict-better certificates, model-plus-optimality Python results, serialization
 and independent process replay, then required full gates. Missing evidence never receives gold credit.

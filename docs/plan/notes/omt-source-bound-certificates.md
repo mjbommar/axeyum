@@ -58,3 +58,9 @@ differentials, corpus plus four string front doors, full-feature solver library,
 then workspace libraries. Per-job exit files are authoritative; confirm nonzero
 counts before claiming a pass. Rust source remains frozen. Format runner20489
 is pending. Stub89655 and mutations42006/72743 remain live.
+
+Source-binding mutation runner42006 terminal zero: baseline 2 passed; removing
+each atom/origin/column comparison yields exactly 1 passed / 1 intended failed,
+exit101. Logs `/var/tmp/axeyum-source-farkas-recovered-{baseline,atoms,origins,columns}.log`.
+Private snapshot restored; its lra.rs bytes exactly equal the current source
+(hash 75cdc8b41c3b5aac1c295dc3832b876fec688600d9da7cf6e30669d42a1d7f80). Format20489 terminal zero.
