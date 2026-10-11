@@ -35,3 +35,27 @@ def test_pack_load_accepts_leap_day_interval(tmp_path):
     metadata['effective_interval'] = {'from': '2024-02-29', 'to': '2024-03-01'}
     path.write_text(json.dumps(metadata))
     assert Pack(tmp_path / 'pack').metadata['effective_interval'] == metadata['effective_interval']
+
+
+@pytest.mark.parametrize('filename,text', [
+    ('metadata.json', '[]'),
+    ('expected.json', 'null'),
+    ('metadata.json', '{"schema_version":1,"schema_version":1}'),
+    ('expected.json', '{"schema_version":1,"schema_version":1}'),
+])
+def test_pack_load_rejects_malformed_document(tmp_path, filename, text):
+    shutil.copytree(SOURCE, tmp_path / 'pack')
+    (tmp_path / 'pack' / filename).write_text(text)
+    with pytest.raises(ValueError):
+        Pack(tmp_path / 'pack')
+
+
+@pytest.mark.parametrize('filename', ['metadata.json', 'expected.json'])
+def test_pack_load_rejects_boolean_version(tmp_path, filename):
+    shutil.copytree(SOURCE, tmp_path / 'pack')
+    path = tmp_path / 'pack' / filename
+    document = json.loads(path.read_text())
+    document['schema_version'] = True
+    path.write_text(json.dumps(document))
+    with pytest.raises(ValueError):
+        Pack(tmp_path / 'pack')

@@ -20,7 +20,11 @@ time. Local changed facade plus sealed combined native binary passed35 tests
 Runtime guard controls passed in private47c91033e snapshot: type/canonical/
 order removal each turns2 passing tests into1 failed/1 passed; originals restored.
 Logs /var/tmp/axeyum-rules-runtime-control-{type,canonical,order}.log.
-Next: broader dated/statute integration and full feedback closure.
+Pack intake now rejects duplicate JSON keys, non-object documents and bool
+schema versions. Local facade with sealed native passed52 metadata/pack/date/
+statute tests,3.81s. New intake guard mutations pending, no coverage credited.
+Next: source/calendar authority and applicability evidence, general obligation
+proof routes, intake controls and full feedback closure.
 Parent targeted gamma tests passed19/0 failed/ignored,3.90s;
 /var/tmp/axeyum-feedback-cas-lint-tests.log. Complete lint15399 terminated101 after930/932 targets: four duplicate
 doc_markdown diagnostics at CAS expr.rs275 (ValueError/BudgetExceeded).

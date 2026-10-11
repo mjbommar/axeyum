@@ -141,10 +141,21 @@ class Pack:
             path = self.directory / name
             if path.stat().st_size > 1_048_576:
                 raise ValueError('pack document exceeds 1 MiB')
-            return json.loads(path.read_text())
+            def unique_object(pairs):
+                result = {}
+                for key, value in pairs:
+                    if key in result:
+                        raise ValueError('duplicate pack document field')
+                    result[key] = value
+                return result
+            value = json.loads(path.read_text(), object_pairs_hook=unique_object)
+            if type(value) is not dict:
+                raise ValueError('pack document must be a JSON object')
+            return value
         self.metadata = read('metadata.json')
         self.expected = read('expected.json')
-        if self.metadata.get('schema_version') != 1 or self.expected.get('schema_version') != 1:
+        if any(type(document.get('schema_version')) is not int or document['schema_version'] != 1
+               for document in (self.metadata, self.expected)):
             raise ValueError('unsupported pack schema version')
         if self.expected.get('pack_id') != self.metadata.get('id'):
             raise ValueError('pack metadata and expected identity differ')
