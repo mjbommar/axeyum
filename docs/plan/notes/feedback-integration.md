@@ -119,3 +119,17 @@ mutation or upstream message. This is a scoped checker guard, not a global
 checker soundness or EVD-5 completion claim.
 Next SAT work: route census, explicit source/lowering-map export and independently
 checked translation binding, plus full required evidence populations.
+
+SAT route census increment: `sat_certificate_export.py --census` now derives all
+six public term exporter names from the native module, emits their representative
+source/clausal artifacts, replays paired SAT models, and can externally check
+all six LRATs. Three tests pass/zero skips in 0.30s. External example terminal0
+with all six clausal checks and SAT model replays verified; artifact
+/var/tmp/axeyum-lrat-reference-1rg8dt6y/census-export-final/route-census.json.
+New dated census document records exact routes and constraints. Datatype writer
+round trip is rejected (undeclared `construct/0`/`construct/1`); it is retained as
+a source-rendering diagnostic, not portable SMT-LIB. Other five sources parse.
+Source-to-CNF serialized binding remains missing, despite separate in-memory
+BitLowering/CnfEncoding lift APIs. This does not complete EVD-5 or the full goal.
+Required runner 88821 remains live and its full solver log is advancing through
+reconstruction tests; no terminal broad result has been observed.

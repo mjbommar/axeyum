@@ -12,7 +12,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from axeyum import ir
+from axeyum import SmtLibParseError, ir, smt, solver
 from axeyum.solver import cnf, proofs
 
 
@@ -99,13 +99,115 @@ def export(output: Path, checker: Path | None) -> dict:
     return report
 
 
+def route_census(output: Path | None = None, checker: Path | None = None) -> dict:
+    """Diagnostic census of all native Python term-to-clause proof exporters.
+
+    Representative cases do not establish universal logic coverage. Preserve
+    actual declines and missing translation artifacts rather than filling them.
+    """
+    names = sorted(name for name in dir(proofs)
+                   if name.startswith("export_") and name.endswith("_unsat_proof"))
+    expected = {"export_qf_bv_unsat_proof", "export_qf_abv_unsat_proof",
+                "export_qf_aufbv_unsat_proof", "export_qf_uf_unsat_proof",
+                "export_datatype_unsat_proof", "export_qf_lia_unsat_proof"}
+    if set(names) != expected:
+        raise RuntimeError("public exporter population changed; extend the census fixtures")
+    rows = {}
+    for name in names:
+        arena = ir.Arena()
+        if name == "export_datatype_unsat_proof":
+            color = arena.declare_datatype("Color")
+            red = arena.add_constructor(color, "red", [])
+            blue = arena.add_constructor(color, "blue", [])
+            assertions = [arena.eq(arena.construct(red, []), arena.construct(blue, []))]
+        elif name == "export_qf_lia_unsat_proof":
+            x = arena.int_var("x")
+            assertions = [arena.eq(x, arena.int_const(1)), arena.eq(x, arena.int_const(2))]
+        elif name == "export_qf_uf_unsat_proof":
+            sort = ir.Sort.bv(4)
+            f = arena.declare_fun("f", [sort], sort)
+            x, y = arena.bv_var("x", 4), arena.bv_var("y", 4)
+            assertions = [arena.eq(x, y), arena.not_(arena.eq(arena.apply(f, [x]), arena.apply(f, [y])))]
+        elif name in ("export_qf_abv_unsat_proof", "export_qf_aufbv_unsat_proof"):
+            array = arena.array_var("a", 4, 4)
+            index, value = arena.bv_var("i", 4), arena.bv_var("v", 4)
+            if name == "export_qf_aufbv_unsat_proof":
+                f = arena.declare_fun("f", [ir.Sort.bv(4)], ir.Sort.bv(4))
+                other = arena.bv_var("w", 4)
+                assertions = [arena.eq(value, other)]
+                stored, compared = arena.apply(f, [value]), arena.apply(f, [other])
+            else:
+                assertions, stored, compared = [], value, value
+            read = arena.select(arena.store(array, index, stored), index)
+            assertions.append(arena.not_(arena.eq(read, compared)))
+        else:
+            x = arena.bv_var("x", 8)
+            assertions = [arena.bvult(x, arena.bv_const(8, 1)), arena.bvugt(x, arena.bv_const(8, 0))]
+        exporter = getattr(proofs, name)
+        arguments = (8,) if name == "export_qf_lia_unsat_proof" else ()
+        outcome = exporter(arena, assertions, *arguments)
+        if outcome.status != "proved" or outcome.proof is None:
+            raise RuntimeError(f"{name}: representative refutation {outcome.status}")
+        proof = outcome.proof
+        if proof.recheck() is not True:
+            raise RuntimeError(f"{name}: clausal text failed to replay")
+        sat_assertions = assertions[:-1] + [arena.not_(assertions[-1])]
+        sat = exporter(arena, sat_assertions, *arguments)
+        if sat.status != "satisfiable" or sat.proof is not None:
+            raise RuntimeError(f"{name}: SAT control produced {sat.status}")
+        # Reparse the emitted source: datatype rendering currently omits declarations.
+        source = arena.write_script(assertions)
+        try:
+            smt.parse(source)
+            source_round_trip = "parsed"
+        except SmtLibParseError:
+            source_round_trip = "rejected"
+        external = "not-run"
+        if output is not None:
+            directory = output / name
+            directory.mkdir(parents=True, exist_ok=False)
+            (directory / "formula.cnf").write_bytes(proof.dimacs_bytes())
+            (directory / "proof.drat").write_bytes(proof.drat_bytes())
+            (directory / ("source.smt2" if source_round_trip == "parsed" else "source-rendering.txt")).write_text(source)
+            if proof.lrat_bytes() is not None:
+                (directory / "proof.lrat").write_bytes(proof.lrat_bytes())
+            if checker:
+                if proof.lrat is None:
+                    raise RuntimeError(f"{name}: external census cannot check absent LRAT")
+                if not check_external(checker, directory / "formula.cnf", directory / "proof.lrat"):
+                    raise RuntimeError(f"{name}: external clausal check rejected")
+                external = "verified"
+        witness = solver.produce_evidence(arena, sat_assertions, solver.Config(timeout_ms=20_000))
+        checked = witness.check_outcome(arena, sat_assertions)
+        rows[name] = {"verdict": outcome.status, "drat": "checked-in-tree",
+                      "lrat": "present" if proof.lrat is not None else "absent",
+                      "lrat_recheck": proof.recheck_lrat(),
+                      "source_writer_round_trip": source_round_trip,
+                      "int_width": 8 if arguments else None,
+                      "source_to_cnf_map_export": "absent",
+                      "sat_control": sat.status, "sat_model_check": checked.status,
+                      "sat_model_verdict": witness.verdict, "external_cnf_check": external,
+                      "source_sha256": sha256(source.encode())}
+    return {"scope": "representative-queries", "term_exporters": rows,
+            "raw_cnf": {"api": "cnf.solve_with_drat_proof", "lrat": "absent"},
+            "smt_text": {"api": "smt.get_proof", "format": "Alethe-or-None",
+                         "clausal_export": "not-exposed"},
+            "general_solver": {"api": "solver.produce_evidence",
+                               "format": "EvidenceReport", "clausal_export": "not-universal"}}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--lrat-check", type=Path)
+    parser.add_argument("--census", action="store_true")
     args = parser.parse_args()
-    print(json.dumps(export(args.output, args.lrat_check.resolve() if args.lrat_check else None),
-                     sort_keys=True, indent=2))
+    report = export(args.output, args.lrat_check.resolve() if args.lrat_check else None)
+    if args.census:
+        census = route_census(args.output / "census", args.lrat_check.resolve() if args.lrat_check else None)
+        (args.output / "route-census.json").write_text(json.dumps(census, sort_keys=True, indent=2) + "\n")
+        report["route_census"] = census
+    print(json.dumps(report, sort_keys=True, indent=2))
 
 
 if __name__ == "__main__":

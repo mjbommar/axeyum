@@ -32,3 +32,21 @@ def test_external_empty_clause_controls(tmp_path: Path) -> None:
     report = example.export(tmp_path / "export", checker)
     for route in ("boolean", "bit-vector"):
         assert report["routes"][route]["external_cnf_check"] == "verified-with-two-rejection-controls"
+
+
+def test_census_covers_public_exporters_and_replays_sat_models() -> None:
+    from axeyum.solver import proofs
+
+    rows = example.route_census()["term_exporters"]
+    authority = {name for name in dir(proofs)
+                 if name.startswith("export_") and name.endswith("_unsat_proof")}
+    assert set(rows) == authority
+    assert len(rows) == 6
+    for row in rows.values():
+        assert row["verdict"] == "proved"
+        assert row["lrat_recheck"] is True
+        assert row["sat_control"] == "satisfiable"
+        assert row["sat_model_verdict"] == "sat"
+        assert row["sat_model_check"] == "verified"
+        assert row["external_cnf_check"] == "not-run"
+    assert rows["export_qf_lia_unsat_proof"]["int_width"] == 8
