@@ -1102,3 +1102,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [6600](adr-6600-wide-guarded-quotients-bind-context-and-arithmetic-version.md) | Wide guarded quotients bind context and arithmetic version | proposed |
 | [6700](adr-6700-cas-step-traces-reconstruct-through-existing-complex-ring-laws.md) | CAS step traces reconstruct through existing Complex ring laws | proposed |
 | [6800](adr-6800-rust-cas-text-parser-shares-the-bounded-exact-grammar.md) | Rust CAS text parser shares the bounded exact grammar | proposed |
+| [6900](adr-6900-python-cas-parsing-uses-the-native-bounded-grammar.md) | Python CAS parsing uses the native bounded grammar | proposed |

@@ -265,6 +265,15 @@ impl Expr {
 #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Expr {
+    /// Internal native parser transport; diagnostics carry UTF-8 byte offsets.
+    #[staticmethod]
+    fn _parse_text(text: &str) -> (Option<Expr>, String, usize, usize) {
+        match axeyum_cas::text_parser::parse(text) {
+            Ok(expression) => (Some(Expr::wrap(expression)), String::new(), 0, 0),
+            Err(error) => (None, error.message, error.start, error.end),
+        }
+    }
+
     /// Canonical version-1 JSON preserving Pi, variable names and exact rationals.
     /// This transports syntax and carries no proof claim.
     fn to_json(&self) -> PyResult<String> {

@@ -631,6 +631,14 @@ Full CAS3957 passed2147/0 failed/11 ignored,411.14s. Complete lint13564 passed
 Next: source/calendar authority, applicability/effectivity evidence and general
 proof routes, plus integration. Entire feedback goal remains incomplete.
 
+**LIB-6 X2 (`WIP`, cas-python-native-parser, 2026-10-11).** Child a95216e37.
+ADR6900 migrates Python parse to native grammar with character-span translation,
+explicit surrogate errors and native byte/final-AST caps. Binding and wrapper
+implemented; former Python implementation retained as private reference.
+No compile or fresh native test pass credited yet. Next: compile, boundary tests,
+fresh sealed build, fixture/reference wiring, documentation and required gates.
+Entire feedback goal remains incomplete.
+
 ### SOL — Solver parity
 
 Close the measured gap to the named reference division by division, never
