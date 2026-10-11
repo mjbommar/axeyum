@@ -635,7 +635,8 @@ proof routes, plus integration. Entire feedback goal remains incomplete.
 ADR6900 migrates Python parse to native grammar with character-span translation,
 explicit surrogate errors and native byte/final-AST caps. Binding and wrapper
 implemented; former Python implementation retained as private reference.
-Check4896 remains live; native build launched, no pass credited. Added native
+Check4896 passed (1m33s), /var/tmp/axeyum-cas-python-native-check.log.
+Native build37851 remains live; stub generation launched, no runtime pass yet. Added native
 vs37 reference fixtures, UTF8 byte/character/surrogate controls and final AST
 subtraction caps. Fixture generator now uses the independent private reference.
 User guide documents tightened native bounds. Next: fresh sealed package/test
