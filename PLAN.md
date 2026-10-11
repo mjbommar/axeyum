@@ -265,7 +265,11 @@ reset and post-query objectives now select the same query snapshot as assertions
 legacy text optimizers share this correction. Compile check and initial native build pass. Seven focused Rust tests pass
 again after retaining the full Script and declared-string lift metadata
 (`/var/tmp/axeyum-python-omt-retained-script.log`: 7 passed, 0 failed/ignored).
-Six Python controls await fresh rebuild on this revision.
+Fresh extension at 933fbbe02: six selected Python suites report 93 passed,
+34 skipped (CLI-dependent controls); all six OMT controls pass. Binary SHA-256
+89d3ef632addb05f453fa4ee2814b51ed34f8bab81cfcc1547a9fd108cae8e85.
+Full solver/workspace runner 55477 and stub runner 53264 are live, not passes;
+private mutation baseline runner 75540 is compiling.
 Gold eligibility stays false until source-bound no-better evidence is checked;
 generic self-contained evidence checks cannot provide that binding by themselves.
 Next: nonzero focused tests, fresh native/stubs, replay guard mutations, required
