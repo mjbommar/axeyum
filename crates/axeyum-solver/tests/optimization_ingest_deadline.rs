@@ -46,3 +46,25 @@ fn finite_optimization_remains_available_with_an_intake_budget() {
     assert_eq!(report.replay(0).unwrap(), Some(true));
     assert!(report.gold_eligible(0).unwrap());
 }
+
+#[test]
+fn portable_replay_distinguishes_budget_exhaustion_from_rejection() {
+    let report =
+        optimize_with_models(QUERY, OptimizationMode::Lexicographic, &SolverConfig::new()).unwrap();
+    let certificate = report.certificate(0).unwrap();
+    let limited = certificate
+        .check_within(QUERY, Some(std::time::Instant::now()))
+        .unwrap();
+    assert!(!limited.accepted && limited.resource_limited);
+    assert_eq!((limited.examined, limited.discharged), (0, 0));
+    let checked = certificate
+        .check_within(
+            QUERY,
+            std::time::Instant::now().checked_add(Duration::from_secs(10)),
+        )
+        .unwrap();
+    assert!(checked.accepted && !checked.resource_limited);
+    assert_eq!((checked.examined, checked.discharged), (2, 2));
+    let rejected = certificate.check("changed source").unwrap();
+    assert!(!rejected.accepted && !rejected.resource_limited);
+}

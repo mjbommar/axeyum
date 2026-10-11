@@ -257,6 +257,11 @@ impl OptimizationCertificateCheck {
     fn accepted(&self) -> bool {
         self.report.accepted
     }
+    /// True when replay exhausted its deadline without accepting or rejecting.
+    #[getter]
+    fn resource_limited(&self) -> bool {
+        self.report.resource_limited
+    }
     /// Number of obligations actually examined.
     #[getter]
     fn examined(&self) -> usize {
@@ -280,13 +285,19 @@ impl OptimizationCertificateCheck {
     pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
 )]
 #[pyfunction]
+#[pyo3(signature=(certificate_json, script, *, timeout_ms=2000))]
 fn check_optimization_certificate(
     py: Python<'_>,
     certificate_json: &str,
     script: &str,
+    timeout_ms: u64,
 ) -> PyResult<OptimizationCertificateCheck> {
+    let deadline =
+        std::time::Instant::now().checked_add(std::time::Duration::from_millis(timeout_ms));
     let report = py
-        .detach(|| OptimizationCertificate::from_json(certificate_json)?.check(script))
+        .detach(|| {
+            OptimizationCertificate::from_json(certificate_json)?.check_within(script, deadline)
+        })
         .map_err(map_solver_error)?;
     Ok(OptimizationCertificateCheck { report })
 }

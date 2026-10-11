@@ -70,3 +70,13 @@ print('checked 4 obligations')
                             env=os.environ.copy(), capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "checked 4 obligations"
+
+
+def test_portable_replay_timeout_is_explicitly_inconclusive():
+    certificate = smt.optimize(SOURCE)[1].certificate_json()
+    limited = smt.check_optimization_certificate(certificate, SOURCE, timeout_ms=0)
+    assert not limited.accepted and limited.resource_limited
+    assert limited.examined == limited.discharged == 0 and limited.reason
+    checked = smt.check_optimization_certificate(certificate, SOURCE, timeout_ms=2000)
+    assert checked.accepted and not checked.resource_limited
+    assert checked.examined == checked.discharged == 4

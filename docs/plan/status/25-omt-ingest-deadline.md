@@ -34,3 +34,9 @@ passed/1 intended failure, restored bytewise; /var/tmp/axeyum-omt-lexical-*.log.
 Stub generation33160 passed27 modules/661 items,1m51s. Drift/type gates passed
 against sealed native; generated intake_unknown getter committed. Portable checker parsing/Farkas replay
 still runs without a deadline, so checking-budget requirement remains open.
+
+Portable check_within shares deadline with parsing/command reads/Farkas replay,
+returns resource_limited distinct from rejection. Python checker adds timeout_ms
+(default2000) and resource_limited getter. Initial compile44161 passed11.25s,
+2 stale wrapper warnings; removed wrappers. Added Rust/Python expired/positive
+controls. Mid-model evaluation remains bounded but not cooperatively preemptible.

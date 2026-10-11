@@ -203,6 +203,8 @@ impl OptimizationReport {
 pub struct CertificateCheckReport {
     /// True only after every required row checks against the original subject.
     pub accepted: bool,
+    /// True when replay exhausted its caller deadline without a verdict.
+    pub resource_limited: bool,
     /// Number of model/refutation obligations attempted.
     pub examined: usize,
     /// Number of obligations successfully checked.
@@ -213,10 +215,23 @@ pub struct CertificateCheckReport {
 fn rejected(examined: usize, discharged: usize, reason: &str) -> CertificateCheckReport {
     CertificateCheckReport {
         accepted: false,
+        resource_limited: false,
         examined,
         discharged,
         reason: Some(reason.into()),
     }
+}
+fn limited(examined: usize, discharged: usize) -> CertificateCheckReport {
+    CertificateCheckReport {
+        accepted: false,
+        resource_limited: true,
+        examined,
+        discharged,
+        reason: Some("optimization certificate replay deadline exhausted".into()),
+    }
+}
+fn expired(deadline: Option<std::time::Instant>) -> bool {
+    deadline.is_some_and(|at| std::time::Instant::now() >= at)
 }
 fn integer(text: &str) -> Result<i128, SolverError> {
     let value = text
@@ -242,12 +257,12 @@ impl Exact {
         Ok(r)
     }
 }
-fn source_limits(source: &str) -> Result<(), SolverError> {
+fn source_limits(source: &str, deadline: Option<std::time::Instant>) -> Result<(), SolverError> {
     if source.len() > SOURCE_CAP {
         return Err(unsupported("certificate source byte limit"));
     }
-    let commands =
-        axeyum_smtlib::read_all(source).map_err(|e| SolverError::Parse(e.to_string()))?;
+    let commands = axeyum_smtlib::read_all_within(source, deadline)
+        .map_err(|e| SolverError::Parse(e.to_string()))?;
     let mut count = 0;
     let mut stack: Vec<_> = commands.iter().map(|node| (node, 0)).collect();
     while let Some((node, depth)) = stack.pop() {
@@ -319,17 +334,52 @@ impl OptimizationCertificate {
     // Keep the ordered model/refutation discharge loop together for auditing.
     #[allow(clippy::too_many_lines)]
     pub fn check(&self, subject: &str) -> Result<CertificateCheckReport, SolverError> {
+        self.check_within(subject, None)
+    }
+
+    /// Replay with one deadline shared by intake, models and Farkas checks.
+    /// Resource exhaustion never accepts or rejects the mathematical claim.
+    ///
+    /// # Errors
+    /// As [`Self::check`], for malformed or unsupported evidence.
+    #[allow(clippy::too_many_lines)]
+    pub fn check_within(
+        &self,
+        subject: &str,
+        deadline: Option<std::time::Instant>,
+    ) -> Result<CertificateCheckReport, SolverError> {
         use crate::lra::{FarkasAtom, FarkasCertificate};
         use crate::{Model, check_model};
         use axeyum_ir::{Sort, eval};
+        if expired(deadline) {
+            return Ok(limited(0, 0));
+        }
         if self.source != subject {
             return Ok(rejected(0, 0, "original source mismatch"));
         }
         self.to_json()?;
-        source_limits(subject)?;
-        let mut script =
-            axeyum_smtlib::parse_script(subject).map_err(|e| SolverError::Parse(e.to_string()))?;
-        let objectives = super::active_objectives(subject, &script)?;
+        let limits = source_limits(subject, deadline);
+        if expired(deadline) {
+            return Ok(limited(0, 0));
+        }
+        limits?;
+        let mut script = match axeyum_smtlib::parse_script_within(subject, deadline) {
+            Ok(script) => script,
+            Err(
+                axeyum_smtlib::SmtError::DeadlineExceeded(_)
+                | axeyum_smtlib::SmtError::ResourceLimit(_),
+            ) => return Ok(limited(0, 0)),
+            Err(error) => return Err(SolverError::Parse(error.to_string())),
+        };
+        let commands = match axeyum_smtlib::read_all_within(subject, deadline) {
+            Ok(commands) => commands,
+            Err(
+                axeyum_smtlib::SmtError::DeadlineExceeded(_)
+                | axeyum_smtlib::SmtError::ResourceLimit(_),
+            ) => return Ok(limited(0, 0)),
+            Err(error) => return Err(SolverError::Parse(error.to_string())),
+        };
+        let objectives = super::active_objectives_from_commands(&commands, &script)?;
         let mut context = super::smtlib_single_optimization_query(&script)?.assertions;
         if self.selected >= objectives.len() || self.rows.is_empty() || self.rows.len() > 128 {
             return Ok(rejected(0, 0, "objective selection mismatch"));
@@ -342,12 +392,17 @@ impl OptimizationCertificate {
         if self.version != 1 || self.rows.len() != self.selected - start + 1 {
             return Ok(rejected(0, 0, "missing objective prefix"));
         }
-        if super::active_priority(subject)?.is_some_and(|priority| priority != self.mode) {
+        if super::active_priority_from_commands(&commands)
+            .is_some_and(|priority| priority != self.mode)
+        {
             return Ok(rejected(0, 0, "source objective mode mismatch"));
         }
         let mut examined = 0;
         let mut discharged = 0;
         for (offset, row) in self.rows.iter().enumerate() {
+            if expired(deadline) {
+                return Ok(limited(examined, discharged));
+            }
             let index = start + offset;
             let (objective, maximize) = objectives[index];
             if row.index != index
@@ -474,7 +529,11 @@ impl OptimizationCertificate {
                     .collect::<Result<Vec<_>, SolverError>>()?,
             };
             examined += 1;
-            if !certificate.verify_against_within(&relaxed, &assertions, None)? {
+            let checked = certificate.verify_against_within(&relaxed, &assertions, deadline)?;
+            if expired(deadline) {
+                return Ok(limited(examined, discharged));
+            }
+            if !checked {
                 return Ok(rejected(
                     examined,
                     discharged,
@@ -486,8 +545,12 @@ impl OptimizationCertificate {
                 context.push(pin);
             }
         }
+        if expired(deadline) {
+            return Ok(limited(examined, discharged));
+        }
         Ok(CertificateCheckReport {
             accepted: true,
+            resource_limited: false,
             examined,
             discharged,
             reason: None,

@@ -5,7 +5,7 @@ use crate::{
     check_model, solve,
 };
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
-use axeyum_smtlib::{SExpr, Script, read_all};
+use axeyum_smtlib::{SExpr, Script};
 use std::time::Instant;
 
 /// Source-bearing optimization certificate transport.
@@ -168,14 +168,6 @@ impl OptimizationReport {
 
 // Script's flat objective vector lacks command positions. Reconstruct the active
 // indices from the exact tokenized commands before pairing it with query terms.
-pub(super) fn active_objectives(
-    input: &str,
-    script: &Script,
-) -> Result<Vec<(TermId, bool)>, SolverError> {
-    let commands = read_all(input).map_err(|e| SolverError::Parse(e.to_string()))?;
-    active_objectives_from_commands(&commands, script)
-}
-
 pub(super) fn active_objectives_from_commands(
     commands: &[SExpr],
     script: &Script,
@@ -250,11 +242,6 @@ pub(super) fn active_objectives_from_commands(
         })
         .collect()
 }
-fn active_priority(input: &str) -> Result<Option<String>, SolverError> {
-    let commands = read_all(input).map_err(|e| SolverError::Parse(e.to_string()))?;
-    Ok(active_priority_from_commands(&commands))
-}
-
 fn active_priority_from_commands(commands: &[SExpr]) -> Option<String> {
     let mut priority = None;
     for command in commands {
@@ -744,7 +731,7 @@ mod intake_budget_controls {
         let commands = commands_with_budget(source, &SolverConfig::new(), Instant::now())
             .unwrap()
             .unwrap();
-        assert_eq!(commands, read_all(source).unwrap());
+        assert_eq!(commands, axeyum_smtlib::read_all(source).unwrap());
         assert_eq!(
             active_priority_from_commands(&commands).as_deref(),
             Some("lex")
