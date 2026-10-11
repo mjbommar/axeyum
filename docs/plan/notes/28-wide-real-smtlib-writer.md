@@ -494,3 +494,7 @@ have not run yet. Collect the actual final exit before giving broad credit.
 ### Current workspace CAS result
 
 Final workspace session11433 completed the CAS suite:2154 passed,0 failed,11 ignored,0 filtered in462.73s. Alongside AIG12/arith87/BV34, this is2287 passing tests across four completed crates. Remaining crates are running; the whole workspace gate remains uncredited. Log:`/var/tmp/axeyum-nested-final-workspace.log`. Rust source remains frozen atcc65885a3.
+
+### Workspace reaches kernel suite
+
+Final workspace11433 now has3297 passing tests across ten completed crates,15 ignored and0 failures. Completed populations:AIG12,arith87,BV34,CAS2154/11ignored,CNF645,egraph39,EVM4,FP69,IR107,Lean importer146/4ignored. Kernel2658 tests are executing; remaining whole-workspace/targets/lint/CLI gates are uncredited. The aggregate log supplies actual terminal suite results; Cargo3092650 remains live.
