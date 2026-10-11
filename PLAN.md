@@ -81,8 +81,11 @@ measured after it are **not ledger entries** and are listed separately:
   ([ADR-0509](docs/research/09-decisions/adr-0509-the-trusted-surface-is-measured-as-reached-not-only-declared.md)):
   both are published, and the 30 are reached by no shipped route — the package
   is kept as the negative control those measurements are read against.
-- **CAS** (`scripts/check-cas-trust-registry.py`, run 2026-10-05): 1,280 public
-  functions — 151 certified, 110 checker, 1,019 uncertified; floor 151 held.
+- **CAS** (`scripts/check-cas-trust-registry.py`, current feedback branch):
+  1,310 public functions — 153 certified, 116 checker, 1,041 uncertified;
+  floor 153 held. This is the isolated implementation inventory, pending main
+  integration; the [completion audit](docs/plan/user-feedback-completion-audit-2026-10-11.md)
+  separates replay and kernel receipts. Adding trace logging earns no certification.
 - **Lean replay** ([ADR-1661](docs/research/09-decisions/adr-1661-the-replay-census-covers-every-carrier-and-type-valued-theorems-are-a-named-class.md),
   2026-09-10, not re-run): of 4,478 proved declarations pinned Lean accepts
   4,394; 50 are `Type`-valued theorems Lean refuses; 34 are blocked behind them.
