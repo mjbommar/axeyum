@@ -277,7 +277,8 @@ Gold eligibility stays false until source-bound no-better evidence is checked;
 generic self-contained evidence checks cannot provide that binding by themselves.
 Next: nonzero focused tests, fresh native/stubs, replay guard mutations, required
 full gates, then source-bound optimality certificates and preemptible ingest.
-Existing integration EUF full-gate failure remains unresolved. No goal completion.
+Prior EUF failure does not reproduce in this run: its heavy timeout test
+passes; full solver/workspace still live. No goal completion.
 
 ### SOL — Solver parity
 

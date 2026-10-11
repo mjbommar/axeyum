@@ -40,3 +40,13 @@ optimum without calling the solver, checks both exact reported values, replays
 every retained model, and checks each witness belongs to the enumerated feasible
 population. Fresh sealed-binary OMT suite: 8 collected, 8 passed, 0.13s. This
 finite regression oracle does not grant general optimality-certificate credit.
+
+Current full-solver log now explicitly reports
+`euf_egraph::tests::check_qf_uf_with_config_is_bounded_by_timeout ... ok`
+at line 557. Earlier integration failure is not reproduced on this source run;
+full suite remains live and this single test is not a full-gate pass.
+Optimality route inspection: `alethe_lra.rs::prove_lra_unsat_alethe` converts
+assertions into assumptions and emits `la_generic`; `check_alethe_lra` validates
+the proof's content rather than receiving the original query. OMT acceptance
+therefore requires an independent assertion-to-assumption binding check as well
+as the proof checker; never use self-contained proof validity as source binding.
