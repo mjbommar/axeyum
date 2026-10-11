@@ -339,3 +339,7 @@ Consumer71291 exits0:1167collected,1166passed/1skipped65.53s. Sole skip is exter
 ## Fixed-source full CAS and route inventory reconciliation
 
 Full CASv2 session37290 exits0 at Rust0b829e980:2154passed/0failed/11ignored/0filtered85.25s. Original result67.12s remains earlier-source evidence. Added nested conditional composition to authoritative route inventory notes/cas-trace-kernel.md with producer, independent-from-search replay, caller-bound context, partial-domain semantics and explicit absent kernel admission. Shared arithmetic and aggregate declared witness-work limits are stated precisely. Current type/lint/workspace and second miter mutation remain pending.
+
+## Final Python doc lint, regenerated stub and hygiene
+
+Child Py lint61730 exits101 on one doc_markdown identifier, resource_limited. Fixed comment cc65885a3 after confirming no active native compiler. Regenerator62778 and Py lint49809 both exit0; final logs /var/tmp/axeyum-nested-conditional-{stubgen-v2,python-clippy-v2}.log. Generated CAS stub reflects the one documentation correction. Merge hygiene36970 exits0, log /var/tmp/axeyum-nested-final-merge-hygiene.log. Current CAS registry6894 and doc gates45795 exit0 (1310functions/153certified/116checker/1041uncertified; links pass). Facts60449 and isolated typed-package checker52388 are still live; no pass credited.

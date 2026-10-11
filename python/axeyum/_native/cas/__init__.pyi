@@ -1148,7 +1148,7 @@ class ConditionalTraceOutcome:
     @property
     def status(self) -> builtins.str:
         r"""
-        produced, checked, rejected, unsupported, or resource_limited.
+        produced, checked, rejected, unsupported, or `resource_limited`.
         """
     @property
     def json(self) -> typing.Optional[builtins.str]:
