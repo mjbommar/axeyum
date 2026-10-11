@@ -35,7 +35,11 @@ refutation, and independently rebuild the relaxation and atom binding during
 `OptimizationReport::replay_optimality`. A missing refutation returns None.
 This covers integer optima whose strict-better real relaxation is infeasible;
 integer-only cuts and Boolean composition remain subsequent producers.
-Python gold eligibility remains disabled until this route is validated.
+Certificate generation runs after all objective solves, against the final
+source arena, so fresh relaxation column IDs stay stable during replay.
+An integer-cut optimum whose strict-better real relaxation is feasible carries
+no Farkas certificate. Python gold eligibility remains disabled until this route
+is validated.
 
 ## Remaining work
 

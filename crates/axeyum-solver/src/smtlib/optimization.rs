@@ -353,37 +353,6 @@ pub fn optimize_with_models(
                     }
                 }
             }
-            // Refute better values against the original context, excluding
-            // the current optimum pin. Including that pin would be circular.
-            if sort == Sort::Int && row.model.is_some() {
-                let remaining = text_optimization_config(config, started);
-                if !remaining.timeout.is_some_and(|t| t.is_zero()) {
-                    let better = if maximize {
-                        script.arena.int_gt(objective, term)?
-                    } else {
-                        script.arena.int_lt(objective, term)?
-                    };
-                    let mut query = row.context.clone();
-                    query.push(better);
-                    if let Some((relaxed, constraints)) =
-                        crate::int_real_relax::relax_int_assertions_to_real(&script.arena, &query)?
-                    {
-                        let deadline = config.timeout.and_then(|t| started.checked_add(t));
-                        row.no_better = match crate::lra::lra_farkas_certificate_within(
-                            &relaxed,
-                            &constraints,
-                            deadline,
-                        ) {
-                            Ok(certificate) => certificate,
-                            Err(SolverError::Unsupported(_)) => None,
-                            Err(error) => return Err(error),
-                        };
-                        if deadline.is_some_and(|d| Instant::now() >= d) {
-                            row.no_better = None;
-                        }
-                    }
-                }
-            }
             if mode == OptimizationMode::Lexicographic {
                 assertions.push(pin);
             }
@@ -392,11 +361,49 @@ pub fn optimize_with_models(
             && !matches!(row.outcome, OptOutcome::Optimal(_));
         rows.push(row);
     }
-    let report = OptimizationReport {
+    let mut report = OptimizationReport {
         mode,
         objectives: rows,
         script,
     };
+    // All original symbol declarations are now fixed. Generate certificates
+    // against this final arena so later objective solves cannot shift the
+    // fresh relaxation column IDs used when replay reconstructs the source.
+    for row in &mut report.objectives {
+        if row.sort != Sort::Int || row.model.is_none() {
+            continue;
+        }
+        let Some(Value::Int(value)) = &row.value else {
+            continue;
+        };
+        let remaining = text_optimization_config(config, started);
+        if remaining.timeout.is_some_and(|t| t.is_zero()) {
+            break;
+        }
+        let bound = report.script.arena.int_const(*value);
+        let better = if row.maximize {
+            report.script.arena.int_gt(row.objective, bound)?
+        } else {
+            report.script.arena.int_lt(row.objective, bound)?
+        };
+        // Never include this objective's optimum pin in the refutation.
+        let mut query = row.context.clone();
+        query.push(better);
+        if let Some((relaxed, constraints)) =
+            crate::int_real_relax::relax_int_assertions_to_real(&report.script.arena, &query)?
+        {
+            let deadline = config.timeout.and_then(|t| started.checked_add(t));
+            row.no_better =
+                match crate::lra::lra_farkas_certificate_within(&relaxed, &constraints, deadline) {
+                    Ok(certificate) => certificate,
+                    Err(SolverError::Unsupported(_)) => None,
+                    Err(error) => return Err(error),
+                };
+            if deadline.is_some_and(|d| Instant::now() >= d) {
+                row.no_better = None;
+            }
+        }
+    }
     for index in 0..report.objectives.len() {
         if report.replay(index)? == Some(false) {
             return Err(SolverError::Backend(
@@ -429,6 +436,8 @@ mod tests {
             assert_eq!(r.objectives[1].value, Some(Value::Int(ys)));
             assert_eq!(r.replay(0).unwrap(), Some(true));
             assert_eq!(r.replay(1).unwrap(), Some(true));
+            assert_eq!(r.replay_optimality(0).unwrap(), Some(true));
+            assert_eq!(r.replay_optimality(1).unwrap(), Some(true));
         }
         let r = run(
             &format!("{BOUNDS}(minimize x)(check-sat)"),
@@ -449,6 +458,17 @@ mod tests {
                 Some(Value::Int(if direction == "maximize" { 9 } else { 1 }));
             assert_eq!(report.replay_optimality(0).unwrap(), Some(false));
         }
+    }
+
+    #[test]
+    fn integer_cut_required_optimum_has_no_real_refutation() {
+        let report = run(
+            "(declare-const x Int)(assert (>= x 0))(assert (<= (* 2 x) 1))(maximize x)(check-sat)",
+            OptimizationMode::Box,
+        );
+        assert_eq!(report.objectives[0].value, Some(Value::Int(0)));
+        assert_eq!(report.replay(0).unwrap(), Some(true));
+        assert_eq!(report.replay_optimality(0).unwrap(), None);
     }
 
     #[test]
