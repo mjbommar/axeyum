@@ -9,7 +9,7 @@
 
 use std::time::{Duration, Instant};
 
-use axeyum_solver::{UnsatProof, UnsatProofOutcome};
+use axeyum_solver::{EndToEndUnsatOutcome, UnsatProof, UnsatProofOutcome};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyModule};
@@ -184,6 +184,183 @@ impl PyUnsatProof {
                 .map_or_else(|| "None".to_owned(), |lrat| format!("{} bytes", lrat.len()))
         )
     }
+}
+
+/// A saved reference-miter refutation plus the final clausal UNSAT proof.
+/// Construction stores data; source-bound replay supplies the checked claim.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver.proofs")
+)]
+#[pyclass(frozen, from_py_object, module = "axeyum", name = "EndToEndUnsatProof")]
+#[derive(Clone)]
+pub struct PyEndToEndUnsatProof {
+    faithfulness: UnsatProof,
+    unsat: UnsatProof,
+}
+
+impl PyEndToEndUnsatProof {
+    fn as_outcome(&self) -> EndToEndUnsatOutcome {
+        EndToEndUnsatOutcome::Certified {
+            faithfulness_dimacs: self.faithfulness.dimacs.clone(),
+            faithfulness_drat: self.faithfulness.drat.clone(),
+            unsat: self.unsat.clone(),
+        }
+    }
+}
+
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
+#[pymethods]
+impl PyEndToEndUnsatProof {
+    /// Restores two saved certificate components without accepting their claims.
+    /// Each component uses UnsatProof's 8 MiB/text and 16 MiB/component caps.
+    #[new]
+    fn new(
+        faithfulness_dimacs: &str,
+        faithfulness_drat: &str,
+        unsat: PyRef<'_, PyUnsatProof>,
+    ) -> PyResult<Self> {
+        let faithfulness = PyUnsatProof::new(faithfulness_dimacs, faithfulness_drat, None)?;
+        let final_proof = PyUnsatProof::new(
+            &unsat.proof.dimacs,
+            &unsat.proof.drat,
+            unsat.proof.lrat.as_deref(),
+        )?;
+        Ok(Self {
+            faithfulness: faithfulness.proof,
+            unsat: final_proof.proof,
+        })
+    }
+
+    /// The reference-miter DIMACS/DRAT refutation; LRAT is absent on this route.
+    #[getter]
+    fn faithfulness(&self) -> PyUnsatProof {
+        PyUnsatProof::build(self.faithfulness.clone())
+    }
+
+    /// The final DIMACS/DRAT/optional LRAT refutation.
+    #[getter]
+    fn unsat(&self) -> PyUnsatProof {
+        PyUnsatProof::build(self.unsat.clone())
+    }
+
+    /// Checks the two stored clausal refutations, without a source claim.
+    fn recheck_refutations(&self, py: Python<'_>) -> PyResult<bool> {
+        py.detach(|| {
+            self.faithfulness.recheck().and_then(|faithful| {
+                if faithful {
+                    self.unsat.recheck()
+                } else {
+                    Ok(false)
+                }
+            })
+        })
+        .map_err(|error| map_solver_error(&error))
+    }
+
+    /// Rebuilds both source correspondences and checks the two refutations.
+    /// No SAT search runs. The independent reference bit-blaster and Tseitin
+    /// encoder are the explicit trusted boundary; no kernel theorem is admitted.
+    /// Unsupported/malformed data raise AxeyumError; mismatches return False.
+    /// Replay has no wall-clock deadline, like the underlying Rust checker.
+    fn recheck_for_bool_terms(
+        &self,
+        py: Python<'_>,
+        arena: PyRef<'_, Arena>,
+        assertions: Vec<Term>,
+    ) -> PyResult<bool> {
+        let ids = arena.resolve_terms(&assertions)?;
+        let subject = &arena.arena;
+        let certificate = self.as_outcome();
+        py.detach(|| certificate.recheck_for_bool_terms(subject, &ids))
+            .map_err(|error| map_solver_error(&error))
+    }
+}
+
+/// Outcome of attempting reference-miter plus final UNSAT certification.
+/// Not-certified supplies no verdict or successful certificate.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver.proofs")
+)]
+#[pyclass(frozen, module = "axeyum", name = "EndToEndUnsatProofOutcome")]
+pub struct PyEndToEndUnsatProofOutcome {
+    status: &'static str,
+    proof: Option<PyEndToEndUnsatProof>,
+}
+
+impl PyEndToEndUnsatProofOutcome {
+    fn build(outcome: EndToEndUnsatOutcome) -> Self {
+        match outcome {
+            EndToEndUnsatOutcome::Certified {
+                faithfulness_dimacs,
+                faithfulness_drat,
+                unsat,
+            } => Self {
+                status: "certified",
+                proof: Some(PyEndToEndUnsatProof {
+                    faithfulness: UnsatProof {
+                        dimacs: faithfulness_dimacs,
+                        drat: faithfulness_drat,
+                        lrat: None,
+                    },
+                    unsat,
+                }),
+            },
+            EndToEndUnsatOutcome::Satisfiable => Self {
+                status: "satisfiable",
+                proof: None,
+            },
+            EndToEndUnsatOutcome::NotCertified => Self {
+                status: "not-certified",
+                proof: None,
+            },
+        }
+    }
+}
+
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
+#[pymethods]
+impl PyEndToEndUnsatProofOutcome {
+    #[getter]
+    fn status(&self) -> &str {
+        self.status
+    }
+
+    #[getter]
+    fn proof(&self) -> Option<PyEndToEndUnsatProof> {
+        self.proof.clone()
+    }
+}
+
+/// Certifies Boolean/BV UNSAT with the independently coded reference miter.
+/// Both proof searches share one deadline. Construction and replay remain
+/// deterministic/unlimited; timeout_ms is not a hard total-work deadline.
+/// Expired entry budgets and unsupported reference fragments are not-certified.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.solver.proofs")
+)]
+#[pyfunction]
+#[pyo3(signature = (arena, assertions, timeout_ms = None))]
+pub fn certify_qf_bv_unsat_end_to_end(
+    py: Python<'_>,
+    arena: PyRef<'_, Arena>,
+    assertions: Vec<Term>,
+    timeout_ms: Option<u64>,
+) -> PyResult<PyEndToEndUnsatProofOutcome> {
+    let ids = arena.resolve_terms(&assertions)?;
+    let subject = &arena.arena;
+    let deadline = deadline(timeout_ms);
+    if deadline.is_some_and(|limit| Instant::now() >= limit) {
+        return Ok(PyEndToEndUnsatProofOutcome::build(
+            EndToEndUnsatOutcome::NotCertified,
+        ));
+    }
+    let outcome = py
+        .detach(|| axeyum_solver::certify_qf_bv_unsat_end_to_end_within(subject, &ids, deadline))
+        .map_err(|error| map_solver_error(&error))?;
+    Ok(PyEndToEndUnsatProofOutcome::build(outcome))
 }
 
 /// Copies `text` straight into a freshly allocated Python `bytes`.
@@ -379,6 +556,9 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     )?;
     module.add_class::<PyUnsatProof>()?;
     module.add_class::<PyUnsatProofOutcome>()?;
+    module.add_class::<PyEndToEndUnsatProof>()?;
+    module.add_class::<PyEndToEndUnsatProofOutcome>()?;
+    module.add_function(wrap_pyfunction!(certify_qf_bv_unsat_end_to_end, &module)?)?;
     module.add_function(wrap_pyfunction!(export_qf_bv_unsat_proof, &module)?)?;
     module.add_function(wrap_pyfunction!(export_qf_abv_unsat_proof, &module)?)?;
     module.add_function(wrap_pyfunction!(export_qf_aufbv_unsat_proof, &module)?)?;
