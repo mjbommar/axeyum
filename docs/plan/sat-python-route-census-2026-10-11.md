@@ -10,8 +10,9 @@ Run the [export example](../../python/examples/sat_certificate_export.py) with
 `--output <new-directory> --census --lrat-check <pinned-checker>`. Build the
 checker privately following the [guard instructions](../../scripts/patches/README.md#drat-trim-empty-clause-guard).
 It writes each representative route's source, CNF, DRAT and optional LRAT,
-plus `route-census.json`. A rejected source rendering is deliberately saved as
-`source-rendering.txt`, not advertised as executable SMT-LIB.
+plus `route-census.json`. The current example requires every source to reparse;
+it fails rather than publishing a rejected rendering as executable SMT-LIB.
+The initial measurement below predates that repair.
 
 Measured native source: combined implementation `2a111e062bd6242c13e96dac8b098ba68d7a188a`.
 Sealed package: `/var/tmp/axeyum-feedback-combined-gates-invfxf_7/package`;
@@ -29,7 +30,7 @@ All six public term-exporter names are derived from the native module; an added
 exporter without a fixture fails the census. Three tests collected/three passed,
 zero skips, 0.30 seconds, with the sealed package and guarded checker configured.
 
-## Observed routes
+## Initial observed routes
 
 All six rows below produced DRAT and LRAT, passed in-tree text replay and
 external clausal LRAT checking, and had a paired SAT control with an independently
@@ -63,7 +64,46 @@ arbitrary source query. Source hashes establish artifact identity only.
 Next implement deterministic export and replay of the complete applicable
 lowering chain, with altered-source/map rejection controls. Theory reductions
 need their own checking recipes rather than merely attaching a Boolean CNF.
-Fix datatype source declaration/constructor rendering and exercise full parse,
-solve and proof round trips. Keep bounded-LIA limits explicit. Extend the
+The datatype source declaration/constructor repair and representative parse/proof
+round trips are recorded below; broader datatype populations remain separate. Keep bounded-LIA limits explicit. Extend the
 representative fixtures to a registered proof population and cover general SMT
 and mixed-theory evidence routes separately. RAT elaboration remains EVD-4.
+
+
+## Source export and replay follow-up
+
+Datatype writer`b8b237c65` now exports names and the reachable recursive
+sort/field declaration closure. Six Rust controls cover nullary, recursive,
+mutually recursive, field-only dependency, array/UF signature and quoted names.
+All six initial exporter fixtures now emit reparsable `source.smt2`; the census
+requires this and fails on a regression. Independently running Z3 over each
+exported source returns UNSAT. This is representative serialization/verdict
+validation, not proof of the theory lowering chain.
+
+Python native source`30a4e434e` adds saved-text construction and
+`UnsatProof.recheck_for_bool_terms(arena, assertions)` (ADR8000). Native SHA256
+`10021c3dfa772267b520db5c9744fd96c602717043a5e4da3edd97eaf57b84cc`.
+Current export artifact:
+`/data0/axeyum/artifacts/python/source-bound-sat-qualified-76lb7aij/export`;
+example exits0 with the same guarded checker pinned above. The two Boolean/BV
+example bundles replay against the caller's original terms and reject a
+satisfiable substituted query. SAT/proof/OMT37 tests pass0 skips; proof/stub35
+pass0 skips after fixing the CAS integer annotation shadow. Nine source-binding
+controls include two producer-disabled child processes restoring saved text.
+Private guard deletion makes exactly one of those nine tests fail; sources are
+restored bytewise.
+
+This new replay rebuilds the production bit-blast/Tseitin encoding and checks
+exact DIMACS correspondence. It is a useful source-binding API behind an
+explicit trusted-reduction boundary, not independent bit-blast verification.
+Equivalent source propositions with the same encoding may replay; original text
+provenance/authentication is a different contract. Array/UF/datatype and
+finite-width LIA maps remain absent from serialized bundles.
+
+The independent-reference miter producer already exists in Rust. Its portable
+source-bound checker must reconstruct the expected subject miter, compare its
+CNF, and bind the final UNSAT certificate to the same source, without invoking
+proof search. Checking two arbitrary refutations from text alone does not prove
+that correspondence. Exposing that audited route and complete theory mappings
+is the next evidence increment; external LRAT and kernel admission remain
+separate claims.

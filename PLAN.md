@@ -722,10 +722,11 @@ Source-bound Python replay childfe3094477: expose existing Rust checker and
 restored text constructor; ADR8000 distinguishes trusted encoding from an
 independent translation proof. Fresh native SHA10021c3dfa772267b520db5c9744fd96c602717043a5e4da3edd97eaf57b84cc:
 SAT/proof/OMT37 tests pass0 skips0.68s, including nine new controls and two
-producer-disabled child replays. Py Clippy-D passes2m13s. Guard baseline9 passes; mutation95810 still live. Stub generator91359 passed
-27 modules/661 items. Runtime drift/type gates pass, but stubtest fails on
-Expr.int shadowing bare int annotations (34 other tests pass). Structured
-metadata qualification implemented; generator48361 running, no pass credited.
+producer-disabled child replays. Py Clippy-D passes2m13s. Guard deletion: baseline9 passes ->8 passes/1 intended failure; source restored
+bytewise. Stub generation qualifies5 integer annotations shadowed by Expr.int;
+proof/stub35 tests pass0 skips2.17s, including mypy runtime comparison. Drift
+27 modules/1876 symbols and type ratchet95.4% pass. Generator Clippy-D passes.
+Current export/census exits0; two source-bound routes, six Z3 UNSAT sources.
 Next: fresh native tests, private source-binding guard control, collect broad
 gate outputs, integrate, and finish remaining proof/conditional trace gaps. No broad completion claim;
 overall goal stays active.

@@ -84,7 +84,7 @@ fn qualify_int_type(info: &mut pyo3_stub_gen::TypeInfo) -> bool {
         "typing.Optional[int]" => "typing.Optional[builtins.int]",
         _ => return false,
     };
-    info.name = qualified.to_owned();
+    qualified.clone_into(&mut info.name);
     info.import.insert("builtins".into());
     true
 }

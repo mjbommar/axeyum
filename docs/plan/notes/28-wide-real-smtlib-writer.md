@@ -98,3 +98,19 @@ The older independent-reference miter route does exist in Rust, but its saved
 the subject miter. Its source-bound portable replay therefore needs an explicit
 subject/miter correspondence checker before a Python wrapper can claim that
 boundary closed. This is the next SAT evidence increment after this API.
+
+
+Source guard95810 completed: baseline9 passes; removing exact DIMACS comparison
+leaves8 passes and exactly1 intended failure
+`test_source_binding_rejects_a_satisfiable_substitute`. Both runs collect9 tests;
+source restored bytewise (SHA595286d9000fbda9d23c2868704e8748023911107cb6ae0a2e91094cef5260a4).
+
+Final structured stub generation qualifies exactly5 integer annotations;
+27 modules/661 items. Drift passes27 modules/1876 symbols/5 aliases/319 synthetic
+dunders; type ratchet passes1829 parameters/1744 typed/131 allowed Any/46 Any
+returns95.4%. Repeated proof/stub tests35 pass0 skips2.17s, including actual
+mypy runtime comparison. Initial generator Clippy found assigning-clones;
+changed metadata assignment to clone_into and the warning-denied rerun passes.
+Current export/census exits0 with two source-bound Boolean/BV examples and six
+independent Z3 UNSAT source verdicts. Current fixture/certifier scope remains
+explicit in the route census; no independent translation or kernel credit.
