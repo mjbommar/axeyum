@@ -11,7 +11,7 @@ rg -n 'QF_LRA' docs/plan/archive/lanes/      # every archived lane that mentions
 rg -n '<lane-or-topic>' docs/plan/CATALOG.md  # find the file, then open it
 ```
 
-Counts: 771 archived lanes (177 not DONE when archived), 55 older archive files, 345 dated plan notes, 80 lane notes, 508 strand and planning documents.
+Counts: 771 archived lanes (177 not DONE when archived), 55 older archive files, 345 dated plan notes, 81 lane notes, 508 strand and planning documents.
 
 ## Lanes that were not DONE when archived
 
@@ -1217,6 +1217,7 @@ Result notes, designs, handoffs and earlier queues. Evidence for claims; never t
 | Date | File | Title |
 |---|---|---|
 | 2026-10-11 | [`docs/plan/notes/rules-dates.md`](notes/rules-dates.md) | Typed Date facade evidence — 2026-10-11 |
+| 2026-10-11 | [`docs/plan/notes/python-omt-results.md`](notes/python-omt-results.md) | Python OMT validation record |
 | 2026-10-11 | [`docs/plan/notes/feedback-integration.md`](notes/feedback-integration.md) | Feedback branch integration — 2026-10-11 |
 | 2026-10-10 | [`docs/plan/notes/omt-correctness.md`](notes/omt-correctness.md) | OMT correctness validation — 2026-10-10 |
 | 2026-09-06 | [`docs/plan/notes/coordinator-math-five-topics-2026-09-06.md`](notes/coordinator-math-five-topics-2026-09-06.md) | coordinator-math, 2026-09-06 — detail behind the five topics |

@@ -28,3 +28,7 @@ until its asserted terminal result. New Python test
 `test_declared_string_model_is_lifted_without_decoding_real_bitvectors` passes
 against the sealed revision binary; OMT suite now 7 collected / 7 passed, 0.15s.
 Separate probes also replayed Int and BV optima with String model `AB`.
+
+Added `python/examples/smt_optimization.py` and user-guide API documentation.
+The sealed extension executes all four lex/box model replays with expected
+values and explicit false gold eligibility; example terminal exit zero.

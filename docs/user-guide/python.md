@@ -220,6 +220,28 @@ Three surfaces from ADR-2140 (items 6, 7 and 9 of the 2026-09-16 list):
   which case you are in. `as_dict()` is the `dict` `stats()` returned before
   this type existed.
 
+## SMT optimization
+
+`smt.optimize(script, mode="lex", timeout_ms=2000)` returns ordered objective
+results with exact Python integer values, objective direction and sort, status,
+and retained feasible models. Integer and unsigned bit-vector objectives of
+widths 1–127 are supported; unsupported sorts and modes are explicit errors.
+`mode="lex"` pins earlier optima, while `mode="box"` optimizes each objective
+independently and retains a separate model for each.
+
+Each objective exposes `model`, `model_available`, `model_unavailable_reason`,
+and `replay()`. Replay checks its original constraints, any earlier lexicographic
+pins, and the reported objective value. Declared strings are lifted back to
+strings; genuine bit-vector declarations remain bit-vector values. A missing
+witness returns `None` from replay. Unknown, infeasible, and unbounded results
+have no attained optimum value. Generic `smt.solve` declines objective scripts.
+
+`gold_eligible` currently remains false: feasible-model replay alone does not
+check the claim that no better solution exists. Run the
+[optimization example](../../python/examples/smt_optimization.py) to compare
+lexicographic `[10, 0]` and independent `[10, 3]` values with four actual model
+replays.
+
 ## See also: C defects through cindergraph
 
 [`python/examples/cindergraph_defects/`](../../python/examples/cindergraph_defects/README.md)
