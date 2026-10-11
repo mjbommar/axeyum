@@ -137,3 +137,11 @@ Census assertions preserve absent miter LRAT and no kernel-admission claim.
 Focused census/end-to-end session98367, stub generation41978, Python Clippy82361
 are live; observed pytest and stub generator in kernel filesystem I/O wait.
 No pass credited or duplicate jobs launched. Corrected guard script also live.
+
+Current full-feature solver77505 terminal0:2033 pass0 failures/ignores826.10s
+on source9fd9721d0, including source-bound reference-miter core changes.
+Focused census/end-to-end98367 terminal0:15 pass0 skips18.64s. Updated export
+CLI exits0 with six clausal/two reference fixtures; artifact
+`/data0/axeyum/artifacts/python/reference-miter-census-39dd_n61/export`.
+Private guard script, stub generation, PyClippy and older workspace remain
+pending; current full-source workspace still required before integration.

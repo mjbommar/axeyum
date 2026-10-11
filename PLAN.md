@@ -726,8 +726,9 @@ Sealed native dab497034b3f4b733d3fc70c49d89ba702f14946e9b6882deeb76b6595451356;
 focused end-to-end/source/SAT/proof/OMT49 pass0 skips7.03s. Stub refresh live.
 
 Full solver74254 passed2033 tests0 failures/ignores909.38s on wide-decimal/NRA
-source; predates newer code. Current full solver77505 and older datatype
-workspace87947 still running, no pass credited. Earlier workspace81069/58007
+source; predates newer code. Current full solver77505 passes2033 tests0 failures/ignores826.10s.
+Census/end-to-end15 pass0 skips; CLI six clausal/two reference fixtures exits0.
+Older datatype workspace87947 still running, no pass credited. Earlier workspace81069/58007
 terminal143/-15, not passes. Next: exact guard controls, fresh Python checks,
 full gates, integration, and remaining arithmetic/conditional trace evidence.
 Overall goal remains active.

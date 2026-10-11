@@ -100,10 +100,22 @@ Equivalent source propositions with the same encoding may replay; original text
 provenance/authentication is a different contract. Array/UF/datatype and
 finite-width LIA maps remain absent from serialized bundles.
 
-The independent-reference miter producer already exists in Rust. Its portable
-source-bound checker must reconstruct the expected subject miter, compare its
-CNF, and bind the final UNSAT certificate to the same source, without invoking
-proof search. Checking two arbitrary refutations from text alone does not prove
-that correspondence. Exposing that audited route and complete theory mappings
-is the next evidence increment; external LRAT and kernel admission remain
-separate claims.
+The reference-miter source checker and Python API are now implemented in
+commits9fd9721d0/7437a1356. Replay reconstructs the final CNF and expected
+subject miter, compares both to saved text, and checks their refutations without
+proof search. Native SHA256
+`dab497034b3f4b733d3fc70c49d89ba702f14946e9b6882deeb76b6595451356`
+passes49 focused Python tests; the updated census/end-to-end suites pass15 with
+no skips18.64s. The executable example exits0 and exports six clausal routes
+plus Boolean/BV reference-miter fixtures to
+`/data0/axeyum/artifacts/python/reference-miter-census-39dd_n61/export`.
+
+The reference fixtures check saved-source replay and reject a changed satisfiable
+source and a valid unrelated clausal refutation substituted for the expected
+miter. Census populations derive from registered exporter and certifier APIs.
+Both miter and final CNF/DRAT texts are exported; miter LRAT remains absent.
+The six clausal fixtures retain their pinned guarded external LRAT checks;
+source replay of the composite uses the in-tree checker. Independent reference
+lowering, miter construction and Tseitin encoding remain trusted. General theory
+source mappings, universal LRAT and kernel admission are separate unfinished
+requirements, not consequences of these fixtures.
