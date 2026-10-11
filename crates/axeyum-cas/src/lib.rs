@@ -59,6 +59,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+/// Source-bound, bounded polynomial rewrite traces (ADR-2500).
+pub mod rewrite_trace;
+
 use axeyum_ir::{Rational, poly};
 use num_bigint::BigInt;
 use num_rational::BigRational;

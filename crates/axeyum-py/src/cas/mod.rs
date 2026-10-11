@@ -41,6 +41,7 @@ pub(crate) mod poly;
 pub(crate) mod rational;
 pub(crate) mod special;
 pub(crate) mod stats;
+pub(crate) mod trace;
 pub(crate) mod transforms;
 
 use pyo3::create_exception;
@@ -78,6 +79,7 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
 
     module.add_class::<rational::Rational>()?;
     module.add_class::<expr::Expr>()?;
+    trace::register(&module)?;
     module.add_class::<expr::ZeroTest>()?;
     module.add_class::<expr::Certainty>()?;
     module.add_class::<expr::Sign>()?;

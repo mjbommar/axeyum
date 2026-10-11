@@ -159,10 +159,26 @@ integration controls passed: equality/replay/tamper, big refutation, and the
 360-period payment against an independent Python Fraction (2859/2849 bits).
 Wide Python transport/evaluation implemented with explicit 16,384-bit limits;
 fresh Python: 213 pass. Constant folds/rendering repaired; four Rust controls,
-focused clippy, generated stubs and arithmetic-boundary gate pass (ADR-2900). Private-snapshot guard mutation killed exactly one test. Full CAS library
-passed 2,140 tests (11 ignored); new full CAS/workspace gates run against e7b58fc86 (runner 59537; logs in notes). Next: audit other promoted-value
+focused clippy, generated stubs and arithmetic-boundary gate pass (ADR-2900). Private-snapshot guard mutation killed exactly one test. Earlier Rust-only CAS gate passed 2,140 (11 ignored). Latest full CAS: red,
+2,139 pass/one untouched finite-group timing failure (6.095s > 5s); new full CAS/workspace gates run against e7b58fc86 (runner 59537; logs in notes). Next: audit other promoted-value
 boundaries, implement exact expression/Python arithmetic and amortization,
 negative powers, pi and bounded text parsing. No LIB-6 completion is claimed.
+
+**CAS step traces (`WIP`, cas-traces, 2026-10-10).** First opt-in polynomial
+producer/checker carries full input/result and before/after trees, ordered IDs,
+locations, stable rules/arguments, premises/context/side conditions and local
+normal-form witnesses. Eight fresh integration tests passed; examples compiled
+but their zero-test harnesses are only build evidence. Separate-process replay
+accepted 1 genuine claim and rejected all 5 corruptions; focused clippy passed.
+Context-guard mutation: baseline 5 pass; mutant 4 pass/1 fail. Fresh Python bindings passed 6 tests and the rational four-step export demo.
+Final-source rebuild passed: six Python tests, byte-identical Rust/Python
+exports and two standalone replays. Generated stubs contain 649 items.
+Malformed local witnesses now report their failing step; focused clippy passes.
+Latest rebuilt extension passes seven Python tests including that diagnostic. ADR-2500 is proposed pending validation.
+Next: complete gates and guarded division,
+then kernel reconstruction. Wide trace coefficients also remain pending. No
+kernel admission or LIB-5 completion is claimed. Evidence:
+[trace lane](docs/plan/notes/cas-traces.md).
 
 **Boolean Alethe (`WIP`, boolean-alethe, 2026-10-10).** Text proof API now
 emits source-bound Boolean refutations for not/and/or/equality/xor/constants plus implication/Boolean ite,
@@ -221,15 +237,15 @@ Certificates remain conditional; native UNSAT/kernel proof routes are open.
 Next: validator integration and complete CON-7
 validation. No integration/completion claim.
 
-**Feedback integration (`WIP`, feedback-integration, 2026-10-11).** Isolated
-branch starts from wide CAS/signed-power/parser head da0e38a0a. Integrating Date/
-rules c3c747eb9 with generated plan/ADR views rebuilt; source merged cleanly.
-Historical audit conflicts retain the main planning correction. Signed literal import 343a289c8 merges cleanly in source; generated views rebuilt.
-OMT import a536b76d0 also merges cleanly in source; source-lane gate red remains
-recorded. Boolean/LIA proof import de0b570f3 also merges cleanly with OMT in smtlib.rs.
-Trace lane remains remain to integrate and verify.
-Source lane branches/history are retained; integration imports are linear commits.
-No combined gate pass, main landing or overall completion claimed.
+**Feedback integration (`WIP`, feedback-integration, 2026-10-11).** Base
+wide CAS/signed powers/parser/evalf da0e38a0a plus rules c3c747eb9, signed literals
+343a289c8, OMT a536b76d0, proofs de0b570f3 and traces cd5287f84 now combine
+without source conflicts. CAS history retains newer c0a083978 evidence. Generated
+views, formatting and merge hygiene pass with documented skipped scopes.
+Next: fresh combined native build and Rust/Python interactions/full gates, then
+remaining trace width/domains/kernel bridges, pi/serialization, OMT Python gold,
+SAT routes and consumer validation. Source branches retained; imports are linear.
+No combined runtime pass, main landing or overall completion claimed.
 
 ### SOL — Solver parity
 

@@ -1,13 +1,13 @@
-# Lane: feedback-integration — combine feature lanes and verify their interaction
+# Lane: feedback-integration — combined source and interaction gates
 
 <!-- plan-section: lane-status -->
 
-**Feedback integration (`WIP`, feedback-integration, 2026-10-11).** Isolated
-branch starts from wide CAS/signed-power/parser head da0e38a0a. Integrating Date/
-rules c3c747eb9 with generated plan/ADR views rebuilt; source merged cleanly.
-Historical audit conflicts retain the main planning correction. Signed literal import 343a289c8 merges cleanly in source; generated views rebuilt.
-OMT import a536b76d0 also merges cleanly in source; source-lane gate red remains
-recorded. Boolean/LIA proof import de0b570f3 also merges cleanly with OMT in smtlib.rs.
-Trace lane remains remain to integrate and verify.
-Source lane branches/history are retained; integration imports are linear commits.
-No combined gate pass, main landing or overall completion claimed.
+**Feedback integration (`WIP`, feedback-integration, 2026-10-11).** Base
+wide CAS/signed powers/parser/evalf da0e38a0a plus rules c3c747eb9, signed literals
+343a289c8, OMT a536b76d0, proofs de0b570f3 and traces cd5287f84 now combine
+without source conflicts. CAS history retains newer c0a083978 evidence. Generated
+views, formatting and merge hygiene pass with documented skipped scopes.
+Next: fresh combined native build and Rust/Python interactions/full gates, then
+remaining trace width/domains/kernel bridges, pi/serialization, OMT Python gold,
+SAT routes and consumer validation. Source branches retained; imports are linear.
+No combined runtime pass, main landing or overall completion claimed.

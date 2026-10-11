@@ -38,9 +38,11 @@ __all__ = [
     "Rational",
     "RealInterval",
     "RealSet",
+    "RewriteTrace",
     "Sign",
     "SparseSearchLimits",
     "SparseSearchOutcome",
+    "TraceOutcome",
     "ZeroTest",
     "acosh",
     "algebraic_real_roots",
@@ -200,6 +202,7 @@ __all__ = [
     "newton_divided_differences",
     "next_prime",
     "normalize",
+    "normalize_trace",
     "nsimplify",
     "nth_prime",
     "num_divisors",
@@ -227,6 +230,7 @@ __all__ = [
     "real_part",
     "real_root_intervals",
     "real_roots",
+    "replay_trace",
     "residue",
     "resultant",
     "rewrite_exp",
@@ -2034,6 +2038,35 @@ class RealSet:
     def __repr__(self) -> builtins.str: ...
 
 @typing.final
+class RewriteTrace:
+    r"""
+    A full polynomial equality log; kernel admission remains separate.
+    """
+    @property
+    def input(self) -> Expr:
+        r"""
+        Original typed expression.
+        """
+    @property
+    def result(self) -> Expr:
+        r"""
+        Claimed final typed expression.
+        """
+    @property
+    def step_count(self) -> builtins.int:
+        r"""
+        Number of actual local rewrites, including their certificates.
+        """
+    def to_json(self) -> builtins.str:
+        r"""
+        Deterministic complete evidence JSON, suitable for a separate process.
+        """
+    def replay(self, input: Expr, result: Expr, *, max_steps: builtins.int = 128, max_work: builtins.int = 1000000) -> TraceOutcome:
+        r"""
+        Check this log against separately supplied original/final expressions.
+        """
+
+@typing.final
 class SparseSearchLimits:
     r"""
     Explicit ceilings for one degree's sparse GF(2) search.
@@ -2103,6 +2136,32 @@ class SparseSearchOutcome:
         The configured candidate ceiling that stopped the search, or `None`.
         """
     def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class TraceOutcome:
+    r"""
+    Production/checking status; refusal never becomes a success-shaped value.
+    """
+    @property
+    def status(self) -> builtins.str:
+        r"""
+        produced, checked, rejected, unsupported, or resource_limited.
+        """
+    @property
+    def trace(self) -> typing.Optional[RewriteTrace]:
+        r"""
+        Completed evidence only on successful production or replay.
+        """
+    @property
+    def failing_step(self) -> typing.Optional[builtins.int]:
+        r"""
+        Failing step index when the checker identifies a local obligation.
+        """
+    @property
+    def detail(self) -> builtins.str:
+        r"""
+        Concrete decline/rejection reason; empty on success.
+        """
 
 @typing.final
 class ZeroTest:
@@ -3417,6 +3476,11 @@ def normalize(expr: Expr) -> typing.Optional[MultiPoly]:
     the polynomial fragment (or overflows).
     """
 
+def normalize_trace(expr: Expr, *, max_steps: builtins.int = 128, max_work: builtins.int = 1000000) -> TraceOutcome:
+    r"""
+    Produce an opt-in polynomial step trace with explicit refusal status.
+    """
+
 def nsimplify(value: builtins.float, max_denominator: builtins.int) -> typing.Optional[Expr]:
     r"""
     A symbolic value matching the float `value`, or `None`.
@@ -3618,6 +3682,11 @@ def real_roots(expr: Expr, var: builtins.str) -> typing.Optional[builtins.list[A
     
     Tier R: a pure function of its arguments. `None` when `expr` is not a
     univariate rational polynomial in `var`, or on overflow.
+    """
+
+def replay_trace(json: builtins.str, input: Expr, result: Expr, *, max_steps: builtins.int = 128, max_work: builtins.int = 1000000) -> TraceOutcome:
+    r"""
+    Replay exported JSON against an explicit expected equality statement.
     """
 
 def residue(expr: Expr, var: builtins.str, point: builtins.int  |  fractions.Fraction  |  Rational) -> typing.Optional[Expr]:

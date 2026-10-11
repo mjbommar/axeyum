@@ -30,3 +30,12 @@ views are rebuilt. Original evidence boundaries remain: portable Boolean/real
 checks used a source-binding guard-patched Carcara; lia_generic composition is
 internal-only; source lane full solver passes 2007 but its workspace remains
 live. No original pass is credited as a combined integration gate.
+
+Proof integration landed as 4dc2dfd87 (31 files); combined cargo fmt read-only
+check and generated-document checks pass. Trace import cd5287f84 merges cleanly
+in native/Python source. Conflicting CAS status/history retain the newer
+CAS-parent c0a083978 documents, including its 2139-pass/one timing-failure CAS
+suite result, instead of the trace child's older Rust-only account. Trace wire
+still explicitly declines wide coefficients and conditional division; importing
+it does not satisfy those remaining requirements. Next: fresh combined build
+and regression gates, then remaining implementation work.

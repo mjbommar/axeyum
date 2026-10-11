@@ -109,3 +109,13 @@ Full-gate runner 59537 is live against e7b58fc86, with logs at
 workspace library with one test thread, retaining terminal exit status and
 nonzero counts. Do not restart merely because observation yields no output.
 No terminal result is credited yet.
+
+## Latest full CAS gate is red
+
+Runner 59537 completed its CAS library phase against e7b58fc86: exit 101,
+2139 passed, one failed, eleven ignored, 1314.04 seconds. Sole failure:
+matgroup::tests::psl2_f7_isomorphic_to_gl3_f2 reports 6.095126417 seconds
+against its five-second single-thread debug budget. Functional assertions reached
+the timing check. The matgroup source is untouched; no threshold was changed.
+This is a red gate, not proof of an ambient-load cause. Parent/quiet comparison
+is still required. Workspace phase has started and remains live; do not restart.
