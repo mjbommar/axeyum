@@ -3,36 +3,40 @@
 <!-- plan-section: lane-status -->
 
 **LIB-5/6 / EVD-5 / P0 (`WIP`, wide-real-smtlib-writer, 2026-10-11).**
-Current nested child0b829e980, details/receipts in
-[notes](../notes/28-wide-real-smtlib-writer.md). Overall goal remains active.
+Current Rust cc65885a3 (last change is Python documentation); generated stub
+6c11a0008. [Detailed receipts](../notes/28-wide-real-smtlib-writer.md).
+Overall feedback goal remains active; implementation has not landed on main.
 
-Earlier exact Real intake/writer, wide NRA/FP safety, datatype source export,
-source-bound clausal and reference-miter replay are committed in ancestry.
-SMT396 and five parser frontdoors158 pass; MSRV and default Wasm build pass;
-facts2971 check0 errors. Private decimal/FP/NRA guards each kill one test.
-Reference-miter core7 plus old producer9 fixtures pass; full-feature solver
-2033 pass0 failures/ignores826.10s on9fd9721d0. This predates nested CAS changes.
-Fresh preserved native7437a1356: focused Python49 and updated census15 pass0 skips;
-24 existing consumer files1154 pass0 skips170.80s. CLI exports six clausal/two
-reference fixtures. General theory correspondence and kernel admission remain
-separate. Parent stubs d826846b9 verified; lint fixed c1328e0ee and rerun88148 passes. Miter guard v2 remains live.
+Earlier exact Real intake/writer, wide NRA/FP safety, datatype source export
+and source-bound SAT/ref-miter replay are in ancestry. SMT396 and required
+parser frontdoors158 pass; MSRV/default Wasm pass; facts2971 validated on ancestor.
+Private decimal/FP/NRA guards each kill one intended test. Full-feature solver
+2033pass/0fail/0ignore826.10s on9fd9721d0 predates nested CAS additions.
 
-Nested conditional Rust/Python production/replay committed1a8eab81d/6c4077ab9:
-full source/path/context/congruence/continuity binding, bounded transport and
-witness work, partial rational domains. Six Rust and thirteen Python controls written (wide coefficients/partial declines).
-Doc plan/ADR/link gates and CAS registry pass:153 certified floor held,116 checker,
-1041 uncertified; no logging credit. Fresh nested native34 tests pass; broader25file run1166pass/1external-checker skip65.53s.
-Initial compile/test/private baseline failed before compilation on an invalid
-workspace serde_json inheritance. Fixed e0a90431b with direct dependency and
-full offline metadata; lock diff adds only that Py dependency.
-Six-test29625 passes6/0/0; private v2 baseline6 passes. Py-check12773 passes1m13s; native54673 + sealed-tests72160 pass34/0skip0.32s.
-Parent stub gates pass. Child generator9262 passes27modules/667items/5qualified int annotations; fresh type gates pending.
-Private v2 helper72923 passes:6 baseline ->5 pass/one intended congruence failure; restored bytewise.
-Original failed baseline source restored and failure logs preserved.
+Reference-miter replay binds final CNF and independently reconstructed miter
+CNF to original Bool/BV terms. Private v2:7baseline; each of two guard removals
+6pass/one intended failure; both files independently match9fd9721d0 bytewise.
+Parent native focused49/census15 and existing consumers1154 pass0 skips.
+General theory correspondence and kernel admission are explicit separate gaps.
 
-Older datatype workspace87947 and parent current workspace18900 remain live;
-no pass credited. Two owned parent build trees moved from idle to lowest
-best-effort I/O7 without restarts or changing CPU/memory/serialization caps.
-Full CAS6544 passes2154/0failed/11ignored67.12s. Lint fixes0b829e980 committed; CAS lint v2 passes11.75s. Fixed-source full CAS/Py lint started.
-Next: actual nested tests/native/stubs/lint/private guards, broad gates,
-integration and requirement-by-requirement completion audit.
+Nested conditional composition checks source/path/context/congruence/continuity,
+partial domains, local guarded-v2 witnesses and bounded transport/work.
+Six Rust controls and13Python controls cover wide coefficients and partial declines.
+Private congruence guard:6baseline ->5pass/one intended failure; restored bytewise.
+Full CAS on lint-fixed0b829e980:2154pass/0fail/11ignored85.25s. CAS lint passes.
+Fresh native99af1a4c preserved:34trace tests pass0skip0.32s;25consumer files
+1166pass/1external-checker skip65.53s. No partial evidence on unsupported steps.
+
+Python lint final rerun49809 passes after cc65885a3 doc fix; generator62778
+passes27modules/667items/5qualified integer annotations. Generated stubs committed.
+Sealed typed checker52388 is live; configured guarded LRAT export check is included.
+Current CAS registry6894 passes:1310public/153certified/116checker/1041uncertified;
+no logging credit. Plan/link gates45795 pass. Merge hygiene36970 exits0 with
+shape duplicate/projection scopes explicitly skipped, not full population credit.
+
+Current facts60449 and final workspace11433 remain live, uncredited. All-targets
+check22417 waits for confirmed workspace Cargo3092650 to finish. Read-only main
+merge preview has no conflicts; keep main untouched until green. Older parent
+workspace handles need independent collection and cannot qualify this child.
+Next: collect fact/type/external/workspace/all-target results, archive reconciled
+lanes, integrate, then audit every original milestone against final evidence.
