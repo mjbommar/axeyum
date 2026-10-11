@@ -12,7 +12,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from axeyum import SmtLibParseError, ir, smt, solver
+from axeyum import ir, smt, solver
 from axeyum.solver import cnf, proofs
 
 
@@ -155,20 +155,18 @@ def route_census(output: Path | None = None, checker: Path | None = None) -> dic
         sat = exporter(arena, sat_assertions, *arguments)
         if sat.status != "satisfiable" or sat.proof is not None:
             raise RuntimeError(f"{name}: SAT control produced {sat.status}")
-        # Reparse the emitted source: datatype rendering currently omits declarations.
+        # Each exported source must remain a complete, reparsable query.
+        # This checks serialization; it does not prove source-to-CNF lowering.
         source = arena.write_script(assertions)
-        try:
-            smt.parse(source)
-            source_round_trip = "parsed"
-        except SmtLibParseError:
-            source_round_trip = "rejected"
+        smt.parse(source)
+        source_round_trip = "parsed"
         external = "not-run"
         if output is not None:
             directory = output / name
             directory.mkdir(parents=True, exist_ok=False)
             (directory / "formula.cnf").write_bytes(proof.dimacs_bytes())
             (directory / "proof.drat").write_bytes(proof.drat_bytes())
-            (directory / ("source.smt2" if source_round_trip == "parsed" else "source-rendering.txt")).write_text(source)
+            (directory / "source.smt2").write_text(source)
             if proof.lrat_bytes() is not None:
                 (directory / "proof.lrat").write_bytes(proof.lrat_bytes())
             if checker:

@@ -720,7 +720,10 @@ All sources restored bytewise. Full solver serial gate74254 running on final
 source; no pass credited yet. Datatype export child starts at3e4d96ad0: missing declarations, sort/name
 placeholders and parenthesized nullary constructors repaired; dependencies
 collected through recursive fields, arrays and UF signatures. Six reparsing
-controls running2515; no pass credited. Next: collect tests and full gates.
+controls passed; all SMT tests396 passed before helper-only refactor. Clippy
+length findings repaired by extracting metadata/name helpers; v3 passed2.00s.
+SAT census now requires all source queries to reparse. Post-refactor broad
+SMT run79995 active. Next: fresh native census and remaining full gates.
 No solver-wide completion or integration claim. Overall goal stays active.
 
 ### SOL — Solver parity

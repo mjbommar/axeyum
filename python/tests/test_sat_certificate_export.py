@@ -43,6 +43,7 @@ def test_census_covers_public_exporters_and_replays_sat_models() -> None:
     assert set(rows) == authority
     assert len(rows) == 6
     for row in rows.values():
+        assert row["source_writer_round_trip"] == "parsed"
         assert row["verdict"] == "proved"
         assert row["lrat_recheck"] is True
         assert row["sat_control"] == "satisfiable"

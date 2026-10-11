@@ -44,25 +44,7 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
                 symbols.push((name.to_owned(), sort));
             }
             TermNode::App { op, args } => {
-                if let Op::Forall(var) | Op::Exists(var) = op {
-                    collect_declaration_sorts(
-                        arena,
-                        arena.symbol(*var).1,
-                        &mut uninterpreted_sorts,
-                        &mut datatypes,
-                    );
-                }
-                if let Op::DtConstruct { constructor, .. }
-                | Op::DtSelect { constructor, .. }
-                | Op::DtTest(constructor) = op
-                {
-                    collect_declaration_sorts(
-                        arena,
-                        Sort::Datatype(arena.constructor_datatype(*constructor)),
-                        &mut uninterpreted_sorts,
-                        &mut datatypes,
-                    );
-                }
+                collect_op_declarations(arena, *op, &mut uninterpreted_sorts, &mut datatypes);
                 if let Op::Apply(func) = op
                     && seen_functions.insert(*func)
                 {
@@ -98,19 +80,7 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
     }
     symbols.sort_by(|a, b| a.0.cmp(&b.0));
     functions.sort_by_key(|f| arena.function(*f).0.to_owned());
-    let mut used_names: HashSet<String> = symbols.iter().map(|(name, _)| name.clone()).collect();
-
-    for &func in &functions {
-        used_names.insert(arena.function(func).0.to_owned());
-    }
-    for &dt in &datatypes {
-        for &ctor in arena.datatype_constructors(dt) {
-            used_names.insert(arena.constructor_name(ctor).to_owned());
-            for (field, _) in arena.constructor_fields(ctor) {
-                used_names.insert(field.clone());
-            }
-        }
-    }
+    let mut used_names = declaration_names(arena, &symbols, &functions, &datatypes);
     let mut out = write_preamble(arena, &symbols, &functions, uninterpreted_sorts, datatypes);
 
     // Emit shared App nodes as defs in ascending id order (children first).
@@ -137,6 +107,50 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
     }
     out.push_str("(check-sat)\n");
     out
+}
+
+fn collect_op_declarations(
+    arena: &TermArena,
+    op: Op,
+    uninterpreted_sorts: &mut HashSet<SortId>,
+    datatypes: &mut HashSet<DatatypeId>,
+) {
+    if let Op::Forall(var) | Op::Exists(var) = op {
+        collect_declaration_sorts(arena, arena.symbol(var).1, uninterpreted_sorts, datatypes);
+    }
+    if let Op::DtConstruct { constructor, .. }
+    | Op::DtSelect { constructor, .. }
+    | Op::DtTest(constructor) = op
+    {
+        collect_declaration_sorts(
+            arena,
+            Sort::Datatype(arena.constructor_datatype(constructor)),
+            uninterpreted_sorts,
+            datatypes,
+        );
+    }
+}
+
+fn declaration_names(
+    arena: &TermArena,
+    symbols: &[(String, Sort)],
+    functions: &[FuncId],
+    datatypes: &HashSet<DatatypeId>,
+) -> HashSet<String> {
+    let mut used_names: HashSet<String> = symbols.iter().map(|(name, _)| name.clone()).collect();
+
+    for &func in functions {
+        used_names.insert(arena.function(func).0.to_owned());
+    }
+    for &dt in datatypes {
+        for &ctor in arena.datatype_constructors(dt) {
+            used_names.insert(arena.constructor_name(ctor).to_owned());
+            for (field, _) in arena.constructor_fields(ctor) {
+                used_names.insert(field.clone());
+            }
+        }
+    }
+    used_names
 }
 
 fn write_preamble(
