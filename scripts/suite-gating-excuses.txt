@@ -315,3 +315,12 @@ word_equation_route: unreviewed
 word_int_coupling_sat: unreviewed
 xor_cdcl_curated_measure: unreviewed
 xor_cdcl_fallback: unreviewed
+
+# Feedback branch paused checkpoint, 2026-10-11: explicit registration debt.
+boolean_alethe_front_door: checkpoint publication at user-requested pause; integration suites have lane receipts, automatic pre-push registration remains resume work (docs/plan/user-feedback-completion-audit-2026-10-11.md)
+boolean_lia_alethe: checkpoint publication at user-requested pause; integration suites have lane receipts, automatic pre-push registration remains resume work (docs/plan/user-feedback-completion-audit-2026-10-11.md)
+negative_real_alethe: checkpoint publication at user-requested pause; integration suites have lane receipts, automatic pre-push registration remains resume work (docs/plan/user-feedback-completion-audit-2026-10-11.md)
+optimization_ingest_deadline: checkpoint publication at user-requested pause; integration suites have lane receipts, automatic pre-push registration remains resume work (docs/plan/user-feedback-completion-audit-2026-10-11.md)
+signed_integer_front_door: checkpoint publication at user-requested pause; integration suites have lane receipts, automatic pre-push registration remains resume work (docs/plan/user-feedback-completion-audit-2026-10-11.md)
+source_bound_miter_replay: checkpoint publication at user-requested pause; integration suites have lane receipts, automatic pre-push registration remains resume work (docs/plan/user-feedback-completion-audit-2026-10-11.md)
+wide_real_front_door: checkpoint publication at user-requested pause; integration suites have lane receipts, automatic pre-push registration remains resume work (docs/plan/user-feedback-completion-audit-2026-10-11.md)

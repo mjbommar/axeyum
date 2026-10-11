@@ -180,3 +180,8 @@ is private test code and the CAS bridge manifest is absent. Resume with that wor
 fresh required gates, the completion audit, then main integration. Cleanup removed
 231.68 GiB of inactive main-checkout build caches; source, active caches, checker
 binaries and evidence were preserved. No further cleanup is pending in this checkpoint.
+
+Checkpoint push first failed the suite-gating L0 check: seven new suites had no
+hook/exception entry. Explicit paused-checkpoint exceptions record this registration
+debt in `scripts/suite-gating-excuses.txt`; automatic hook registration remains resume
+work. These exceptions do not provide test pass credit or close the final gates.
