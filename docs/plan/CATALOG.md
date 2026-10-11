@@ -11,7 +11,7 @@ rg -n 'QF_LRA' docs/plan/archive/lanes/      # every archived lane that mentions
 rg -n '<lane-or-topic>' docs/plan/CATALOG.md  # find the file, then open it
 ```
 
-Counts: 771 archived lanes (177 not DONE when archived), 55 older archive files, 345 dated plan notes, 83 lane notes, 508 strand and planning documents.
+Counts: 771 archived lanes (177 not DONE when archived), 55 older archive files, 345 dated plan notes, 84 lane notes, 508 strand and planning documents.
 
 ## Lanes that were not DONE when archived
 
@@ -1248,6 +1248,7 @@ Result notes, designs, handoffs and earlier queues. Evidence for claims; never t
 |  | [`docs/plan/notes/creal-field.md`](notes/creal-field.md) | Notes: creal-field |
 |  | [`docs/plan/notes/cas-wide-traces/cost.md`](notes/cas-wide-traces/cost.md) | Wide CAS trace cost diagnostics |
 |  | [`docs/plan/notes/cas-traces.md`](notes/cas-traces.md) | LIB-5 CAS trace implementation evidence |
+|  | [`docs/plan/notes/cas-trace-kernel.md`](notes/cas-trace-kernel.md) | CAS trace reconstruction route inventory |
 |  | [`docs/plan/notes/cas-negative-powers.md`](notes/cas-negative-powers.md) | Signed CAS powers — implementation evidence |
 |  | [`docs/plan/notes/cas-exact.md`](notes/cas-exact.md) | LIB-6 exact-input evidence |
 |  | [`docs/plan/notes/boolean-alethe.md`](notes/boolean-alethe.md) | Boolean and arithmetic Alethe implementation evidence |
