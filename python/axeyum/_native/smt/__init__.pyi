@@ -139,6 +139,11 @@ class OptimizationResult:
         Explicit lex or box semantics.
         """
     @property
+    def intake_unknown(self) -> typing.Optional[builtins.str]:
+        r"""
+        Resource exhaustion before objective identities were available.
+        """
+    @property
     def objectives(self) -> builtins.list[OptimizationObjective]:
         r"""
         Results in active objective declaration order.

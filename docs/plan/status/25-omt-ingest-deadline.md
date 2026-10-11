@@ -29,6 +29,8 @@ Initial pytest command referenced nonexistent portable file:0 tests credited.
 Corrected actual two suites passed17/0 skipped,0.25s;
 /var/tmp/axeyum-omt-ingest-python-tests-v2.log. Added3 direct command controls
 (original start, no-deadline tokens/priority, resource mapping);58300 passed3/0
-failed/ignored. Private initial lexical poll removal34997 live; no control pass
-credited yet. Stub generation33160 live. Portable checker parsing/Farkas replay
+failed/ignored. Private initial lexical poll removal34997 passed: baseline4, removed poll3
+passed/1 intended failure, restored bytewise; /var/tmp/axeyum-omt-lexical-*.log.
+Stub generation33160 passed27 modules/661 items,1m51s. Drift/type gates passed
+against sealed native; generated intake_unknown getter committed. Portable checker parsing/Farkas replay
 still runs without a deadline, so checking-budget requirement remains open.
