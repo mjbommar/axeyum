@@ -321,7 +321,8 @@ parent; full lint rerun remains required.
 Parent source-bound branch front-door gates completed: 2/48/13/82/13 tests,
 158 total, all 0 failures/ignored, in
 `/var/tmp/axeyum-omt-gold-required-_volk68z/`. Those are parent evidence, not
-portable-child broad-gate credit. Parent full solver/workspace not yet credited.
+portable-child broad-gate credit. Parent full solver passed 2021 tests, 0
+failed/ignored, 865.62s (`solver-full.log`); workspace remains uncredited.
 
 Python now exports objective certificate JSON and provides counted replay against
 caller-supplied source via `check_optimization_certificate`. Fresh native build
@@ -333,7 +334,15 @@ optimization and invalid subject/value/prefix/envelope controls. Updated example
 ran four model replays plus counted certificate checks. Logs:
 `/var/tmp/axeyum-omt-portable-python-tests.log`. Stub generation56496 running.
 
-Next: generated stub validation, snapshot checker mutations and broader gates.
+Additional fresh-extension proof/Date/pack/statute suites passed 43 tests, 0
+skipped, 4.26s (`/var/tmp/axeyum-omt-portable-consumer-tests.log`): 58 Python
+tests total across both runs. Read-only formatting and generated-plan gates pass.
+Private snapshot `snap-omt-portable-evidence-mutation-0b44e2703` baseline:
+7 passed; removing source guard: exactly 1 intended failure, 6 passed, exit101.
+Priority mutation1108 running; log `/var/tmp/axeyum-omt-portable-mutations.log`.
+Full lint45243 pending/running, `/var/tmp/axeyum-omt-portable-clippy.log`.
+
+Next: finish generated stub validation, priority mutation and broader gates.
 Integer-only/BV/Boolean optimality producers, preemptible replay and kernel
 reconstruction remain open; full feedback goal remains active.
 
