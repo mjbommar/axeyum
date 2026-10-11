@@ -185,6 +185,17 @@ fn real_term(
         AletheTerm::App(head, args) => match head.as_str() {
             "+" => fold_real(arena, vars, args, TermArena::real_add),
             "*" => fold_real_mul(arena, vars, args),
+            "/" if args.len() == 2 => {
+                let left = real_term(arena, vars, &args[0])?;
+                let right = real_term(arena, vars, &args[1])?;
+                let quotient = closed_real_scalar(arena, left)
+                    .zip(closed_real_scalar(arena, right))
+                    .and_then(|(left, right)| left.checked_div(right));
+                Some(match quotient {
+                    Some(value) => arena.real_const(value),
+                    None => real_var(arena, vars, &term.key()),
+                })
+            }
             "-" => match args.len() {
                 1 => {
                     let a = real_term(arena, vars, &args[0])?;
@@ -257,24 +268,67 @@ fn fold_real_mul(
 ) -> Option<TermId> {
     let (first, rest) = args.split_first()?;
     let mut acc = real_term(arena, vars, first)?;
-    let mut acc_is_const = is_constant_term(arena, acc);
+    let mut scalar = closed_real_scalar(arena, acc);
+    if let Some(value) = scalar {
+        acc = arena.real_const(value);
+    }
     for arg in rest {
-        let next = real_term(arena, vars, arg)?;
-        let next_is_const = is_constant_term(arena, next);
-        // Linear product: at least one of the two factors must be a constant.
-        if !acc_is_const && !next_is_const {
+        let mut next = real_term(arena, vars, arg)?;
+        let next_scalar = closed_real_scalar(arena, next);
+        if let Some(value) = next_scalar {
+            next = arena.real_const(value);
+        }
+        if scalar.is_none() && next_scalar.is_none() {
             return None;
         }
-        acc = arena.real_mul(acc, next).ok()?;
-        // The product is constant only when both factors were constant.
-        acc_is_const = acc_is_const && next_is_const;
+        scalar = match (scalar, next_scalar) {
+            (Some(left), Some(right)) => Some(left.checked_mul(right)?),
+            _ => None,
+        };
+        acc = match scalar {
+            Some(value) => arena.real_const(value),
+            None => arena.real_mul(acc, next).ok()?,
+        };
     }
     Some(acc)
 }
 
-/// Whether `term` is a real constant.
-fn is_constant_term(arena: &TermArena, term: TermId) -> bool {
-    matches!(arena.node(term), axeyum_ir::TermNode::RealConst(_))
+/// Evaluates only closed, total scalar syntax with checked exact arithmetic.
+/// Variables, applications and division are excluded; no model is consulted.
+fn closed_real_scalar(arena: &TermArena, term: TermId) -> Option<Rational> {
+    fn visit(
+        arena: &TermArena,
+        term: TermId,
+        depth: usize,
+        remaining: &mut usize,
+    ) -> Option<Rational> {
+        if depth > 32 {
+            return None;
+        }
+        *remaining = remaining.checked_sub(1)?;
+        match arena.node(term) {
+            TermNode::RealConst(value) => Some(*value),
+            TermNode::App {
+                op: Op::RealNeg,
+                args,
+            } if args.len() == 1 => visit(arena, args[0], depth + 1, remaining)?.checked_neg(),
+            TermNode::App { op, args } if args.len() == 2 => {
+                if !matches!(op, Op::RealAdd | Op::RealSub | Op::RealMul) {
+                    return None;
+                }
+                let left = visit(arena, args[0], depth + 1, remaining)?;
+                let right = visit(arena, args[1], depth + 1, remaining)?;
+                match op {
+                    Op::RealAdd => left.checked_add(right),
+                    Op::RealSub => left.checked_sub(right),
+                    Op::RealMul => left.checked_mul(right),
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+    visit(arena, term, 0, &mut 512)
 }
 
 /// Parses an SMT-LIB numeral into an exact [`Rational`]: a decimal integer
@@ -491,6 +545,140 @@ fn is_int_constant_term(arena: &TermArena, term: TermId) -> bool {
     matches!(arena.node(term), axeyum_ir::TermNode::IntConst(_))
 }
 
+fn equality_step(
+    commands: &mut Vec<AletheCommand>,
+    before: AletheTerm,
+    after: AletheTerm,
+    rule: &str,
+    premises: Vec<String>,
+) -> String {
+    let id = format!("real_norm_{}", commands.len());
+    commands.push(AletheCommand::Step {
+        id: id.clone(),
+        clause: vec![AletheLit {
+            atom: AletheTerm::App("=".to_owned(), vec![before, after]),
+            negated: false,
+        }],
+        rule: rule.to_owned(),
+        premises,
+        args: Vec::new(),
+    });
+    id
+}
+
+fn normalize_negations(
+    term: &AletheTerm,
+    commands: &mut Vec<AletheCommand>,
+    depth: usize,
+    remaining: &mut usize,
+) -> Option<(AletheTerm, Option<String>)> {
+    if depth > 32 {
+        return None;
+    }
+    *remaining = remaining.checked_sub(1)?;
+    let AletheTerm::App(head, args) = term else {
+        return Some((term.clone(), None));
+    };
+    let mut children = Vec::with_capacity(args.len());
+    let mut premises = Vec::new();
+    for child in args {
+        let (normalized, proof) = normalize_negations(child, commands, depth + 1, remaining)?;
+        children.push(normalized);
+        premises.extend(proof);
+    }
+    let rebuilt = AletheTerm::App(head.clone(), children);
+    let mut bridge = if rebuilt == *term {
+        None
+    } else {
+        Some(equality_step(
+            commands,
+            term.clone(),
+            rebuilt.clone(),
+            "cong",
+            premises,
+        ))
+    };
+    let reduced = match &rebuilt {
+        AletheTerm::App(head, outer) if head == "-" && outer.len() == 1 => match &outer[0] {
+            AletheTerm::App(head, inner) if head == "-" && inner.len() == 1 => {
+                Some(inner[0].clone())
+            }
+            _ => None,
+        },
+        _ => None,
+    };
+    if let Some(reduced) = reduced {
+        let step = equality_step(
+            commands,
+            rebuilt,
+            reduced.clone(),
+            "minus_simplify",
+            Vec::new(),
+        );
+        bridge = Some(match bridge {
+            Some(previous) => equality_step(
+                commands,
+                term.clone(),
+                reduced.clone(),
+                "trans",
+                vec![previous, step],
+            ),
+            None => step,
+        });
+        Some((reduced, bridge))
+    } else {
+        Some((rebuilt, bridge))
+    }
+}
+
+fn normalize_assumed_atoms(
+    atoms: &[AletheTerm],
+    commands: &mut Vec<AletheCommand>,
+    premise_ids: &mut [String],
+) -> Option<Vec<AletheTerm>> {
+    let mut remaining = 512;
+    atoms
+        .iter()
+        .enumerate()
+        .map(|(index, atom)| {
+            let (normalized, bridge) = normalize_negations(atom, commands, 0, &mut remaining)?;
+            if let Some(bridge) = bridge {
+                let source = premise_ids.get_mut(index)?;
+                let clause_id = format!("real_equiv_{index}");
+                commands.push(AletheCommand::Step {
+                    id: clause_id.clone(),
+                    clause: vec![
+                        AletheLit {
+                            atom: atom.clone(),
+                            negated: true,
+                        },
+                        AletheLit {
+                            atom: normalized.clone(),
+                            negated: false,
+                        },
+                    ],
+                    rule: "equiv1".to_owned(),
+                    premises: vec![bridge],
+                    args: Vec::new(),
+                });
+                let result_id = format!("real_assert_{index}");
+                commands.push(AletheCommand::Step {
+                    id: result_id.clone(),
+                    clause: vec![AletheLit {
+                        atom: normalized.clone(),
+                        negated: false,
+                    }],
+                    rule: "resolution".to_owned(),
+                    premises: vec![source.clone(), clause_id],
+                    args: Vec::new(),
+                });
+                *source = result_id;
+            }
+            Some(normalized)
+        })
+        .collect()
+}
+
 /// Emits a checkable Alethe refutation of an `unsat` linear-real-arithmetic
 /// conjunction `assertions`, or `None` if they are not `unsat` (by
 /// [`check_with_lra`]) or any atom is outside the linear-real fragment the term
@@ -535,6 +723,7 @@ pub fn prove_lra_unsat_alethe(
         });
         premise_ids.push(id);
     }
+    let atoms = normalize_assumed_atoms(&atoms, &mut commands, &mut premise_ids)?;
     // `la_generic` derives `(cl ¬φ1 … ¬φn)` — valid since `⋀ φᵢ` is unsat.
     let la_clause: Vec<AletheLit> = atoms
         .iter()
@@ -941,8 +1130,8 @@ fn rational_to_alethe(value: &Rational) -> Option<AletheTerm> {
     } else {
         *value
     };
-    let num = magnitude.numerator();
-    let den = magnitude.denominator();
+    let num = magnitude.checked_numerator()?;
+    let den = magnitude.checked_denominator()?;
     let positive_term = if den == 1 {
         AletheTerm::Const(num.to_string())
     } else {
@@ -984,7 +1173,7 @@ fn real_atom_to_alethe(arena: &TermArena, t: TermId) -> Option<AletheTerm> {
 }
 
 /// Converts an IR linear-real term to its Alethe term (the inverse of
-/// [`real_term`]): symbols → `Const(name)`, constants → `Const("p/q")`, and the
+/// [`real_term`]): symbols → `Const(name)`, constants → canonical exact numeral/division terms, and the
 /// linear operators `+`/`-`/`*` to their SMT-LIB heads. `None` outside that
 /// fragment.
 fn real_subterm_to_alethe(arena: &TermArena, t: TermId) -> Option<AletheTerm> {
@@ -993,11 +1182,7 @@ fn real_subterm_to_alethe(arena: &TermArena, t: TermId) -> Option<AletheTerm> {
             let (name, _sort) = arena.symbol(*s);
             Some(AletheTerm::Const(name.to_owned()))
         }
-        TermNode::RealConst(r) => Some(AletheTerm::Const(format!(
-            "{}/{}",
-            r.numerator(),
-            r.denominator()
-        ))),
+        TermNode::RealConst(r) => rational_to_alethe(r),
         TermNode::App { op, args } => {
             let head = match op {
                 Op::RealAdd => "+",

@@ -164,6 +164,29 @@ passed 2,140 tests (11 ignored); new full CAS/workspace gates run against e7b58f
 boundaries, implement exact expression/Python arithmetic and amortization,
 negative powers, pi and bounded text parsing. No LIB-6 completion is claimed.
 
+**Boolean Alethe (`WIP`, boolean-alethe, 2026-10-10).** Text proof API now
+emits source-bound Boolean refutations for not/and/or/equality/xor/constants plus implication/Boolean ite,
+reusing the existing proof tail. Literal source syntax survives IR folding;
+quoted atoms serialize/reparse. Fresh checks: six solver proof tests, four CNF
+controls, 645 CNF library tests and focused clippy pass. Pinned Carcara accepts
+seven exports without holes and rejects two source/premise corruptions.
+False-pin mutation: baseline 3 pass; mutant 2 pass/1 fail. ADR-2600 proposed.
+Conditional rows: two checker tests pass; 13 exports pass pinned Carcara.
+Nine SAT controls replay; conditional mutation kills exactly one test.
+Negative-real multiplication now checks, including a nested-negation bridge;
+five arithmetic exports are accepted by Carcara, but a changed-coefficient
+source also passes: the unpatched checker fails source binding. An isolated pinned guard-patched
+checker now passes all 18 exports and rejects that changed source. Both new
+arithmetic mutations kill exactly one test. Fresh public Python: five tests pass;
+five full,z3 arithmetic differential suites: 20 tests pass. Updated CNF library: 645 pass. Full solver: 2007 pass; five front-door suites: 158 pass. Workspace remains live.
+Next: scoped/macro source reconstruction, elaboration/checking
+budget propagation, broader Python coverage, kernel reconstruction and full
+workspace gates. Boolean+LIA composition is in progress (ADR-2800): five new tests pass, source quoting and serialized replay repaired;
+portable integer elaboration remains. All 16 targeted Rust proof tests, focused clippy and seven fresh Python tests pass.
+Gates pin 446aae38b (logs in notes); workspace PID 3297276 remains live.
+The negative-real repair still needs remaining source/coercion controls. No full EVD-6 completion or integration claimed.
+Details: [notes](docs/plan/notes/boolean-alethe.md).
+
 **Signed CAS powers (`WIP`, cas-negative-powers, 2026-10-10).** Based on
 97359c332's bounded wide Python surface. ADR-3000 proposes signed Rust/Python
 powers lowering to partial Div/Pow nodes with explicit limits and zero/missing
@@ -203,7 +226,8 @@ branch starts from wide CAS/signed-power/parser head da0e38a0a. Integrating Date
 rules c3c747eb9 with generated plan/ADR views rebuilt; source merged cleanly.
 Historical audit conflicts retain the main planning correction. Signed literal import 343a289c8 merges cleanly in source; generated views rebuilt.
 OMT import a536b76d0 also merges cleanly in source; source-lane gate red remains
-recorded. Other lanes (traces, Boolean/LIA proofs) remain to integrate and verify.
+recorded. Boolean/LIA proof import de0b570f3 also merges cleanly with OMT in smtlib.rs.
+Trace lane remains remain to integrate and verify.
 Source lane branches/history are retained; integration imports are linear commits.
 No combined gate pass, main landing or overall completion claimed.
 

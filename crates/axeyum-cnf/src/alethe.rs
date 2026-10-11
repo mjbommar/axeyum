@@ -194,12 +194,33 @@ enum Token {
 
 /// Tokenizes Alethe text into parens and atom tokens. Lines starting with `;`
 /// are comments; a `;` anywhere starts a comment to end of line.
-fn tokenize(text: &str) -> Vec<Token> {
+fn tokenize(text: &str) -> Result<Vec<Token>, AletheError> {
     let mut tokens = Vec::new();
     let mut current = String::new();
     let mut chars = text.chars().peekable();
     while let Some(ch) = chars.next() {
         match ch {
+            '|' => {
+                if !current.is_empty() {
+                    return Err(AletheError::Parse("quoted symbol inside atom".to_owned()));
+                }
+                let mut symbol = String::from("|");
+                let mut closed = false;
+                for next in chars.by_ref() {
+                    if next == '\\' {
+                        return Err(AletheError::Parse("backslash in quoted symbol".to_owned()));
+                    }
+                    symbol.push(next);
+                    if next == '|' {
+                        closed = true;
+                        break;
+                    }
+                }
+                if !closed {
+                    return Err(AletheError::Parse("unterminated quoted symbol".to_owned()));
+                }
+                tokens.push(Token::Atom(symbol));
+            }
             ';' => {
                 // Comment to end of line.
                 flush_atom(&mut current, &mut tokens);
@@ -224,7 +245,7 @@ fn tokenize(text: &str) -> Vec<Token> {
         }
     }
     flush_atom(&mut current, &mut tokens);
-    tokens
+    Ok(tokens)
 }
 
 fn flush_atom(current: &mut String, tokens: &mut Vec<Token>) {
@@ -297,7 +318,7 @@ fn read_one(tokens: &[Token], pos: usize) -> Result<(Sexp, usize), AletheError> 
 ///
 /// Returns [`AletheError::Parse`] for malformed s-expressions or commands.
 pub fn parse_alethe(text: &str) -> Result<Vec<AletheCommand>, AletheError> {
-    let tokens = tokenize(text);
+    let tokens = tokenize(text)?;
     let sexps = read_sexps(&tokens)?;
     sexps.iter().map(parse_command).collect()
 }
@@ -1052,6 +1073,11 @@ fn check_structural_rule(
 ) -> Option<bool> {
     let no_premises = premise_clauses.is_empty();
     match rule {
+        "minus_simplify" => Some(no_premises && is_double_negation_clause(clause)),
+        "true" => Some(no_premises && is_boolean_constant_clause(clause, true)),
+        "false" => Some(no_premises && is_boolean_constant_clause(clause, false)),
+        "implies_pos" | "implies_neg1" | "implies_neg2" | "ite_pos1" | "ite_pos2" | "ite_neg1"
+        | "ite_neg2" => Some(no_premises && is_conditional_clause(rule, clause)),
         "eq_reflexive" => Some(no_premises && is_eq_reflexive(clause)),
         "eq_transitive" => Some(no_premises && is_eq_transitive(clause)),
         "eq_symmetric" => Some(no_premises && is_eq_symmetric(clause)),
@@ -1101,6 +1127,86 @@ fn check_structural_rule(
             Some(no_premises && check_bitblast(bitblast, clause))
         }
         _ => None,
+    }
+}
+
+fn is_double_negation_clause(clause: &AletheClause) -> bool {
+    fn double_minus(term: &AletheTerm) -> Option<&AletheTerm> {
+        let [outer] = as_app(term, "-")? else {
+            return None;
+        };
+        let [inner] = as_app(outer, "-")? else {
+            return None;
+        };
+        Some(inner)
+    }
+    let [literal] = clause.as_slice() else {
+        return false;
+    };
+    if literal.negated {
+        return false;
+    }
+    let Some((left, right)) = as_eq(&literal.atom) else {
+        return false;
+    };
+    double_minus(left) == Some(right) || double_minus(right) == Some(left)
+}
+
+fn is_conditional_clause(rule: &str, clause: &AletheClause) -> bool {
+    let Some((first, tail)) = clause.split_first() else {
+        return false;
+    };
+    let term = term_of_lit(first);
+    let positive_rule = matches!(rule, "implies_pos" | "ite_pos1" | "ite_pos2");
+    let gate = if positive_rule {
+        let Some([inner]) = as_app(&term, "not") else {
+            return false;
+        };
+        inner
+    } else {
+        &term
+    };
+    let negative = |term: &AletheTerm| AletheTerm::App("not".to_owned(), vec![term.clone()]);
+    let expected = match (rule, gate) {
+        ("implies_pos", AletheTerm::App(head, args)) if head == "=>" && args.len() == 2 => {
+            vec![negative(&args[0]), args[1].clone()]
+        }
+        ("implies_neg1", AletheTerm::App(head, args)) if head == "=>" && args.len() == 2 => {
+            vec![args[0].clone()]
+        }
+        ("implies_neg2", AletheTerm::App(head, args)) if head == "=>" && args.len() == 2 => {
+            vec![negative(&args[1])]
+        }
+        ("ite_pos1", AletheTerm::App(head, args)) if head == "ite" && args.len() == 3 => {
+            vec![args[0].clone(), args[2].clone()]
+        }
+        ("ite_pos2", AletheTerm::App(head, args)) if head == "ite" && args.len() == 3 => {
+            vec![negative(&args[0]), args[1].clone()]
+        }
+        ("ite_neg1", AletheTerm::App(head, args)) if head == "ite" && args.len() == 3 => {
+            vec![args[0].clone(), negative(&args[2])]
+        }
+        ("ite_neg2", AletheTerm::App(head, args)) if head == "ite" && args.len() == 3 => {
+            vec![negative(&args[0]), negative(&args[1])]
+        }
+        _ => return false,
+    };
+    let actual = tail.iter().map(term_of_lit).collect::<Vec<_>>();
+    actual == expected
+}
+
+fn is_boolean_constant_clause(clause: &AletheClause, value: bool) -> bool {
+    let [literal] = clause.as_slice() else {
+        return false;
+    };
+    let term = term_of_lit(literal);
+    if value {
+        term == AletheTerm::Const("true".to_owned())
+    } else {
+        term == AletheTerm::App(
+            "not".to_owned(),
+            vec![AletheTerm::Const("false".to_owned())],
+        )
     }
 }
 

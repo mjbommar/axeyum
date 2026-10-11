@@ -1,0 +1,4 @@
+(assume h0 (> x 0))
+(assume h1 (> (* (- 1) x) 0))
+(step la (cl (not (> x 0)) (not (> (* (- 1) x) 0))) :rule la_generic :args (1 1))
+(step empty (cl) :rule resolution :premises (la h0 h1))

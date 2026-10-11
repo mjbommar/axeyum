@@ -1,0 +1,13 @@
+diff --git a/carcara/src/ast/polyeq.rs b/carcara/src/ast/polyeq.rs
+index b718fb6..438a3ab 100644
+--- a/carcara/src/ast/polyeq.rs
++++ b/carcara/src/ast/polyeq.rs
+@@ -537,6 +537,8 @@ impl PolyeqComparable for Term {
+                 if comp.is_mod_nary
+                     && args.len() == 1
+                     && op.nary_case() == Some(NaryCase::LeftAssoc)
++                    // Unary subtraction is negation, never the singleton identity.
++                    && *op != Operator::Sub
+                     // We have to check with `==` first because we are calling into `comp.eq` with
+                     // `&Term`s directly (instead of `Rc<Term>`s), so the `==` check is skipped
+                     && (args[0].as_ref() == other || comp.eq(args[0].as_ref(), other)) =>

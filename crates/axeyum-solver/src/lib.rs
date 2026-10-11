@@ -90,6 +90,8 @@ macro_rules! full_modules {
         mod bmc;
         mod bool_euf;
         mod bool_simplify;
+        mod boolean_alethe;
+        mod boolean_lia_alethe;
         mod bv2nat_blast;
         mod bv2nat_bound;
         mod bv_defined_enum;

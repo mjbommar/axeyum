@@ -65,7 +65,7 @@ use std::collections::BTreeMap;
 
 use axeyum_cnf::{
     AletheClause, AletheCommand, AletheLit, AletheTerm, CnfClause, CnfFormula, CnfLit, CnfVar,
-    LratStep, ProofSolveOutcome, elaborate_drat_to_lrat, solve_with_drat_proof,
+    LratStep, ProofSolveOutcome, elaborate_drat_to_lrat,
 };
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode};
 
@@ -450,6 +450,25 @@ pub(crate) fn prove_bit_gate_unsat_alethe(
     formulas: &[AletheTerm],
     definitions: BTreeMap<String, AletheTerm>,
 ) -> Option<(Vec<AletheCommand>, BTreeMap<String, AletheTerm>)> {
+    prove_bit_gate_unsat_alethe_within(formulas, definitions, None)
+}
+
+pub(crate) fn prove_bit_gate_unsat_alethe_within(
+    formulas: &[AletheTerm],
+    definitions: BTreeMap<String, AletheTerm>,
+    deadline: Option<std::time::Instant>,
+) -> Option<(Vec<AletheCommand>, BTreeMap<String, AletheTerm>)> {
+    prove_bit_gate_unsat_alethe_with_theory(formulas, definitions, &[], deadline)
+}
+
+/// The caller supplies checked theory clauses over the same propositional atoms.
+/// These clauses become proof steps, never additional source assumptions.
+pub(crate) fn prove_bit_gate_unsat_alethe_with_theory(
+    formulas: &[AletheTerm],
+    definitions: BTreeMap<String, AletheTerm>,
+    theory: &[Vec<AletheLit>],
+    deadline: Option<std::time::Instant>,
+) -> Option<(Vec<AletheCommand>, BTreeMap<String, AletheTerm>)> {
     if formulas.is_empty() {
         return None;
     }
@@ -473,8 +492,21 @@ pub(crate) fn prove_bit_gate_unsat_alethe(
             gate.step_id.clone(),
         ));
     }
+    for clause in theory {
+        let mut lits = Vec::new();
+        for literal in clause {
+            let atom = if literal.negated {
+                AletheTerm::App("not".to_owned(), vec![literal.atom.clone()])
+            } else {
+                literal.atom.clone()
+            };
+            lits.push(tseitin.encode(&mut builder, &atom)?);
+        }
+        let id = builder.step(clause.clone(), "lia_generic", &[]);
+        input_clause_ids.push((lits.iter().map(|lit| lit.to_cnf(&tseitin)).collect(), id));
+    }
     let pins = tseitin.boolean_const_pins();
-    let commands = refute(&mut builder, &tseitin, &input_clause_ids, &pins)?;
+    let commands = refute_within(&mut builder, &tseitin, &input_clause_ids, &pins, deadline)?;
     Some((commands, tseitin.gate_defs))
 }
 
@@ -1243,6 +1275,8 @@ impl Tseitin {
                     ("or", _) => GateKind::Or,
                     ("=", 2) => GateKind::Equiv,
                     ("xor", 2) => GateKind::Xor,
+                    ("=>", 2) => GateKind::Implies,
+                    ("ite", 3) => GateKind::Ite,
                     _ => return None,
                 };
                 let operands = args
@@ -1256,6 +1290,9 @@ impl Tseitin {
                     GateKind::Or => self.encode_or(builder, &gate, &operands),
                     GateKind::Equiv | GateKind::Xor => {
                         self.encode_binary(builder, &gate, &operands, kind)?;
+                    }
+                    GateKind::Implies | GateKind::Ite => {
+                        self.encode_conditional(builder, &gate, &operands, kind)?;
                     }
                 }
                 self.memo.insert(key, gate.clone());
@@ -1281,6 +1318,8 @@ impl Tseitin {
                     ("or", _) => self.encode_gate(builder, term, GateKind::Or, args)?,
                     ("=", 2) => self.encode_gate(builder, term, GateKind::Equiv, args)?,
                     ("xor", 2) => self.encode_gate(builder, term, GateKind::Xor, args)?,
+                    ("=>", 2) => self.encode_gate(builder, term, GateKind::Implies, args)?,
+                    ("ite", 3) => self.encode_gate(builder, term, GateKind::Ite, args)?,
                     _ => return None,
                 };
                 // Memoize compound gates (a `not` is cheap and view-dependent, so it
@@ -1319,6 +1358,9 @@ impl Tseitin {
             GateKind::Or => self.encode_or(builder, &gate, &operands),
             GateKind::Equiv => self.encode_binary(builder, &gate, &operands, GateKind::Equiv)?,
             GateKind::Xor => self.encode_binary(builder, &gate, &operands, GateKind::Xor)?,
+            GateKind::Implies | GateKind::Ite => {
+                self.encode_conditional(builder, &gate, &operands, kind)?;
+            }
         }
         Some(gate)
     }
@@ -1384,6 +1426,48 @@ impl Tseitin {
         }
     }
 
+    /// Source-form implication and Boolean ite clauses from the Alethe calculus.
+    fn encode_conditional(
+        &mut self,
+        builder: &mut Builder,
+        gate: &PLit,
+        operands: &[PLit],
+        kind: GateKind,
+    ) -> Option<()> {
+        type ConditionalRow<'a> = (&'a str, bool, &'a [(usize, bool)]);
+        let rows: &[ConditionalRow<'_>] = match kind {
+            GateKind::Implies if operands.len() == 2 => &[
+                ("implies_pos", true, &[(0, true), (1, false)]),
+                ("implies_neg1", false, &[(0, false)]),
+                ("implies_neg2", false, &[(1, true)]),
+            ],
+            GateKind::Ite if operands.len() == 3 => &[
+                ("ite_pos1", true, &[(0, false), (2, false)]),
+                ("ite_pos2", true, &[(0, true), (1, false)]),
+                ("ite_neg1", false, &[(0, false), (2, true)]),
+                ("ite_neg2", false, &[(0, true), (1, true)]),
+            ],
+            _ => return None,
+        };
+        for &(rule, gate_neg, arguments) in rows {
+            let mut lits = vec![if gate_neg {
+                (gate.lit_not_view(), gate.wrap_not())
+            } else {
+                (gate.lit_view(), gate.clone())
+            }];
+            for &(index, negative) in arguments {
+                let operand = operands.get(index)?;
+                lits.push(if negative {
+                    (operand.lit_not_view(), operand.wrap_not())
+                } else {
+                    (operand.lit_view(), operand.clone())
+                });
+            }
+            self.emit(builder, rule, Vec::new(), lits);
+        }
+        Some(())
+    }
+
     /// The four defining clauses for a binary `=` (`Equiv`) or `xor` gate.
     fn encode_binary(
         &mut self,
@@ -1439,6 +1523,8 @@ impl Tseitin {
 /// The Boolean connective a Tseitin gate encodes.
 #[derive(Clone, Copy)]
 enum GateKind {
+    Implies,
+    Ite,
     And,
     Or,
     Equiv,
@@ -1469,6 +1555,16 @@ fn refute(
     input_clause_ids: &[(Vec<CnfLit>, String)],
     pins: &[Pin],
 ) -> Option<Vec<AletheCommand>> {
+    refute_within(builder, tseitin, input_clause_ids, pins, None)
+}
+
+fn refute_within(
+    builder: &mut Builder,
+    tseitin: &Tseitin,
+    input_clause_ids: &[(Vec<CnfLit>, String)],
+    pins: &[Pin],
+    deadline: Option<std::time::Instant>,
+) -> Option<Vec<AletheCommand>> {
     // First attempt the refutation WITHOUT the Boolean-constant pins: most fragments
     // (every bitwise/congruence-style one) are unsat over the bit atoms alone, so the
     // proof stays pin-free and our in-tree `check_alethe` (which has no `true`/`false`
@@ -1496,7 +1592,7 @@ fn refute(
     let used_pins;
     let lrat = {
         let bare = build_formula(false)?;
-        match solve_with_drat_proof(&bare) {
+        match axeyum_cnf::solve_with_drat_proof_within(&bare, deadline) {
             ProofSolveOutcome::Unsat(drat) => {
                 used_pins = false;
                 elaborate_drat_to_lrat(&bare, &drat).ok()?
@@ -1504,7 +1600,9 @@ fn refute(
             _ if !pins.is_empty() => {
                 // Bit atoms alone are satisfiable; retry with the constant pins.
                 let pinned = build_formula(true)?;
-                let ProofSolveOutcome::Unsat(drat) = solve_with_drat_proof(&pinned) else {
+                let ProofSolveOutcome::Unsat(drat) =
+                    axeyum_cnf::solve_with_drat_proof_within(&pinned, deadline)
+                else {
                     return None;
                 };
                 used_pins = true;

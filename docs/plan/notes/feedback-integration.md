@@ -22,3 +22,11 @@ recount found five declared/five actual entries. No pin found in sexpr.rs.
 OMT import from a536b76d0 merges cleanly in solver source; only generated views
 conflict and are rebuilt. Its source-lane full solver failure and live workspace
 are retained as evidence, not transformed into a combined green gate.
+
+OMT import landed in 4564410fe (12 files); post-merge hygiene passed with its
+existing skipped scopes. Boolean/LIA/negative-real proof import from de0b570f3
+merges cleanly in source, including smtlib.rs alongside OMT changes. Generated
+views are rebuilt. Original evidence boundaries remain: portable Boolean/real
+checks used a source-binding guard-patched Carcara; lia_generic composition is
+internal-only; source lane full solver passes 2007 but its workspace remains
+live. No original pass is credited as a combined integration gate.

@@ -1265,7 +1265,9 @@ fn get_option(py: Python<'_>, script: &str) -> PyResult<Option<Vec<(String, Stri
 ///
 /// `None` means **no emitter covers this refutation**, not that the script is
 /// satisfiable. Three fragments also pass external Carcara; the `QF_LIA` one
-/// is internal-only, so it is tried last.
+/// is internal-only, so it is tried last. Bounded Boolean/Int composition uses
+/// the same internal-only `lia_generic` rule; external acceptance with holes
+/// does not certify those integer steps.
 #[cfg_attr(
     feature = "stub-gen",
     pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")

@@ -3760,8 +3760,9 @@ pub fn solve_smtlib_unsat_core(
 /// Produces a checkable **Alethe proof** for an SMT-LIB script (`get-proof`):
 /// when the conjunction of its assertions is `unsat` and falls within a supported
 /// proof fragment, returns the textual Alethe proof, re-validated by the in-tree
-/// checker before it is returned. Four fragments are tried, in order:
+/// checker before it is returned. Supported routes include:
 ///
+/// - **Pure Boolean**: source-preserving Tseitin clauses and resolution.
 /// - **`QF_BV`**: a complete `bitblast_*` → CNF-introduction → resolution
 ///   refutation deriving `(cl)` (re-checked by [`check_alethe`]).
 /// - **`QF_UF`** (EUF) / **`QF_ABV`**: a congruence/transitivity refutation
@@ -3770,7 +3771,9 @@ pub fn solve_smtlib_unsat_core(
 ///   latter via the internal-only `read_over_write_same` rule).
 /// - **`QF_LRA`**: a Farkas `la_generic` + resolution refutation (re-checked by
 ///   [`crate::check_alethe_lra`], which decides the `la_generic` coefficients).
-/// - **`QF_LIA`**: an integer `lia_generic` refutation (re-checked by
+/// - **Boolean/`QF_LIA`**: a bounded propositional spine with checked integer
+///   blocking clauses, followed by the conjunction-only integer fallback. Both
+///   use internal-only `lia_generic` refutations (re-checked by
 ///   [`crate::check_alethe_lra`], which honors integrality).
 ///
 /// Each emitter is self-validating (it returns a proof only when it checks), and
@@ -3810,6 +3813,9 @@ pub fn solve_smtlib_get_proof(
     let arena = &script.arena;
     let assertions = &query.assertions;
 
+    if let Some(proof) = crate::boolean_alethe::prove(input, arena, assertions, config) {
+        return Ok(Some(write_alethe(&proof)));
+    }
     // QF_BV: the bitblast→CNF→resolution driver (re-checked by check_alethe).
     if let Some(proof) = crate::prove_qf_bv_unsat_alethe(arena, assertions)
         && matches!(check_alethe(&proof), Ok(true))
@@ -3832,6 +3838,10 @@ pub fn solve_smtlib_get_proof(
     if let Some(proof) = crate::prove_lra_unsat_alethe(arena, assertions)
         && matches!(crate::check_alethe_lra(&proof), Ok(true))
     {
+        return Ok(Some(write_alethe(&proof)));
+    }
+    // Boolean/LIA: source-bound propositional spine with internal integer lemmas.
+    if let Some(proof) = crate::boolean_lia_alethe::prove(input, config) {
         return Ok(Some(write_alethe(&proof)));
     }
     // QF_LIA: an integer `lia_generic` refutation, re-checked by check_alethe_lra
