@@ -29,11 +29,14 @@ targets move to /data0; recovered gold runner39580 and mutation runner42006
 use disk-backed targets. Migration36457 failed when the destination build started too early.
 Remainder migration68923 and parent mutation migration80296 completed; root
 space restored to14GiB. Parent replay mutations restart72743 on/data0.
-Gold stub generator89655 is live; active target is untouched.
+Gold stub generator89655 passes (27 modules/652 items); runtime signature
+gate checks1856 symbols, type gate1717/1802 typed params. Parent replay72743
+passes: baseline7; each constraint/value guard removal kills one intended test.
 Required gates runner54092 live (five z3 fuzzes, five front doors, full solver,
 workspace); logs `/var/tmp/axeyum-omt-gold-required-_volk68z/`. Rust frozen.
 Source-binding mutations42006 pass: baseline2; each atom/origin/column guard
 removal gives exactly one intended failure; private source restored.
-Next: stubs and parent model replay mutations; Boolean lowering binding,
+First z3 LRA differential: 8 passed, zero failures/ignored. Other gates live.
+Next: Boolean lowering binding,
 strict-better certificates, model-plus-optimality Python results, serialization
 and independent process replay, then required full gates. Missing evidence never receives gold credit.

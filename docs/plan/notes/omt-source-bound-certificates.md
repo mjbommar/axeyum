@@ -64,3 +64,16 @@ each atom/origin/column comparison yields exactly 1 passed / 1 intended failed,
 exit101. Logs `/var/tmp/axeyum-source-farkas-recovered-{baseline,atoms,origins,columns}.log`.
 Private snapshot restored; its lra.rs bytes exactly equal the current source
 (hash 75cdc8b41c3b5aac1c295dc3832b876fec688600d9da7cf6e30669d42a1d7f80). Format20489 terminal zero.
+
+## Replay mutations and generated API
+
+Parent replay runner72743 terminal zero: 7 baseline passed; each constraint
+model/value guard removal yields exactly 6 passed / 1 intended failed, exit101.
+Logs `/var/tmp/axeyum-omt-replay-recovered-{baseline,constraints,objective}.log`.
+Private snapshot restored. Stub89655 terminal zero: 27 modules/652 items.
+Signature check against the sealed fresh gold extension: 1856 symbols, 5 aliases,
+319 synthesized dunders. Type check: 1802 params, 1717 typed, 131 Any all
+allowlisted, 46 Any returns, 95.3 percent across 27 stub files. Generated SMT
+stubs include both classes, optimize, optimality replay and gold eligibility.
+Required qf_lra_differential_fuzz exit zero: 8 passed, 0 failed/ignored, 31.82s.
+Remaining required runner54092 phases are live, not passing yet.

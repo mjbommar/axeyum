@@ -5,6 +5,8 @@ from axeyum._native import ir
 import builtins
 import typing
 __all__ = [
+    "OptimizationObjective",
+    "OptimizationResult",
     "Outcome",
     "Response",
     "Script",
@@ -18,12 +20,104 @@ __all__ = [
     "get_value",
     "incremental",
     "least_witness",
+    "optimize",
     "parse",
     "session",
     "solve",
     "unsat_core",
     "write_script",
 ]
+
+@typing.final
+class OptimizationObjective:
+    r"""
+    One optimization objective and its replayable feasible witness.
+    """
+    @property
+    def status(self) -> builtins.str:
+        r"""
+        optimal, infeasible, unbounded or unknown; optimal is not a gold certificate.
+        """
+    @property
+    def direction(self) -> builtins.str:
+        r"""
+        maximize or minimize.
+        """
+    @property
+    def sort(self) -> builtins.str:
+        r"""
+        Int or BitVec; bit-vector optimization uses unsigned order.
+        """
+    @property
+    def bit_width(self) -> typing.Optional[builtins.int]:
+        r"""
+        Bit-vector width, or None for an integer objective.
+        """
+    @property
+    def value(self) -> typing.Optional[builtins.int]:
+        r"""
+        Exact optimum as a Python int; BV values are unsigned. None if undecided.
+        """
+    @property
+    def detail(self) -> builtins.str:
+        r"""
+        Unknown reason, empty for a decided optimization.
+        """
+    @property
+    def model_available(self) -> builtins.bool:
+        r"""
+        Whether this objective retains a model for replay.
+        """
+    @property
+    def model_unavailable_reason(self) -> typing.Optional[builtins.str]:
+        r"""
+        Why witness retrieval did not complete, or None when available.
+        """
+    @property
+    def model(self) -> dict:
+        r"""
+        A fresh declaration-ordered dictionary; mutation cannot alter replay state.
+        """
+    @property
+    def gold_eligible(self) -> builtins.bool:
+        r"""
+        Replay both witnesses, including every earlier lexicographic objective.
+        Missing or invalid evidence yields false; a model alone is insufficient.
+        """
+    def replay(self) -> typing.Optional[builtins.bool]:
+        r"""
+        Replay original assertions, lexicographic prefix and claimed objective value.
+        None means no witness, not a successful replay.
+        """
+    def replay_optimality(self) -> typing.Optional[builtins.bool]:
+        r"""
+        Rebuild and check the original strict-better query's refutation.
+        None means missing evidence, including integer-only cut or BV routes.
+        """
+
+@typing.final
+class OptimizationResult:
+    r"""
+    Explicit box/lex semantics and ordered per-objective results.
+    """
+    @property
+    def mode(self) -> builtins.str:
+        r"""
+        Explicit lex or box semantics.
+        """
+    @property
+    def objectives(self) -> builtins.list[OptimizationObjective]:
+        r"""
+        Results in active objective declaration order.
+        """
+    @property
+    def complete(self) -> builtins.bool:
+        r"""
+        True when every objective has an optimum and retained feasible model.
+        This is completion of witness retrieval, not checked optimality.
+        """
+    def __len__(self) -> builtins.int: ...
+    def __getitem__(self, index: builtins.int) -> OptimizationObjective: ...
 
 @typing.final
 class Outcome:
@@ -317,7 +411,9 @@ def get_proof(script: builtins.str, *, timeout_ms: builtins.int = 10000) -> typi
     
     `None` means **no emitter covers this refutation**, not that the script is
     satisfiable. Three fragments also pass external Carcara; the `QF_LIA` one
-    is internal-only, so it is tried last.
+    is internal-only, so it is tried last. Bounded Boolean/Int composition uses
+    the same internal-only `lia_generic` rule; external acceptance with holes
+    does not certify those integer steps.
     """
 
 def get_value(script: builtins.str, *, timeout_ms: builtins.int = 10000) -> typing.Optional[builtins.list[typing.Any]]:
@@ -351,6 +447,12 @@ def least_witness(script: builtins.str, symbols: typing.Optional[typing.Sequence
     
     As `solve`: `SmtLibParseError` for malformed text, `AxeyumError` for any
     other solver failure.
+    """
+
+def optimize(script: builtins.str, *, mode: builtins.str = 'lex', timeout_ms: builtins.int = 2000, resource_limit: typing.Optional[builtins.int] = None, memory_limit_mb: typing.Optional[builtins.int] = None, node_budget: typing.Optional[builtins.int] = None, cnf_variable_budget: typing.Optional[builtins.int] = None, cnf_clause_budget: typing.Optional[builtins.int] = None) -> OptimizationResult:
+    r"""
+    Optimize Int/unsigned-BV objectives explicitly. Feasible model replay is
+    provided; gold eligibility additionally rechecks source-bound refutations.
     """
 
 def parse(script: builtins.str, *, timeout_ms: typing.Optional[builtins.int] = None) -> Script:
