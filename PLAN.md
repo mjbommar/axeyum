@@ -464,6 +464,10 @@ context/kernel boundaries and explicit translator declines.
 Parent guarded full lint passed927 targets/27 crates/0 diagnostics; not a child
 lint result. All broader feedback requirements remain active.
 
+Trust registry checked:1296 public functions,151 certified floor held,114 checker,
+1031 uncertified. Generated plan and diff whitespace checks passed. Release44600
+confirmed live at kernel compilation; no test result credited.
+
 ### SOL — Solver parity
 
 Close the measured gap to the named reference division by division, never
