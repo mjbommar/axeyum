@@ -458,7 +458,7 @@ measure axiom footprint, reject altered statement/assumptions, release validatio
 Implemented syntax translator for bounded integer ring expressions and a generated
 multistep trace test: byte replay, before/after kernel terms, transitivity,
 admission, measured empty footprint, altered-endpoint rejection. Release job44600
-compiling, uncredited: `/var/tmp/axeyum-cas-trace-kernel-test.log`.
+passed1/0 failed/ignored,95.98s (compile4m55s): `/var/tmp/axeyum-cas-trace-kernel-test.log`.
 [Route inventory](docs/plan/notes/cas-trace-kernel.md) records current producer/checker/
 context/kernel boundaries and explicit translator declines.
 Parent guarded full lint passed927 targets/27 crates/0 diagnostics; not a child
@@ -466,14 +466,14 @@ lint result. All broader feedback requirements remain active.
 
 Trust registry checked:1296 public functions,151 certified floor held,114 checker,
 1031 uncertified. Generated plan and diff whitespace checks passed. Release44600
-confirmed live at kernel compilation (rustc active near100% CPU); no test result
-credited. Fact-ledger/link validation33874 running, uncredited.
+completed:generated multistep theorem admitted, empty measured footprint and
+changed-endpoint rejection all asserted. Fact-ledger/link validation33874 running, uncredited.
 
 Compatibility launched after verifying installed toolchains:wasm84951 and
 MSRV1.88 check53910, uncredited; `/var/tmp/axeyum-cas-trace-kernel-{wasm,msrv}.log`.
 
 Parent guarded CAS39650 passed2147/0 failed/11 ignored,478.13s; release44600
-built successfully in4m55s and now runs1 kernel test (still uncredited).
+passed as recorded above.
 Source check:existing text parser lives in python/axeyum/_cas_parser.py; native
 Rust parsing entry point remains a required LIB-6 extension.
 

@@ -1,11 +1,13 @@
 # CAS trace reconstruction route inventory
 
 Source inspection at5d7f0d85f. This records concrete routes and limits, not
-kernel admission results. Release validation44600 is compiling.
+general kernel admission coverage. Release validation44600 passed one test,
+0 failed/ignored,95.98s; compilation4m55s. The test independently required
+admission, empty measured footprint and rejection at a changed endpoint.
 
 | Route | Producer | Replay/checker | Context | Kernel boundary |
 |---|---|---|---|---|
-| Polynomial v1 trace | `normalize_with_trace` | `replay_json` / `check_trace` | Empty | New step test translates original syntax and composes Complex ring proofs; admission unverified |
+| Polynomial v1 trace | `normalize_with_trace` | `replay_json` / `check_trace` | Empty | New step test translates original syntax and composes Complex ring proofs; one generated multistep integer-ring identity admitted with empty measured footprint |
 | Wide polynomial v2 trace | `normalize_with_trace_wide` | Same checker, version-selected bounded promoted arithmetic | Empty; closed divisor nonzero conditions | New translator currently declines fractional/large coefficients and division |
 | Guarded quotient v1/v2 | `cancel_factor_with_trace` / `_wide` | `replay_guarded_json` / `check_guarded_trace` | Exact external ordered nonzero assumptions | Requires implication/domain reconstruction; not implemented by new unconditional bridge |
 | Existing Complex CAS bridge | `build_true_identity` in `complex/cas_bridge_tests.rs` | Kernel declaration type checking | Free Complex variable; integer univariate polynomial | Whole product identity proof through polynomial evaluation/ring laws; does not consume trace bytes |
