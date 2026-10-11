@@ -90,6 +90,7 @@ explicit rather than claiming a separate arithmetic implementation.
 The final workspace binary passes all three bounded kernel bridge controls:
 generated multistep admission/empty measured footprint, added-assumption
 rejection, and unsupported translation decline. The complete kernel/workspace
-gates are still running. Public generalized reconstruction, persisted admission
-receipts and discovery integration are further extensions; the plan requires
-the demonstrated admission boundary before connecting discovery.
+gates are still running. The production handoff is still missing: reconstruction remains test-only
+and the CAS dispatch capability manifest is absent. Public bounded intake,
+admission receipts and discovery dispatch remain required after the demonstrated
+boundary. Wider/conditional reconstruction keeps its explicit unsupported scope.

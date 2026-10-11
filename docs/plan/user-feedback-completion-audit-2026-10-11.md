@@ -142,3 +142,21 @@ passes do not close it. Final-source session54766 is queued after verified CLI
 completion, requiring all12 source-derived tests and retaining timing frames.
 It writes only to a separate absolute artifact directory. No baseline or timing
 threshold was relaxed. Integration remains pending that gate as well.
+
+## T3 production handoff remains open
+
+A source-level completion audit finds the trace-to-kernel implementation only
+in `complex/cas_bridge_tests.rs`; no public trace intake exists. The current
+`fact-frontier.py` CAS capability is false because
+`artifacts/autogenesis/cas-bridge-manifest.json` is absent. The demonstrated
+admission boundary does not close the plan's producer/discovery handoff. This
+remains implementation work, in addition to aggregate gates and integration.
+See the [public handoff plan](cas-trace-public-handoff-plan-2026-10-11.md).
+
+The queued baseline gates were reordered to prioritize the unresolved frontier
+regression: workspace11433 -> frontier87172 -> all-targets99970 -> complete
+Clippy54143 -> CLI97027. Previous watchers were independently verified idle with
+no child process and empty logs, then deliberately stopped (terminal143). No
+Cargo/test process was stopped or restarted. Each new downstream watcher requires
+its predecessor's success receipt. These gates cover the frozen baseline; new
+production handoff source will need its own appropriate validation.

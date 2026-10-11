@@ -743,15 +743,15 @@ no logging credit. Plan/link gates45795 pass. Merge hygiene36970 exits0 with
 shape duplicate/projection scopes explicitly skipped, not full population credit.
 
 Facts60449 passes2971. Workspace11433:3297pass/10crates; kernel2658 running,
-whole gate uncredited. All-targets
-check22417 waits for confirmed workspace Cargo3092650 to finish. Read-only main
-merge preview has no conflicts; keep main untouched until green. Older parent
-workspace18900 cancelled duplicate/143; datatype87947 terminal143, no credit.
-ADR3200/3300/3400/3500/7200 accepted as bounded contracts; validator20pass.
+whole gate uncredited. Queued chain after workspace:frontier87172/targets99970/
+Clippy54143/CLI97027, each requires predecessor success. Old idle watchers
+22417/12036/43772/54766 cancelled143; Cargo3092650 untouched.
+Main preview conflict-free; main stays untouched until implementation/gates close.
+ADR3200/3300/3400/3500/7200 accepted; validator20pass.
 Final native costs/statute/5examples/6original probes pass; fmt2294files passes.
-ADR6700 accepted:release3pass and current workspace3controls pass. Next: collect workspace/all-targets and
-queued Clippy12036/CLI43772/frontier54766 (old timing failure),
-archive lanes, integrate and audit.
+ADR6700 release3/current workspace3controls pass; intake is test-only and CAS
+manifest absent. Public producer/discovery handoff remains required.
+Next: isolated handoff, closing gates, archival/integration/audit.
 
 ### SOL — Solver parity
 
