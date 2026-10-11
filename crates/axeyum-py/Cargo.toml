@@ -42,7 +42,7 @@ required-features = ["stub-gen"]
 stub-gen = ["dep:anyhow", "dep:pyo3-stub-gen"]
 
 [dependencies]
-serde_json.workspace = true
+serde_json = "1"
 axeyum-arith = { path = "../axeyum-arith", version = "0.1.0" }
 axeyum-aig = { path = "../axeyum-aig", version = "0.1.0" }
 axeyum-bv = { path = "../axeyum-bv", version = "0.1.0" }

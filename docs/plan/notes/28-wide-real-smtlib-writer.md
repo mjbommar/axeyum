@@ -246,3 +246,13 @@ owned process trees (7 processes/37 threads) to lowest best-effort I/O priority7
 verified both roots with ionice. No restarts; CPU niceness, memory caps and host
 serialization retained. Forty-five-second follow-up confirms jobs still live;
 no terminal result or test pass inferred from this scheduling adjustment.
+
+Nested compile32748/test42993/Python42846 terminal101 before compilation:
+Py manifest incorrectly inherited serde_json from an absent workspace entry.
+No tests ran. Corrected to serde_json="1" matching existing crates; offline
+Cargo metadata confirms the actual dependency. The first --no-deps metadata
+run did not change Cargo.lock; lane-commit correctly refused that unchanged
+path. Full offline metadata now resolves the graph and updates the lockfile.
+Private congruence helper73515 terminal1 on the same baseline manifest failure,
+source restored bytewise and no mutation credit. Fresh fixed-source snapshot
+needs current six-test population and mutant5/one exact intended failure.
