@@ -334,10 +334,19 @@ pub fn eval(arena: &TermArena, term: TermId, assignment: &Assignment) -> Result<
 const EVAL_DEADLINE: &str = "ground evaluation deadline exhausted";
 
 fn check_eval_deadline(deadline: Option<std::time::Instant>) -> Result<(), IrError> {
-    if deadline.is_some_and(|at| std::time::Instant::now() >= at) {
+    if deadline.is_some_and(|at| eval_now() >= at) {
         return Err(IrError::Unsupported(EVAL_DEADLINE));
     }
     Ok(())
+}
+
+#[inline]
+fn eval_now() -> std::time::Instant {
+    #[cfg(test)]
+    if let Some(now) = deadline_controls::clock_now() {
+        return now;
+    }
+    std::time::Instant::now()
 }
 
 /// Evaluate with a shared deadline; `None` means resource exhaustion.
@@ -639,6 +648,7 @@ fn eval_quantifier(
         Sort::Float { exp, sig } if exp + sig <= QUANTIFIER_EVAL_BIT_LIMIT => {
             let width = exp + sig;
             for value in 0..(1u128 << width) {
+                check_eval_deadline(deadline)?;
                 let raw = Value::Bv { width, value };
                 let canonical = canonicalize_for_sort(sort, raw.clone());
                 if canonical != raw {
@@ -1893,5 +1903,116 @@ mod eval_with_memo_tests {
         let inc2 = eval_with_memo(&arena, goal, &asg, &mut memo).unwrap();
         assert_eq!(inc2, eval(&arena, goal, &asg).unwrap());
         assert_eq!(inc2, Value::Bool(false)); // 4 + 7 == 11 ≠ 10
+    }
+}
+
+#[cfg(test)]
+mod deadline_controls {
+    use super::*;
+    use std::cell::Cell;
+    use std::time::{Duration, Instant};
+
+    type ClockState = (Instant, Instant, usize, usize);
+    thread_local! {
+        static CLOCK: Cell<Option<ClockState>> = const { Cell::new(None) };
+    }
+
+    pub(super) fn clock_now() -> Option<Instant> {
+        CLOCK.with(|clock| {
+            let (before, expired, remaining, observations) = clock.get()?;
+            clock.set(Some((
+                before,
+                expired,
+                remaining.saturating_sub(1),
+                observations + 1,
+            )));
+            Some(if remaining == 0 { expired } else { before })
+        })
+    }
+
+    struct ClockGuard(Option<ClockState>);
+    impl ClockGuard {
+        fn expires_after(before: Instant, deadline: Instant, polls: usize) -> Self {
+            Self(CLOCK.with(|clock| clock.replace(Some((before, deadline, polls, 0)))))
+        }
+        fn observations() -> usize {
+            CLOCK.with(|clock| clock.get().unwrap().3)
+        }
+    }
+    impl Drop for ClockGuard {
+        fn drop(&mut self) {
+            CLOCK.with(|clock| clock.set(self.0));
+        }
+    }
+
+    #[test]
+    fn finite_body_deadline_reaches_nested_evaluation() {
+        for (sort, binding_polls) in [
+            (Sort::Bool, 1),
+            (Sort::BitVec(2), 1),
+            (Sort::Float { exp: 2, sig: 2 }, 2),
+        ] {
+            let mut arena = TermArena::new();
+            let bound = arena.declare("bound", sort).unwrap();
+            let missing = arena.declare("missing", Sort::Bool).unwrap();
+            let body = arena.var(missing);
+            let assignment = Assignment::new();
+            // A positive control proves body evaluation would report this error.
+            assert_eq!(
+                eval_quantifier(&arena, bound, body, true, &assignment, None),
+                Err(IrError::UnboundSymbol(missing))
+            );
+            let before = Instant::now();
+            let deadline = before + Duration::from_secs(60);
+            let _clock = ClockGuard::expires_after(before, deadline, binding_polls);
+            // The binding poll succeeds; time expires at nested body evaluation.
+            assert_eq!(
+                eval_quantifier(&arena, bound, body, true, &assignment, Some(deadline)),
+                Err(IrError::Unsupported(EVAL_DEADLINE))
+            );
+        }
+    }
+
+    #[test]
+    fn finite_body_deadline_unlimited_evaluation_reads_no_clock() {
+        let mut arena = TermArena::new();
+        let bound = arena.declare("bound", Sort::Bool).unwrap();
+        let body = arena.bool_const(true);
+        let before = Instant::now();
+        let _clock = ClockGuard::expires_after(before, before, 0);
+        assert_eq!(
+            eval_quantifier(&arena, bound, body, true, &Assignment::new(), None),
+            Ok(Value::Bool(true))
+        );
+        assert_eq!(ClockGuard::observations(), 0);
+    }
+
+    #[test]
+    fn fp_candidate_deadline_checks_noncanonical_nan() {
+        let sort = Sort::Float { exp: 2, sig: 2 };
+        let mut arena = TermArena::new();
+        let bound = arena.declare("bound", sort).unwrap();
+        let body = arena.bool_const(true);
+        let assignment = Assignment::new();
+        assert_eq!(
+            eval_quantifier(&arena, bound, body, true, &assignment, None),
+            Ok(Value::Bool(true))
+        );
+        let raw = Value::Bv {
+            width: 4,
+            value: 15,
+        };
+        assert_ne!(canonicalize_for_sort(sort, raw.clone()), raw);
+        let before = Instant::now();
+        let deadline = before + Duration::from_secs(60);
+        // Fifteen canonical candidates each complete five polls (candidate,
+        // binding, body entry, literal visit, body completion). The next clock
+        // observation expires on the final noncanonical NaN candidate.
+        let _clock = ClockGuard::expires_after(before, deadline, 15 * 5);
+        assert_eq!(
+            eval_quantifier(&arena, bound, body, true, &assignment, Some(deadline)),
+            Err(IrError::Unsupported(EVAL_DEADLINE))
+        );
+        assert_eq!(ClockGuard::observations(), 76);
     }
 }
