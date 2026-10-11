@@ -435,6 +435,17 @@ def validate_metadata(pack_dir: Path, metadata: dict[str, Any]) -> None:
     if not re.fullmatch(r"[a-z0-9_]+", metadata["id"]):
         fail("metadata.id must be lowercase snake case")
 
+    interval = metadata["effective_interval"]
+    if not isinstance(interval, dict):
+        fail("metadata.effective_interval must be an object")
+    require_keys("metadata.effective_interval", interval, {"from", "to"})
+    start = require_date("metadata.effective_interval.from", interval["from"])
+    end = interval["to"]
+    if end is not None:
+        end = require_date("metadata.effective_interval.to", end)
+        if end <= start:
+            fail("metadata.effective_interval.to must be after from")
+
     seen_labels: set[str] = set()
     for index, citation in enumerate(metadata["source_citations"]):
         require_keys(f"source_citations[{index}]", citation, {"label", "uri"})

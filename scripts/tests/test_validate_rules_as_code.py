@@ -1,4 +1,6 @@
 """Discriminating input controls for the Rules-as-Code pack validator."""
+import copy
+import json
 import importlib.util
 from pathlib import Path
 import sys
@@ -18,12 +20,12 @@ class InputControls(unittest.TestCase):
 
     def test_invalid_gregorian_dates(self):
         for value in ("2023-02-29", "1900-02-29", "2024-04-31", "0000-01-01", "2024-00-01", "2024-01-00"):
-            with self.subTest(value=value), self.assertRaises(checker.ValidationError):
+            with self.assertRaises(checker.ValidationError):
                 checker.require_date("date", value)
 
     def test_date_shape(self):
         for value in (None, 20240101, "2024-1-01", "2024-01-01T00:00:00", "２０２４-０１-０１"):
-            with self.subTest(value=value), self.assertRaises(checker.ValidationError):
+            with self.assertRaises(checker.ValidationError):
                 checker.require_date("date", value)
 
     def test_integer_values(self):
@@ -32,13 +34,43 @@ class InputControls(unittest.TestCase):
 
     def test_boolean_is_not_integer(self):
         for value in (True, False):
-            with self.subTest(value=value), self.assertRaises(checker.ValidationError):
+            with self.assertRaises(checker.ValidationError):
                 checker.require_int("count", value)
 
     def test_non_integer_values(self):
         for value in (None, "1", 1.0):
-            with self.subTest(value=value), self.assertRaises(checker.ValidationError):
+            with self.assertRaises(checker.ValidationError):
                 checker.require_int("count", value)
+
+
+class MetadataControls(unittest.TestCase):
+    def setUp(self):
+        self.pack = SCRIPT.parent.parent / "docs/rules-as-code/examples/benefit-eligibility-v0"
+        self.metadata = json.loads((self.pack / "metadata.json").read_text())
+
+    def test_existing_and_finite_interval(self):
+        checker.validate_metadata(self.pack, self.metadata)
+        self.metadata["effective_interval"]["to"] = "2027-01-01"
+        checker.validate_metadata(self.pack, self.metadata)
+
+    def test_invalid_interval_dates(self):
+        for field in ("from", "to"):
+            metadata = copy.deepcopy(self.metadata)
+            metadata["effective_interval"][field] = "2026-02-30"
+            with self.assertRaises(checker.ValidationError):
+                checker.validate_metadata(self.pack, metadata)
+
+    def test_empty_or_reversed_interval(self):
+        for end in ("2026-01-01", "2025-12-31"):
+            metadata = copy.deepcopy(self.metadata)
+            metadata["effective_interval"]["to"] = end
+            with self.assertRaises(checker.ValidationError):
+                checker.validate_metadata(self.pack, metadata)
+
+    def test_missing_interval_start(self):
+        self.metadata["effective_interval"] = {"to": None}
+        with self.assertRaises(checker.ValidationError):
+            checker.validate_metadata(self.pack, self.metadata)
 
 
 if __name__ == "__main__":
