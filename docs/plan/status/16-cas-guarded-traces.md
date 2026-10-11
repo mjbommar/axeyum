@@ -14,8 +14,15 @@ Implemented `guarded_trace`: original quotient/result/context transport, explici
 denominator premise, polynomial-trace identity replay, syntactic cancellation
 producer and bounded JSON export/replay. Three Rust tests cover byte replay,
 missing/altered assumptions, an incorrect quotient and the zero corner. Cargo
-job16697 pending/running; `/var/tmp/axeyum-cas-guarded-tests.log`, Data0 target.
-No passing test count credited yet. Source frozen while that job runs.
+job16697 completed: 3 passed, 0 failed/ignored, 0.00s, 2151 filtered out,
+`/var/tmp/axeyum-cas-guarded-tests.log`, Data0 target. No broad-gate credit.
+
+Portable parent stub generation/signature/type gates passed (27 modules, 654
+items, 1860 runtime symbols). Its private source/priority mutations each yielded
+6 passed plus exactly 1 intended failure; snapshot restored byte-for-byte.
+Parent lint45243 is terminal101: missing panic documentation for midpoint expect,
+173-line portable checker and collapsible priority if. These require repair;
+no full-lint pass claimed.
 
 Next: inspect focused result, Python exposure, private mutation controls and
 broader CAS gates. Nested cancellation, wide trace
