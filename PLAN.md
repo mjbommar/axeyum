@@ -469,6 +469,9 @@ Trust registry checked:1296 public functions,151 certified floor held,114 checke
 confirmed live at kernel compilation (rustc active near100% CPU); no test result
 credited. Fact-ledger/link validation33874 running, uncredited.
 
+Compatibility launched after verifying installed toolchains:wasm84951 and
+MSRV1.88 check53910, uncredited; `/var/tmp/axeyum-cas-trace-kernel-{wasm,msrv}.log`.
+
 ### SOL — Solver parity
 
 Close the measured gap to the named reference division by division, never

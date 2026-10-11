@@ -21,3 +21,6 @@ Trust registry checked:1296 public functions,151 certified floor held,114 checke
 1031 uncertified. Generated plan and diff whitespace checks passed. Release44600
 confirmed live at kernel compilation (rustc active near100% CPU); no test result
 credited. Fact-ledger/link validation33874 running, uncredited.
+
+Compatibility launched after verifying installed toolchains:wasm84951 and
+MSRV1.88 check53910, uncredited; `/var/tmp/axeyum-cas-trace-kernel-{wasm,msrv}.log`.
