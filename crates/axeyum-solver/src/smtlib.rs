@@ -3088,7 +3088,11 @@ pub fn optimize_smtlib(input: &str, config: &SolverConfig) -> Result<Vec<OptOutc
         Err(reason) => return Ok(vec![OptOutcome::Unknown(reason)]),
     };
     let query = smtlib_single_optimization_query(&script)?;
-    let objectives = optimization::active_objectives(input, &script)?;
+    let commands = match optimization::commands_with_budget(input, config, started)? {
+        Ok(commands) => commands,
+        Err(reason) => return Ok(vec![OptOutcome::Unknown(reason)]),
+    };
+    let objectives = optimization::active_objectives_from_commands(&commands, &script)?;
     let mut outcomes = Vec::with_capacity(objectives.len());
     for (objective, is_max) in objectives {
         outcomes.push(optimize_one(
@@ -3125,7 +3129,11 @@ pub fn optimize_smtlib_lexicographic(
         Err(reason) => return Ok(vec![OptOutcome::Unknown(reason)]),
     };
     let query = smtlib_single_optimization_query(&script)?;
-    let objectives = optimization::active_objectives(input, &script)?;
+    let commands = match optimization::commands_with_budget(input, config, started)? {
+        Ok(commands) => commands,
+        Err(reason) => return Ok(vec![OptOutcome::Unknown(reason)]),
+    };
+    let objectives = optimization::active_objectives_from_commands(&commands, &script)?;
     let mut assertions = query.assertions;
     let mut outcomes = Vec::with_capacity(objectives.len());
     let mut stopped = false;

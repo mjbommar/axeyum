@@ -14,5 +14,7 @@ budget; Python exposes intake_unknown reason. Added3 solver integration controls
 passed3/0 failed/ignored, /var/tmp/axeyum-omt-ingest-optimization-tests.log.
 Python tests now require zero-budget intake reason/no fabricated rows, including
 long comment inputs in both modes. Fresh Python run pending. Next: command
-reread wiring, fresh Python,
+reread now uses shared deadline; typed priority reuses same command list.
+Command rerun86284 live, no new pass credited. Next: direct command-budget
+controls, fresh Python,
 full solver/workspace/front-door gates and controls. Full goal remains incomplete.

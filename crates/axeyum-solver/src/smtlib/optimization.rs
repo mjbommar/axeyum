@@ -173,6 +173,13 @@ pub(super) fn active_objectives(
     script: &Script,
 ) -> Result<Vec<(TermId, bool)>, SolverError> {
     let commands = read_all(input).map_err(|e| SolverError::Parse(e.to_string()))?;
+    active_objectives_from_commands(&commands, script)
+}
+
+pub(super) fn active_objectives_from_commands(
+    commands: &[SExpr],
+    script: &Script,
+) -> Result<Vec<(TermId, bool)>, SolverError> {
     let mut active = Vec::new();
     let mut scopes = Vec::new();
     let mut queried = None;
@@ -244,8 +251,13 @@ pub(super) fn active_objectives(
         .collect()
 }
 fn active_priority(input: &str) -> Result<Option<String>, SolverError> {
+    let commands = read_all(input).map_err(|e| SolverError::Parse(e.to_string()))?;
+    Ok(active_priority_from_commands(&commands))
+}
+
+fn active_priority_from_commands(commands: &[SExpr]) -> Option<String> {
     let mut priority = None;
-    for command in read_all(input).map_err(|e| SolverError::Parse(e.to_string()))? {
+    for command in commands {
         let Some(items) = command.list() else {
             continue;
         };
@@ -257,7 +269,7 @@ fn active_priority(input: &str) -> Result<Option<String>, SolverError> {
             _ => (),
         }
     }
-    Ok(priority)
+    priority
 }
 fn constant(
     arena: &mut TermArena,
@@ -293,7 +305,24 @@ pub(super) fn parse_with_budget(
     let deadline = config
         .timeout
         .and_then(|budget| started.checked_add(budget));
-    match axeyum_smtlib::parse_script_within(input, deadline) {
+    intake_result(axeyum_smtlib::parse_script_within(input, deadline))
+}
+
+pub(super) fn commands_with_budget(
+    input: &str,
+    config: &SolverConfig,
+    started: Instant,
+) -> Result<Result<Vec<SExpr>, UnknownReason>, SolverError> {
+    let deadline = config
+        .timeout
+        .and_then(|budget| started.checked_add(budget));
+    intake_result(axeyum_smtlib::read_all_within(input, deadline))
+}
+
+fn intake_result<T>(
+    result: Result<T, axeyum_smtlib::SmtError>,
+) -> Result<Result<T, UnknownReason>, SolverError> {
+    match result {
         Ok(script) => Ok(Ok(script)),
         Err(axeyum_smtlib::SmtError::DeadlineExceeded(phase)) => Ok(Err(UnknownReason {
             kind: UnknownKind::ResourceLimit,
@@ -332,7 +361,19 @@ pub fn optimize_with_models(
             });
         }
     };
-    let objectives = active_objectives(input, &script)?;
+    let commands = match commands_with_budget(input, config, started)? {
+        Ok(commands) => commands,
+        Err(reason) => {
+            return Ok(OptimizationReport {
+                mode,
+                objectives: Vec::new(),
+                intake_unknown: Some(reason),
+                script: Script::default(),
+                source: String::new(),
+            });
+        }
+    };
+    let objectives = active_objectives_from_commands(&commands, &script)?;
     let query = smtlib_single_optimization_query(&script)?;
     for &(objective, _) in &objectives {
         match script.arena.sort_of(objective) {
@@ -344,7 +385,7 @@ pub fn optimize_with_models(
             }
         }
     }
-    if let Some(requested) = active_priority(input)?
+    if let Some(requested) = active_priority_from_commands(&commands)
         && requested != mode.name()
     {
         return Err(SolverError::Unsupported(format!(
