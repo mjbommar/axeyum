@@ -1095,3 +1095,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [6301](adr-6301-farkas-source-binding-precedes-optimality-credit.md) | Farkas source binding precedes optimality credit | proposed |
 | [6302](adr-6302-portable-omt-certificates-carry-the-original-query.md) | Portable OMT certificates carry the original query | proposed |
 | [6400](adr-6400-conditional-cas-traces-bind-external-nonzero-assumptions.md) | Conditional CAS traces bind external nonzero assumptions | proposed |
+| [6500](adr-6500-wide-cas-traces-opt-in-to-bounded-promoted-arithmetic.md) | Wide CAS traces opt in to bounded promoted arithmetic | proposed |
