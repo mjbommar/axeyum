@@ -711,7 +711,7 @@ Reference-miter core7 plus old producer9 fixtures pass; full-feature solver
 Fresh preserved native7437a1356: focused Python49 and updated census15 pass0 skips;
 24 existing consumer files1154 pass0 skips170.80s. CLI exports six clausal/two
 reference fixtures. General theory correspondence and kernel admission remain
-separate. Parent generated stubs committed d826846b9 (one file verified); lint82361 and miter guard v2 still live.
+separate. Parent stubs d826846b9 verified; lint fixed c1328e0ee and rerun88148 passes. Miter guard v2 remains live.
 
 Nested conditional Rust/Python production/replay committed1a8eab81d/6c4077ab9:
 full source/path/context/congruence/continuity binding, bounded transport and
@@ -723,14 +723,13 @@ workspace serde_json inheritance. Fixed e0a90431b with direct dependency and
 full offline metadata; lock diff adds only that Py dependency.
 Six-test29625 passes6/0/0; private v2 baseline6 passes. Py-check12773 passes1m13s; native54673 + sealed-tests72160 live.
 Parent stubs27/664 generated; drift27/1883 and type gate pass; runtime stub31 pass0 skips27.18s.
-Fresh guard snapshot37464 and v2
-helper72923 require6 baseline passes ->5 passes/one intended corruption failure.
+Private v2 helper72923 passes:6 baseline ->5 pass/one intended congruence failure; restored bytewise.
 Original failed baseline source restored and failure logs preserved.
 
 Older datatype workspace87947 and parent current workspace18900 remain live;
 no pass credited. Two owned parent build trees moved from idle to lowest
 best-effort I/O7 without restarts or changing CPU/memory/serialization caps.
-Full CAS library suite6544 started against frozen source; no result credited.
+Full CAS6544 passes2154/0failed/11ignored67.12s. CAS lint59232 fails one helper-order lint; fix after native terminal.
 Next: actual nested tests/native/stubs/lint/private guards, broad gates,
 integration and requirement-by-requirement completion audit.
 

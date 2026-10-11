@@ -319,3 +319,7 @@ Current child cb7338abd: unittest discover for test_validate_rules_as_code.py ex
 ## Conditional unsupported/partial-evidence controls
 
 Added three Python controls requiring unsupported pi/sin surrounding expressions and a later uncancellable quotient to return unsupported with a reason, zero completed steps and no JSON/typed result. The latter exercises all-or-nothing production after an earlier honest cancellation. Syntax compilation passes; native runtime is pending. Total conditional Python population13, not10. No Rust edit while native links.
+
+## Full CAS, private congruence and repaired Python lint terminal results
+
+Full CAS6544 exits0:2154passed/0failed/11ignored/0filtered67.12s against frozen nested Rust source. Private helper72923 exits0:6baseline; removing surrounding-expression guard gives exactly5passed/1failed, sole contextual_replacement_rejects_changed_surrounding_subtree; bytewise restoration confirmed. Parent Python lint88148 exits0 with -Dwarnings13.37s after c1328e0ee documentation correction; not a new nested Python lint pass. Nested CAS lint59232 exits101, exactly one items_after_statements diagnostic for locations helper at conditional_trace.rs192. Relocate helper before statements after native54673 terminates; source remains frozen meanwhile. Logs retain exact populations and intended negative assertion.
