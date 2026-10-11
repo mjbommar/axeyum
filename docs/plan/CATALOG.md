@@ -11,7 +11,7 @@ rg -n 'QF_LRA' docs/plan/archive/lanes/      # every archived lane that mentions
 rg -n '<lane-or-topic>' docs/plan/CATALOG.md  # find the file, then open it
 ```
 
-Counts: 771 archived lanes (177 not DONE when archived), 55 older archive files, 345 dated plan notes, 81 lane notes, 508 strand and planning documents.
+Counts: 771 archived lanes (177 not DONE when archived), 55 older archive files, 345 dated plan notes, 82 lane notes, 508 strand and planning documents.
 
 ## Lanes that were not DONE when archived
 
@@ -1241,6 +1241,7 @@ Result notes, designs, handoffs and earlier queues. Evidence for claims; never t
 | 2026-08-15 | [`docs/plan/notes/100-ledger-freshness.md`](notes/100-ledger-freshness.md) | Notes: 100-ledger-freshness |
 |  | [`docs/plan/notes/signed-literals.md`](notes/signed-literals.md) | CON-6 signed integer literal implementation evidence |
 |  | [`docs/plan/notes/reals-design.md`](notes/reals-design.md) | Notes: reals-design |
+|  | [`docs/plan/notes/omt-source-bound-certificates.md`](notes/omt-source-bound-certificates.md) | OMT source-bound certificate validation |
 |  | [`docs/plan/notes/creal.md`](notes/creal.md) | Notes: creal |
 |  | [`docs/plan/notes/creal-lattice.md`](notes/creal-lattice.md) | Notes: creal-lattice |
 |  | [`docs/plan/notes/creal-inv.md`](notes/creal-inv.md) | Notes: creal-inv |

@@ -301,7 +301,9 @@ dbf382f850c122c5f4c84e74e8ce307eb53422013c30aacd69f543fc9762b87c:
 and refutation replay for the entire lex prefix; new gold changes unverified. Build 28856 and mutation baseline 89277
 failed from root filesystem ENOSPC, no test failures or green credit. Lane-owned
 targets move to /data0; recovered gold runner39580 and mutation runner42006
-use disk-backed targets. Migration handle36457 remains live.
+use disk-backed targets. Migration36457 failed when the destination build started too early.
+Remainder moves separately under68923; parent replay-mutation cache80296
+also moves after its terminal ENOSPC failure. Active target is untouched.
 Next: compile/test, checker guard mutations, Boolean lowering binding,
 strict-better certificates, model-plus-optimality Python results, serialization
 and independent process replay, then required full gates. Missing evidence never receives gold credit.
