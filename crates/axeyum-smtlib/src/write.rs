@@ -8,7 +8,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 
-use axeyum_ir::{ArraySortKey, FuncId, Op, Sort, SortId, TermArena, TermId, TermNode};
+use axeyum_ir::{ArraySortKey, DatatypeId, FuncId, Op, Sort, SortId, TermArena, TermId, TermNode};
 
 /// Renders `assertions` as a complete SMT-LIB script
 /// (`set-logic` … `check-sat`).
@@ -25,26 +25,62 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
     let mut functions: Vec<FuncId> = Vec::new();
     let mut uninterpreted_sorts: HashSet<SortId> = HashSet::new();
     let mut seen_functions: HashSet<FuncId> = HashSet::new();
+    let mut datatypes: HashSet<DatatypeId> = HashSet::new();
     while let Some(t) = stack.pop() {
         if seen.contains(&t) {
             continue;
         }
         seen.insert(t);
+        collect_declaration_sorts(
+            arena,
+            arena.sort_of(t),
+            &mut uninterpreted_sorts,
+            &mut datatypes,
+        );
         match arena.node(t) {
             TermNode::Symbol(s) => {
                 let (name, sort) = arena.symbol(*s);
-                collect_uninterpreted_sort(arena, sort, &mut uninterpreted_sorts);
+                collect_declaration_sorts(arena, sort, &mut uninterpreted_sorts, &mut datatypes);
                 symbols.push((name.to_owned(), sort));
             }
             TermNode::App { op, args } => {
+                if let Op::Forall(var) | Op::Exists(var) = op {
+                    collect_declaration_sorts(
+                        arena,
+                        arena.symbol(*var).1,
+                        &mut uninterpreted_sorts,
+                        &mut datatypes,
+                    );
+                }
+                if let Op::DtConstruct { constructor, .. }
+                | Op::DtSelect { constructor, .. }
+                | Op::DtTest(constructor) = op
+                {
+                    collect_declaration_sorts(
+                        arena,
+                        Sort::Datatype(arena.constructor_datatype(*constructor)),
+                        &mut uninterpreted_sorts,
+                        &mut datatypes,
+                    );
+                }
                 if let Op::Apply(func) = op
                     && seen_functions.insert(*func)
                 {
                     let (_, params, result) = arena.function(*func);
                     for &sort in params {
-                        collect_uninterpreted_sort(arena, sort, &mut uninterpreted_sorts);
+                        collect_declaration_sorts(
+                            arena,
+                            sort,
+                            &mut uninterpreted_sorts,
+                            &mut datatypes,
+                        );
                     }
-                    collect_uninterpreted_sort(arena, result, &mut uninterpreted_sorts);
+                    collect_declaration_sorts(
+                        arena,
+                        result,
+                        &mut uninterpreted_sorts,
+                        &mut datatypes,
+                    );
                     functions.push(*func);
                 }
                 for &a in &**args {
@@ -64,7 +100,18 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
     functions.sort_by_key(|f| arena.function(*f).0.to_owned());
     let mut used_names: HashSet<String> = symbols.iter().map(|(name, _)| name.clone()).collect();
 
-    let mut out = write_preamble(arena, &symbols, &functions, uninterpreted_sorts);
+    for &func in &functions {
+        used_names.insert(arena.function(func).0.to_owned());
+    }
+    for &dt in &datatypes {
+        for &ctor in arena.datatype_constructors(dt) {
+            used_names.insert(arena.constructor_name(ctor).to_owned());
+            for (field, _) in arena.constructor_fields(ctor) {
+                used_names.insert(field.clone());
+            }
+        }
+    }
+    let mut out = write_preamble(arena, &symbols, &functions, uninterpreted_sorts, datatypes);
 
     // Emit shared App nodes as defs in ascending id order (children first).
     let mut names: HashMap<TermId, String> = HashMap::new();
@@ -97,6 +144,7 @@ fn write_preamble(
     symbols: &[(String, Sort)],
     functions: &[FuncId],
     uninterpreted_sorts: HashSet<SortId>,
+    datatypes: HashSet<DatatypeId>,
 ) -> String {
     // Assemble the quantifier-free logic name from the features present:
     // `QF_` + `A` (arrays) + `UF` (functions/sorts) + arithmetic core.
@@ -134,7 +182,11 @@ fn write_preamble(
     }
     let has_uninterpreted_sorts = !uninterpreted_sorts.is_empty();
     let has_uf = !functions.is_empty() || has_uninterpreted_sorts;
-    let logic = if has_uf && !has_arrays && !has_integers && !has_reals && !has_bitvec {
+    let logic = if !datatypes.is_empty() {
+        // Datatype fields may combine recursion, arrays, arithmetic and UFs;
+        // ALL faithfully admits those combinations without inventing a logic.
+        "ALL".to_owned()
+    } else if has_uf && !has_arrays && !has_integers && !has_reals && !has_bitvec {
         "QF_UF".to_owned()
     } else {
         let arithmetic = if has_reals {
@@ -160,6 +212,7 @@ fn write_preamble(
             symbol_syntax(arena.uninterpreted_sort_name(id))
         );
     }
+    write_datatype_declarations(arena, datatypes, &mut out);
     for (name, sort) in symbols {
         let _ = writeln!(
             out,
@@ -271,43 +324,103 @@ fn is_simple_symbol(name: &str) -> bool {
         && !RESERVED.contains(&name)
 }
 
-fn collect_uninterpreted_sort(arena: &TermArena, sort: Sort, out: &mut HashSet<SortId>) {
+fn collect_declaration_sorts(
+    arena: &TermArena,
+    sort: Sort,
+    uninterpreted: &mut HashSet<SortId>,
+    datatypes: &mut HashSet<DatatypeId>,
+) {
     match sort {
         Sort::Uninterpreted(id) => {
-            out.insert(id);
+            uninterpreted.insert(id);
         }
-        // The recursion goes THROUGH an interned nested component
-        // (`arena.array_key_sort`). Stopping at the top level would drop the
-        // `(declare-sort …)` line for a carrier that only appears inside a
-        // nested array, and the written script would not re-parse.
+        Sort::Datatype(id) => {
+            // Insert before visiting fields: self/mutual recursion terminates.
+            if datatypes.insert(id) {
+                for &ctor in arena.datatype_constructors(id) {
+                    for &(_, field_sort) in arena.constructor_fields(ctor) {
+                        collect_declaration_sorts(arena, field_sort, uninterpreted, datatypes);
+                    }
+                }
+            }
+        }
         Sort::Array { index, element } => {
-            collect_uninterpreted_sort(arena, arena.array_key_sort(index), out);
-            collect_uninterpreted_sort(arena, arena.array_key_sort(element), out);
+            collect_declaration_sorts(arena, arena.array_key_sort(index), uninterpreted, datatypes);
+            collect_declaration_sorts(
+                arena,
+                arena.array_key_sort(element),
+                uninterpreted,
+                datatypes,
+            );
         }
-        // Mirror the array recursion: a sequence element may itself be an
-        // uninterpreted carrier sort.
         Sort::Seq(element) => {
-            collect_uninterpreted_sort(arena, arena.array_key_sort(element), out);
+            collect_declaration_sorts(
+                arena,
+                arena.array_key_sort(element),
+                uninterpreted,
+                datatypes,
+            );
         }
         Sort::Bool
         | Sort::BitVec(_)
         | Sort::Int
         | Sort::Real
         | Sort::RoundingMode
-        | Sort::Datatype(_)
         | Sort::Float { .. } => {}
     }
 }
 
+fn write_datatype_declarations(
+    arena: &TermArena,
+    datatypes: HashSet<DatatypeId>,
+    out: &mut String,
+) {
+    if datatypes.is_empty() {
+        return;
+    }
+    let mut ids: Vec<_> = datatypes.into_iter().collect();
+    ids.sort();
+    // One group binds every reachable sort before defining any fields, including
+    // dependencies that were originally separate and mutually recursive sorts.
+    out.push_str("(declare-datatypes (");
+    for (i, &dt) in ids.iter().enumerate() {
+        if i != 0 {
+            out.push(' ');
+        }
+        let _ = write!(out, "({} 0)", symbol_syntax(arena.datatype_name(dt)));
+    }
+    out.push_str(") (");
+    for (i, &dt) in ids.iter().enumerate() {
+        if i != 0 {
+            out.push(' ');
+        }
+        out.push('(');
+        for (j, &ctor) in arena.datatype_constructors(dt).iter().enumerate() {
+            if j != 0 {
+                out.push(' ');
+            }
+            let _ = write!(out, "({}", symbol_syntax(arena.constructor_name(ctor)));
+            for (field, sort) in arena.constructor_fields(ctor) {
+                let _ = write!(
+                    out,
+                    " ({} {})",
+                    symbol_syntax(field),
+                    sort_str(arena, *sort)
+                );
+            }
+            out.push(')');
+        }
+        out.push(')');
+    }
+    out.push_str("))\n");
+}
+
 /// Renders `sort` in SMT-LIB syntax.
 ///
-/// Two variants have **no** SMT-LIB spelling here and render as placeholders:
-/// `Sort::Datatype` prints `(Datatype <id>)` (the declaration name is not
-/// reachable from the id alone) and `Sort::Seq` prints `(Seq …)` even for a
-/// declared `String` (ADR-0029 packs one into a bit-vector, so by this point the
-/// distinction is gone). Neither is re-parseable. A caller emitting a model must
-/// therefore decline those sorts rather than print the placeholder — see
-/// `axeyum_solver::SmtLibResponse`.
+/// Datatypes use their arena declaration names. Sequences render `(Seq …)` even
+/// for a lowered `String` (ADR-0029 packs one into a bit-vector, so by this point
+/// the distinction is gone). Model consumers must still explicitly handle or
+/// decline aggregate values rather than assuming a sort spelling supplies them.
 pub fn sort_text(arena: &TermArena, sort: Sort) -> String {
     sort_str(arena, sort)
 }
@@ -326,7 +439,7 @@ fn sort_str(arena: &TermArena, sort: Sort) -> String {
         Sort::Int => "Int".to_owned(),
         Sort::Real => "Real".to_owned(),
         Sort::RoundingMode => "RoundingMode".to_owned(),
-        Sort::Datatype(id) => format!("(Datatype {})", id.index()),
+        Sort::Datatype(id) => symbol_syntax(arena.datatype_name(id)),
         Sort::Uninterpreted(id) => symbol_syntax(arena.uninterpreted_sort_name(id)),
         Sort::Float { exp, sig } => format!("(_ FloatingPoint {exp} {sig})"),
         Sort::Seq(element) => format!("(Seq {})", array_sort_key_str(arena, element)),
@@ -340,7 +453,7 @@ fn array_sort_key_str(arena: &TermArena, sort: ArraySortKey) -> String {
         ArraySortKey::Int => "Int".to_owned(),
         ArraySortKey::Real => "Real".to_owned(),
         ArraySortKey::RoundingMode => "RoundingMode".to_owned(),
-        ArraySortKey::Datatype(id) => format!("(Datatype {})", id.index()),
+        ArraySortKey::Datatype(id) => symbol_syntax(arena.datatype_name(id)),
         ArraySortKey::Uninterpreted(id) => symbol_syntax(arena.uninterpreted_sort_name(id)),
         ArraySortKey::Float { exp, sig } => format!("(_ FloatingPoint {exp} {sig})"),
         // A nested component renders as the array sort it interns, so a script
@@ -482,8 +595,22 @@ fn render_node(arena: &TermArena, root: TermId, names: &HashMap<TermId, String>)
                     }
                     let head = match op {
                         Op::Apply(func) => symbol_syntax(arena.function(*func).0),
+                        Op::DtConstruct { constructor, .. } => {
+                            symbol_syntax(arena.constructor_name(*constructor))
+                        }
+                        Op::DtSelect { constructor, index } => symbol_syntax(
+                            &arena.constructor_fields(*constructor)[*index as usize].0,
+                        ),
+                        Op::DtTest(constructor) => format!(
+                            "(_ is {})",
+                            symbol_syntax(arena.constructor_name(*constructor))
+                        ),
                         _ => op_str(*op),
                     };
+                    if matches!(op, Op::DtConstruct { .. }) && args.is_empty() {
+                        memo.insert(t, head);
+                        continue;
+                    }
                     let mut text = format!("({head}");
                     for a in args {
                         text.push(' ');
@@ -583,9 +710,9 @@ fn op_str(op: Op) -> String {
         Op::Forall(_) | Op::Exists(_) => {
             unreachable!("quantifiers are rendered via their binder form")
         }
-        Op::DtConstruct { constructor, .. } => format!("construct/{}", constructor.index()),
-        Op::DtSelect { constructor, index } => format!("select/{}/{index}", constructor.index()),
-        Op::DtTest(constructor) => format!("is/{}", constructor.index()),
+        Op::DtConstruct { .. } | Op::DtSelect { .. } | Op::DtTest(_) => {
+            unreachable!("datatypes are rendered using arena declaration names")
+        }
         // Sequences (ADR-0051, P2.7). These first-class `Op::Seq*` variants are
         // produced only by the `axeyum-ir` arena builders (`seq_len`/`seq_concat`/
         // …); the bounded string/sequence SMT-LIB encoder (ADR-0029) lowers
