@@ -351,3 +351,7 @@ Private v2 helper2296726 is terminal. Seven baseline passes; final-source remova
 ## Final typed/native export validation terminal results
 
 Checker52388 exits0. Sealed typed package /data0/axeyum/artifacts/python/nested-conditional-typed-pkiqdk79/package preserves99af1a4c native and generated stubs. Drift27modules/1888symbols/5aliases/319syntheticdunders; type1847params/1762typed/131allowlistedAny/46Anyreturns95.4%; runtime44collected/44passed/0skipped22.84s. Tests include actual native stub/type controls, nested13, source-bound end-to-end and certificate export with pinned guarded LRAT checker configured. The previously skipped external checker case executed here; the larger1166pass/1skip run is retained as its actual result. Kernel generated-step identity is an ordinary unignored workspace library test, so final workspace11433 must supply its current-source admission/axiom evidence rather than borrowing a narrow ancestor result.
+
+## Current fact ledger terminal evidence
+
+Facts60449 exits0:2971checked/0errors; DEPENDS_DERIVED kernel_facts2586/named2408/graph3092/missing_edges0. Log /var/tmp/axeyum-nested-final-facts.log. No facts or theorem counts changed by trace logging. Current workspace11433 and sequential all-target check22417 remain pending; main integration still waits for green.

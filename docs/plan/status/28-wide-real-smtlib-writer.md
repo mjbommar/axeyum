@@ -34,7 +34,7 @@ Current CAS registry6894 passes:1310public/153certified/116checker/1041uncertifi
 no logging credit. Plan/link gates45795 pass. Merge hygiene36970 exits0 with
 shape duplicate/projection scopes explicitly skipped, not full population credit.
 
-Current facts60449 and final workspace11433 remain live, uncredited. All-targets
+Current facts60449 passes2971/0errors with0missing derived edges. Final workspace11433 remains live, uncredited. All-targets
 check22417 waits for confirmed workspace Cargo3092650 to finish. Read-only main
 merge preview has no conflicts; keep main untouched until green. Older parent
 workspace handles need independent collection and cannot qualify this child.
