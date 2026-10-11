@@ -88,3 +88,15 @@ external population.
 Older datatype workspace87947 is terminal143 (terminated), not a pass; it
 cannot qualify the final child. Current final workspace11433 and parent18900
 were independently polled and remain live. No terminated job was restarted.
+
+## Explicit CLI closing gate
+
+Final CLI evidence is still missing: older Python SMT runs skipped the
+CLI-dependent population. Watcher43772 is queued after verified-live complete
+Clippy3325630 and requires its zero terminal receipt. It builds current named
+`axeyum` and `smtcomp_cli` binaries, checks bounded maximize/minimize scripts
+explicitly decline through the generic session CLI without printing ordinary
+SAT, and runs all `test_smt.py` cases against final sealed native plus the fresh
+competition CLI (including signed literals and corpus comparisons). Actual
+exit/counts and binary digests remain pending; this queue entry supplies no
+completion credit.

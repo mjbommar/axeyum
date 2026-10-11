@@ -426,3 +426,17 @@ checker32422f24, base6624ea80 plus recorded unary-minusguardpatch. No unmodified
 checker, internalLIA portability, or kernel admission claim.
 Older datatype87947 is terminal143, notpass; finalworkspace11433 andparent18900
 remain live after independent polling. Finalchild replaces, not credits, oldrun.
+
+### Explicit final CLI coverage queued
+
+Completion review found final CLI-dependent tests still missing: earlier Python
+SMT suites skipped34 comparisons. Queued43772 waits on independently live
+completeClippy watcher3325630 and requires its terminal zero receipt before
+building current axeyum/smtcomp_cli targets with serialized resource caps. It
+then probes bounded maximize/minimize through the session binary, requiring
+explicit optimization/objective decline and forbidding a bare SAT answer, and
+runs the complete test_smt.py against sealed native99af1a4c with the freshly
+built competition CLI configured. Build/native identities and actual pytest
+counts must be collected; queued work is not a pass. Logs
+`/var/tmp/axeyum-nested-final-cli-{after-clippy,build,python}.log`; final receipt
+`/var/tmp/axeyum-nested-final-cli-receipt.json`. Source remains frozen.
