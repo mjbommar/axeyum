@@ -12,6 +12,8 @@
     clippy::trivially_copy_pass_by_ref
 )]
 
+mod optimization;
+
 use std::time::Duration;
 
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -1523,6 +1525,7 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
          replay the model yourself.",
     )?;
     module.add_class::<Outcome>()?;
+    optimization::register(&module)?;
     module.add_class::<Response>()?;
     module.add_class::<PyScript>()?;
     module.add_class::<ScriptTerm>()?;

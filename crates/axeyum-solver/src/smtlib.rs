@@ -27,6 +27,8 @@ use axeyum_strings::{
     solve_word_equations,
 };
 use std::fmt::Write as _;
+pub mod optimization;
+
 use std::time::Duration;
 
 use crate::auto::{solve, unsat_core};
@@ -3083,7 +3085,7 @@ pub fn optimize_smtlib(input: &str, config: &SolverConfig) -> Result<Vec<OptOutc
     let started = std::time::Instant::now();
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
     let query = smtlib_single_optimization_query(&script)?;
-    let objectives = std::mem::take(&mut script.objectives);
+    let objectives = optimization::active_objectives(input, &script)?;
     let mut outcomes = Vec::with_capacity(objectives.len());
     for (objective, is_max) in objectives {
         outcomes.push(optimize_one(
@@ -3117,7 +3119,7 @@ pub fn optimize_smtlib_lexicographic(
     let started = std::time::Instant::now();
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
     let query = smtlib_single_optimization_query(&script)?;
-    let objectives = std::mem::take(&mut script.objectives);
+    let objectives = optimization::active_objectives(input, &script)?;
     let mut assertions = query.assertions;
     let mut outcomes = Vec::with_capacity(objectives.len());
     let mut stopped = false;

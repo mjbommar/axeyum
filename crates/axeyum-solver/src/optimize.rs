@@ -1257,6 +1257,25 @@ fn objective_ge(
     decide_with_objective(arena, assertions, objective, Some(bound), config)
 }
 
+// A satisfiability model may omit variables absent from its assertions. The
+// objective can still mention them; choose ordinary scalar defaults, then replay
+// the entire feasibility query before evaluating the original objective.
+fn complete_scalar_model(arena: &TermArena, model: &mut crate::Model) {
+    for (symbol, _, sort) in arena.symbols() {
+        if model.get(symbol).is_some() {
+            continue;
+        }
+        let value = match sort {
+            Sort::Bool => Value::Bool(false),
+            Sort::Int => Value::Int(0),
+            Sort::Real => Value::Real(axeyum_ir::Rational::zero()),
+            Sort::BitVec(width) if width <= 128 => Value::Bv { width, value: 0 },
+            _ => continue,
+        };
+        model.set(symbol, value);
+    }
+}
+
 fn decide_with_objective(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -1278,14 +1297,24 @@ fn decide_with_objective(
     // (soundness: `check_auto` decides the same feasibility query).
     let result = check_auto(arena, &query, config);
     match result {
-        Ok(CheckResult::Sat(model)) => {
+        Ok(CheckResult::Sat(mut model)) => {
+            complete_scalar_model(arena, &mut model);
             if !crate::check_model(arena, &query, &model)? {
                 return Err(SolverError::Backend(
                     "optimization probe model failed replay".to_owned(),
                 ));
             }
             let assignment = model.to_assignment();
-            match eval(arena, objective, &assignment)? {
+            let value = match eval(arena, objective, &assignment) {
+                Ok(value) => value,
+                Err(error) => {
+                    return Ok(Probe::Unknown(UnknownReason {
+                        kind: UnknownKind::Incomplete,
+                        detail: format!("optimization objective model is incomplete: {error}"),
+                    }));
+                }
+            };
+            match value {
                 Value::Int(value) => Ok(Probe::Sat(value)),
                 other => Ok(Probe::Unknown(UnknownReason {
                     kind: UnknownKind::Incomplete,
@@ -1687,9 +1716,24 @@ fn bv_value(
         query.push(constraint);
     }
     match crate::auto::solve(arena, &query, config)? {
-        CheckResult::Sat(model) => {
+        CheckResult::Sat(mut model) => {
+            complete_scalar_model(arena, &mut model);
+            if !crate::check_model(arena, &query, &model)? {
+                return Err(SolverError::Backend(
+                    "BV optimization probe model failed replay".into(),
+                ));
+            }
             let assignment = model.to_assignment();
-            match eval(arena, objective, &assignment)? {
+            let value = match eval(arena, objective, &assignment) {
+                Ok(value) => value,
+                Err(error) => {
+                    return Ok(BvProbe::Unknown(UnknownReason {
+                        kind: UnknownKind::Incomplete,
+                        detail: format!("BV objective model is incomplete: {error}"),
+                    }));
+                }
+            };
+            match value {
                 Value::Bv { value, .. } => Ok(BvProbe::Sat(value)),
                 other => Err(SolverError::Backend(format!(
                     "bv optimization objective evaluated to a non-bit-vector ({other:?})"
