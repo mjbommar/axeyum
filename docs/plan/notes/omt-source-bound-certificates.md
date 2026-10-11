@@ -40,3 +40,21 @@ parent replay mutation72743 reruns baseline and two guards on the migrated
 private cache, logs `/var/tmp/axeyum-omt-replay-recovered-*.log`. Gold stub
 generator89655 is live, log `/var/tmp/axeyum-omt-gold-stub.log`. No Python gold,
 mutation, or stub success is claimed yet.
+
+## Fresh gold Python results and required gates
+
+Gold native39580 terminal zero, source f829f2a92 (later changes Python rules
+regression/docs only). Sealed package
+`/var/tmp/axeyum-omt-gold-python-dysm8rkh/package`; imported path checked.
+SHA-256 `cbb2a2366509201c1ecabf45ef4db47582bea336c1e661a7852fcd1022e84979`.
+Runner92902 terminal zero: 53 passed, 0 skipped, 4.37s across optimization,
+SMT proof regressions, Rules dates/packs/statute deadline suites. Ten OMT tests
+include checked gold max/min, lex prefix requirements and explicit missing
+integer-cut and BV optimality evidence.
+
+Required runner54092 is live, logs
+`/var/tmp/axeyum-omt-gold-required-_volk68z/`. It runs all five z3 arithmetic
+differentials, corpus plus four string front doors, full-feature solver library,
+then workspace libraries. Per-job exit files are authoritative; confirm nonzero
+counts before claiming a pass. Rust source remains frozen. Format runner20489
+is pending. Stub89655 and mutations42006/72743 remain live.
