@@ -50,3 +50,14 @@ signed-literal controls, then full-feature solver proof/OMT/front-door regressio
 All commands retain counts/exit status. Handle polling confirms it is live and
 its build log advances through CAS/solver compilation. No terminal result or
 combined pass is credited. Full required gates and remaining features still apply.
+
+Combined native build completed successfully. Sealed package:
+/var/tmp/axeyum-feedback-combined-gates-invfxf_7/package; native SHA-256
+831f35b5f744de86057caa8cdbeb3a23abe0b805f64227ad0641597a4b14238c.
+Python: 350 pass, 34 skipped, 384 collected (3.54 seconds). Skipped tests in
+SMT suites are external differential fixtures and fresh CLI cases; no pass is
+credited to them. Rust CAS integrations: four nonzero suites, 8/4/2/4 pass
+(18 total). Parser: 96 library plus five signed-literal tests pass (101 total),
+not the older source-lane aggregate count. All these scopes have zero failures.
+Full-feature solver regression phase remains live in 63353, advancing through
+SMT-LIB cases. Its final counts and broad required gates remain uncredited.
