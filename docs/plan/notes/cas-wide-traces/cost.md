@@ -15,8 +15,11 @@ byte replay binds independently constructed original input and expected result.
 
 Exact evaluation does not produce a certificate. Ordinary normalization has
 narrower coefficient limits, so it is not a matching wide-baseline operation.
-The example now also measures ordinary normalization on the small admitted
-workload; that revised run is pending, and no result is inferred here.
+The revised [run with baseline](cost-with-baseline.json) completed seven
+samples: small ordinary normalization median0.011 ms, tracing0.152 ms,
+replay0.062 ms. Payment tracing median0.848 s and replay0.367 s. The different
+initial/revised timings demonstrate host-load sensitivity; neither supports a
+stable performance ratio. Both retain identical trace bytes/step counts.
 
 The payment trace is much more expensive than exact evaluation. It serializes
 intermediate endpoints and rechecks local relations; these measurements justify

@@ -386,49 +386,37 @@ Next: complete own CAS/solver/workspace/lint gates and integration. Nested
 cancellation, wide trace coefficients, cost measurements and kernel admission
 remain required; the full feedback goal is active.
 
-**LIB-5/LIB-6 wide trace evidence (`WIP`, cas-wide-traces, 2026-10-11).** Child
-of435de8c46. ADR-6500 specifies v2 arithmetic/codec while retaining v1 width and
-domain limits. Promoted normalization bounds intermediate coefficients at16384
-bits, width-weighted work, shape/expansion/degree, and constant powers at512.
-Three arithmetic tests passed. V2 traces retain source/endpoints, local witnesses,
-continuity/premises/context and per-step certificates; v1 remains narrow.
+**LIB-5/LIB-6 (`WIP`, cas-wide-traces, 2026-10-11).** Base435de8c46.
+ADR6500 defines opt-in v2 promoted arithmetic/codec,16384-bit intermediate cap,
+width-weighted work, bounded shape/expansion/degree and constant powers512.
+V1 stays narrow. V2 constant division carries checked nonzero conditions and
+validates original domains even for empty traces. Sourcec6b0a5db1.
 
-Added v2 constant-divisor wire/head and explicit nonzero side-condition binding.
-Original-input domain validation also rejects an empty trace for division by0.
-Symbolic divisors require the separate external-context guarded API. Current
-Rust suites: 8 v1 + 7 v2 passed, 0 failed/ignored, v2 1.49s;
-`/var/tmp/axeyum-cas-wide-division-tests.log`. V2 includes full exact 360-period
-amortization with two checked division steps, missing conditions and empty
-undefined-quotient controls. An earlier zero-test lib filter was uncredited;
-all v1 credit comes from the integration suite.
+Rust suites passed8 v1+7 v2,0 failed/ignored after helper extraction:
+`/var/tmp/axeyum-cas-wide-postlint-tests.log`. Private snapshot controls:
+baseline7 passed; condition/domain/bit guard removal each causes6 passes and
+one intended failure, exit101; restored bytewise. Logs
+`/var/tmp/axeyum-cas-wide-control-{baseline,condition,domain,bits}.log`.
+Full lint58742 passed926/926 targets,27 crates,0 diagnostics:
+`/var/tmp/axeyum-cas-wide-clippy-v2.log`.
+Serial full CAS29000 running, uncredited: `/var/tmp/axeyum-cas-wide-full-cas.log`.
+Parent solver2028 passed; parent workspace remains pending.
 
-Python `normalize_trace(..., wide=True)` opts in; default remains v1. Getters
-and source-bound replay transport wide values without narrowing. Fresh native
-68539 passed; sealed package
+Fresh native68539 passed; package
 `/data0/axeyum/artifacts/python/cas-wide-trace-zyb2jcxy/package`, SHA256
-`8d15fa2aa3664369c9031fbe191aeeb46032fe11720ea15072d74e45dde83f55`;
-imported native path verified. 34 Python trace tests passed, 0 skipped, 9.07s,
-`/var/tmp/axeyum-cas-wide-python-tests.log`. Independent Fraction comparisons
-cover positive/negative/zero rates and zero principal; separate-process payment
-replay does not call the producer. Updated amortization example verifies bytes.
-Amortization example completed with exact 2859/2849-bit numerator/denominator
-and zero-rate2500/3. Stub generation completed:27 modules/658 items. Runtime stub check passed:
-1867 symbols; type check1817 parameters/1732 typed,131 Any all allowlisted.
-Private controls completed:baseline7 passed; condition/domain/bit guards each
-removed cause6 passes+1 intended failure, exit101; snapshot restored bytewise.
-Own lint failed convert length115/100; extracted division validation helper.
-Post-refactor suites passed8 v1+7 v2,0 failed/ignored;
-`/var/tmp/axeyum-cas-wide-postlint-tests.log`. Source commitc6b0a5db1.
-Full lint58742 live: `/var/tmp/axeyum-cas-wide-clippy-v2.log`.
-Serial full CAS29000 live: `/var/tmp/axeyum-cas-wide-full-cas.log`.
-Neither aggregate is credited. Parent solver2028 passed; workspace pending.
+`8d15fa2aa3664369c9031fbe191aeeb46032fe11720ea15072d74e45dde83f55`.
+Python34 trace tests passed/0 skipped,9.07s; Fraction payment controls and
+separate-process replay included. Example exact payment2859/2849 coefficient
+bits; zero-rate2500/3. Stubs27 modules/658 items; runtime1867 symbols;
+types1817 parameters/1732 typed,131 Any all allowlisted.
 
-Cost example completed:payment6 steps/34998 bytes, median production1.516s,
-replay0.368s; [diagnostics](docs/plan/notes/cas-wide-traces/cost.md). Revised baseline
-run2013 live, `/var/tmp/axeyum-cas-wide-trace-cost-v2.json`.
+Cost runs completed with exact checks:payment6 steps/34998 bytes, revised
+median production0.848s/replay0.367s. Small ordinary normalization0.011ms,
+tracing0.152ms. [Diagnostics](docs/plan/notes/cas-wide-traces/cost.md) retain both runs
+and extension identity; host-load sensitivity prevents parity claims.
 
-Next: finish broad gates, wide guarded quotients, cost measurements, kernel
-reconstruction and branch integration. Entire feedback goal remains active.
+Next: finish broad gates; wide guarded quotients, kernel reconstruction and
+branch integration. Entire feedback goal remains active.
 
 ### SOL — Solver parity
 
