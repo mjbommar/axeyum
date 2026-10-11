@@ -61,3 +61,17 @@ credited to them. Rust CAS integrations: four nonzero suites, 8/4/2/4 pass
 not the older source-lane aggregate count. All these scopes have zero failures.
 Full-feature solver regression phase remains live in 63353, advancing through
 SMT-LIB cases. Its final counts and broad required gates remain uncredited.
+
+Focused runner 63353 is terminal successful. Solver regression suites have
+6/5/5/25/16/1/102 passes (160 total), all nonzero, zero failures/ignored;
+SMT-LIB suite completed in 33.31 seconds. Combined scoped Rust total is 279
+(18 CAS + 101 parser + 160 solver), with 350 Python passes and 34 explicit skips.
+These results cover the combined source 2a111e062, not every required broad gate.
+
+Required-gate runner 88821 is now live at ce8e28222b0132398ad734c1a9e52051b051f407
+(document-only successor of the same implementation). Logs:
+/var/tmp/axeyum-feedback-required-gates-bewczwlv. Sequence: five mandatory string
+front-door suites, full-feature solver library, workspace library, with every
+terminal row required nonzero. The initial corpus phase is active; no broad
+pass is claimed. Fresh CLI skips, external differential tests, lint, remaining
+features and eventual main landing still require work.
