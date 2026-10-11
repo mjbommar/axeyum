@@ -1,42 +1,30 @@
-# Lane: omt-ingest-deadline — preemptible OMT intake
+# Lane: omt-ingest-deadline — shared intake and evidence budgets
 
 <!-- plan-section: lane-status -->
 
 **CON-5 O1 (`WIP`, omt-ingest-deadline, 2026-10-11).** Child f038d6147.
-ADR7000 specifies shared ingest/search/check deadline and explicit intake unknown
-without fabricated objectives. Reader deadline polling implemented for main loop,
-comments, strings, quoted symbols and atoms; typed parser now uses it. Parser library passed96/0 failed/ignored,3.04s; new lexical budget controls
-passed4/0 failed/ignored. Typed optimizer now uses budgeted parse and represents
-intake exhaustion with explicit reason/no fabricated rows. Solver check45956
-passed42.47s (full-feature compile). Legacy box/lex parse now uses shared
-budget; Python exposes intake_unknown reason. Added3 solver integration controls
-(zero-budget typed/legacy and finite optimum/model/gold positive);48715
-passed3/0 failed/ignored, /var/tmp/axeyum-omt-ingest-optimization-tests.log.
-Python tests now require zero-budget intake reason/no fabricated rows, including
-long comment inputs in both modes. Fresh Python run pending. Next: command
-reread now uses shared deadline; typed priority reuses same command list.
-Command rerun86284 passed3/0 failed/ignored; Python check16361 passed30.02s; getter compiles.
-Fresh native build launched, source frozen; no Python pass credited yet. Next: direct command-budget
-controls, fresh Python,
-full solver/workspace/front-door gates and controls. Full goal remains incomplete.
+ADR7000: lexical/typed parsing and OMT objective/priority reads share original
+start/deadline. Typed intake unknown has reason/no fabricated rows; Python getter
+and guide updated. Parser96 tests passed; lexical4 passed; OMT integration3 then
+4 with portable budget controls passed. Direct command controls3 passed.
+Private lexical initial-poll removal: baseline4 ->3 passed/1 intended failure;
+restored bytewise, /var/tmp/axeyum-omt-lexical-*.log.
 
-User guide now documents shared intake timeout and checking intake_unknown before
-indexing. Native build57554 remains live; no fresh Python result credited.
-
-Native build57554 passed56.73s; sealed omt-ingest-deadline-_59vtrwq/package,
+Native build57554 passed56.73s. Sealed omt-ingest-deadline-_59vtrwq/package,
 SHA256aad1b5679a57484c64dfcef63849113bf16e2604ebe18cbff32b14a2b25f0702.
-Initial pytest command referenced nonexistent portable file:0 tests credited.
-Corrected actual two suites passed17/0 skipped,0.25s;
-/var/tmp/axeyum-omt-ingest-python-tests-v2.log. Added3 direct command controls
-(original start, no-deadline tokens/priority, resource mapping);58300 passed3/0
-failed/ignored. Private initial lexical poll removal34997 passed: baseline4, removed poll3
-passed/1 intended failure, restored bytewise; /var/tmp/axeyum-omt-lexical-*.log.
-Stub generation33160 passed27 modules/661 items,1m51s. Drift/type gates passed
-against sealed native; generated intake_unknown getter committed. Portable checker parsing/Farkas replay
-still runs without a deadline, so checking-budget requirement remains open.
+Corrected actual two Python suites passed17/0 skipped,0.25s; initial command
+referenced nonexistent test file and ran0. Stub33160 passed27 modules/661 items;
+drift/type gates passed. These precede the latest checker API/evaluator changes.
 
-Portable check_within shares deadline with parsing/command reads/Farkas replay,
-returns resource_limited distinct from rejection. Python checker adds timeout_ms
-(default2000) and resource_limited getter. Initial compile44161 passed11.25s,
-2 stale wrapper warnings; removed wrappers. Added Rust/Python expired/positive
-controls. Mid-model evaluation remains bounded but not cooperatively preemptible.
+Portable check_within shares parsing/command/Farkas deadline and reports explicit
+resource_limited. Python checker has timeout_ms default2000. Compile44161 passed
+11.25s with2 unused wrappers; removed wrappers. Budget integration64565 passed4.
+Latest checker needs fresh native build/stubs/private controls and broad gates.
+
+ADR7100 adds eval_within: None is resource exhaustion, Some is actual Value.
+Same deadline propagates through iterative terms and finite quantified bindings;
+existing eval/memo signatures unchanged. Primitive operators remain atomic.
+IR library92005 running; no new IR pass credited. Next: evaluator controls,
+OMT model wiring, fresh Python, full solver/workspace/front-door gates, integration.
+Logs /var/tmp/axeyum-omt-{ingest-*,checker-budget-tests,deadline-ir-tests}.log.
+Entire feedback objective remains incomplete.

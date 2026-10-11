@@ -1104,3 +1104,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [6800](adr-6800-rust-cas-text-parser-shares-the-bounded-exact-grammar.md) | Rust CAS text parser shares the bounded exact grammar | proposed |
 | [6900](adr-6900-python-cas-parsing-uses-the-native-bounded-grammar.md) | Python CAS parsing uses the native bounded grammar | proposed |
 | [7000](adr-7000-omt-intake-shares-the-search-and-checking-deadline.md) | OMT intake shares the search and checking deadline | proposed |
+| [7100](adr-7100-ground-model-evaluation-shares-deadlines-through-finite-quantifiers.md) | Ground model evaluation shares deadlines through finite quantifiers | proposed |

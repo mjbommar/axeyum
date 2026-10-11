@@ -328,8 +328,48 @@ fn well_founded_default_rec(
 /// Panics if `term` does not belong to `arena`, or on arena corruption
 /// (internal invariant violations).
 pub fn eval(arena: &TermArena, term: TermId, assignment: &Assignment) -> Result<Value, IrError> {
+    eval_internal(arena, term, assignment, None)
+}
+
+const EVAL_DEADLINE: &str = "ground evaluation deadline exhausted";
+
+fn check_eval_deadline(deadline: Option<std::time::Instant>) -> Result<(), IrError> {
+    if deadline.is_some_and(|at| std::time::Instant::now() >= at) {
+        return Err(IrError::Unsupported(EVAL_DEADLINE));
+    }
+    Ok(())
+}
+
+/// Evaluate with a shared deadline; `None` means resource exhaustion.
+/// Polls before each term and each finite quantified binding. Primitive operator
+/// evaluation is atomic; no deadline means no clock reads.
+///
+/// # Errors
+/// As [`eval`]; deadline exhaustion is a value rather than an evaluator error.
+///
+/// # Panics
+/// As [`eval`].
+pub fn eval_within(
+    arena: &TermArena,
+    term: TermId,
+    assignment: &Assignment,
+    deadline: Option<std::time::Instant>,
+) -> Result<Option<Value>, IrError> {
+    match eval_internal(arena, term, assignment, deadline) {
+        Ok(value) => Ok(Some(value)),
+        Err(IrError::Unsupported(reason)) if reason == EVAL_DEADLINE => Ok(None),
+        Err(error) => Err(error),
+    }
+}
+
+fn eval_internal(
+    arena: &TermArena,
+    term: TermId,
+    assignment: &Assignment,
+    deadline: Option<std::time::Instant>,
+) -> Result<Value, IrError> {
     let mut memo: FastMap<TermId, Value> = FastMap::default();
-    eval_with_memo(arena, term, assignment, &mut memo)
+    eval_with_memo_internal(arena, term, assignment, &mut memo, deadline)
 }
 
 /// Like [`eval`], but evaluates against a caller-supplied `memo` of already-known
@@ -366,11 +406,24 @@ pub fn eval_with_memo<S: std::hash::BuildHasher>(
     assignment: &Assignment,
     memo: &mut HashMap<TermId, Value, S>,
 ) -> Result<Value, IrError> {
+    eval_with_memo_internal(arena, term, assignment, memo, None)
+}
+
+#[allow(clippy::too_many_lines)]
+fn eval_with_memo_internal<S: std::hash::BuildHasher>(
+    arena: &TermArena,
+    term: TermId,
+    assignment: &Assignment,
+    memo: &mut HashMap<TermId, Value, S>,
+    deadline: Option<std::time::Instant>,
+) -> Result<Value, IrError> {
+    check_eval_deadline(deadline)?;
     // Iterative post-order evaluation with memoization, so deep terms cannot
     // overflow the call stack and shared subterms evaluate once.
     let mut stack: Vec<(TermId, bool)> = vec![(term, false)];
 
     while let Some((t, children_ready)) = stack.pop() {
+        check_eval_deadline(deadline)?;
         if memo.contains_key(&t) {
             continue;
         }
@@ -409,7 +462,8 @@ pub fn eval_with_memo<S: std::hash::BuildHasher>(
                 // fresh sub-evaluation (ADR-0016).
                 Op::Forall(var) | Op::Exists(var) => {
                     let is_forall = matches!(op, Op::Forall(_));
-                    let value = eval_quantifier(arena, *var, args[0], is_forall, assignment)?;
+                    let value =
+                        eval_quantifier(arena, *var, args[0], is_forall, assignment, deadline)?;
                     memo.insert(t, value);
                 }
                 _ => {
@@ -509,6 +563,7 @@ pub fn eval_with_memo<S: std::hash::BuildHasher>(
         }
     }
 
+    check_eval_deadline(deadline)?;
     Ok(memo[&term].clone())
 }
 
@@ -546,12 +601,14 @@ fn eval_quantifier(
     body: TermId,
     is_forall: bool,
     assignment: &Assignment,
+    deadline: Option<std::time::Instant>,
 ) -> Result<Value, IrError> {
     let sort = arena.symbol(var).1;
     let mut sub = assignment.clone();
     let mut check = |value: Value| -> Result<Option<bool>, IrError> {
+        check_eval_deadline(deadline)?;
         sub.set(var, value);
-        let outcome = eval(arena, body, &sub)?
+        let outcome = eval_internal(arena, body, &sub, deadline)?
             .as_bool()
             .expect("quantified body is Bool-sorted");
         // Short-circuit: `forall` fails on the first false, `exists` succeeds on
