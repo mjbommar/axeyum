@@ -133,3 +133,13 @@ Source-to-CNF serialized binding remains missing, despite separate in-memory
 BitLowering/CnfEncoding lift APIs. This does not complete EVD-5 or the full goal.
 Required runner 88821 remains live and its full solver log is advancing through
 reconstruction tests; no terminal broad result has been observed.
+
+Required runner 88821 completed full solver with exit101: 2008 passed, one
+failed, zero ignored, 1264.56s. Failure: euf_egraph::tests::
+check_qf_uf_with_config_is_bounded_by_timeout, line4196; generous-budget
+pigeonhole case expected Unsat but returned Unknown(Other, boolean skeleton
+undecided). This repeats the original OMT source-lane red and is not dismissed
+as host noise. The original proof-lane pass does not close this combined red.
+Runner moved to workspace; same handle remains live. Next required gate work
+is root-causing this bounded-route failure with authoritative parent/control
+measurements; no full solver or workspace green is credited.

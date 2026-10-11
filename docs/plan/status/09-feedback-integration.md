@@ -10,8 +10,8 @@ views, formatting and merge hygiene pass with documented skipped scopes.
 Focused runner 63353 completed at source 2a111e062 (logs in notes):
 native build succeeds; sealed Python now 384 pass/zero skipped with CLI, CAS integrations
 18 pass, parser 101 pass, solver regressions 160 pass. Focused runner completed.
-Required runner 88821 is live: five front-door suites pass 158 tests; full solver
-and workspace remain uncredited. CLI route comparisons are same-engine checks.
+Required runner 88821: five front-door suites pass 158 tests; full solver is red
+(2008 pass/one EUF timeout-expectation failure); workspace is now active. CLI route comparisons are same-engine checks.
 Lint and independent oracle gates remain. Python SAT export/census and three
 tests pass with pinned private empty-clause LRAT guard; unmodified checker accepts
 a SAT control. All six representative term exports recheck, with replayed SAT controls.
