@@ -234,6 +234,8 @@ Native feasibility/minimality/uniqueness validate all 124 reference cases;
 Verdict guard mutation kills exactly one test. Finite-window certificates now replay native ground facts in a separate process;
 35 Python tests pass. Least-endpoint guard mutation kills exactly one test.
 Certificates remain conditional; native UNSAT/kernel proof routes are open.
+Added complete generated benefit coverage: all 576 rows evaluate with
+source SAT replay and matching expected outputs (one targeted test passed).
 Next: validator integration and complete CON-7
 validation. No integration/completion claim.
 

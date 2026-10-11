@@ -174,3 +174,14 @@ Native minimality/uniqueness UNSAT evidence stays separately uncertified; finite
 certificate checking is a narrower explicit route, not replacement of the full
 proof/integration requirements. All previously observed workspace runners remain
 live and advancing through kernel tests; none was restarted or credited green.
+
+## Complete benefit population — integration follow-up
+
+`test_complete_benefit_eligibility_population` derives the `coverage` family
+from the authoritative generated benefit query file, checks 576 rows, converts
+the input Date explicitly, requires sat-replayed, and compares both eligible
+and ineligible outputs. Fresh source-3ce2f60e4 extension, SHA-256
+`dbf382f850c122c5f4c84e74e8ce307eb53422013c30aacd69f543fc9762b87c`,
+package `/var/tmp/axeyum-omt-source-python-fv11_63u/package`: targeted run
+1 passed, 16 deselected, 1.94s. This closes the earlier omitted generated
+benefit family; it does not prove legal applicability or native UNSAT evidence.

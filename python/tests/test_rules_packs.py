@@ -142,3 +142,17 @@ def test_lifted_enum_rejects_negative_model_ordinal(monkeypatch):
     pack = Pack(ROOT / 'workflow-reachability-v0')
     with pytest.raises(ValueError, match='enum model'):
         pack.evaluate({'current_state': 'submitted', 'action': 'request_review', 'supervisor_review': False}, as_of=date(2026, 7, 1))
+
+
+def test_complete_benefit_eligibility_population():
+    pack = Pack(ROOT / 'benefit-eligibility-v0')
+    generated = json.loads((ROOT.parent / 'generated/queries/benefit-eligibility-v0.json').read_text())
+    family = next(row for row in generated['query_families'] if row['id'] == 'coverage')
+    assert len(family['rows']) == family['row_count'] == 576
+    for row in family['rows']:
+        facts = dict(row['facts'])
+        facts['application_date'] = date.fromisoformat(facts['application_date'])
+        result = pack.evaluate(facts)
+        assert result.status == 'sat-replayed', row['id']
+        expected = row['expected_eligible']
+        assert result.outputs == {'eligible': expected, 'ineligible': not expected}, row['id']
