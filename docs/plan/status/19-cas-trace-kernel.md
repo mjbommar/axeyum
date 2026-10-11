@@ -29,3 +29,9 @@ Parent guarded CAS39650 passed2147/0 failed/11 ignored,478.13s; release44600
 passed as recorded above.
 Source check:existing text parser lives in python/axeyum/_cas_parser.py; native
 Rust parsing entry point remains a required LIB-6 extension.
+
+Wasm84951 passed19.87s; MSRV1.88 check53910 passed1m39s, with existing solver
+unused-code warnings (37/35 respectively), not warning-free claims. Added
+fractional/wide/domain/foreign-variable translation declines and hostile added-
+assumption intake controls. Release13258 running, uncredited:
+`/var/tmp/axeyum-cas-trace-kernel-controls.log`.

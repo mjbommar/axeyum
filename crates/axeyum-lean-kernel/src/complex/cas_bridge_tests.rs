@@ -762,3 +762,50 @@ fn generated_step_trace_composes_kernel_proofs_with_empty_footprint() {
         );
     });
 }
+
+#[test]
+fn trace_ring_translation_declines_fractional_wide_and_domain_sensitive_input() {
+    use axeyum_cas::rewrite_trace::PolynomialExpr;
+    let x = CExpr::One;
+    for unsupported in [
+        PolynomialExpr::Const {
+            numerator: "1".into(),
+            denominator: "2".into(),
+        },
+        PolynomialExpr::Const {
+            numerator: i128::MIN.to_string(),
+            denominator: "1".into(),
+        },
+        PolynomialExpr::Const {
+            numerator: "1606938044258990275541962092341162602522202993782792835301376".into(),
+            denominator: "1".into(),
+        },
+        PolynomialExpr::Var("y".into()),
+        PolynomialExpr::Pow {
+            base: Box::new(PolynomialExpr::Var("x".into())),
+            exponent: 5,
+        },
+        PolynomialExpr::Div {
+            numerator: Box::new(PolynomialExpr::Var("x".into())),
+            denominator: Box::new(PolynomialExpr::Var("x".into())),
+        },
+    ] {
+        assert!(trace_ring_expr(&unsupported, &x).is_none());
+    }
+}
+
+#[test]
+fn trace_kernel_intake_rejects_added_assumptions_before_reconstruction() {
+    use axeyum_cas::rewrite_trace::{
+        PolynomialExpr, TraceLimits, normalize_with_trace, replay_json,
+    };
+    let x = CasExpr::var("x");
+    let limits = TraceLimits::default();
+    let trace = normalize_with_trace(&CasExpr::Add(vec![x.clone(), x]), limits).unwrap();
+    let mut carried = trace.clone();
+    carried.assumptions.push(PolynomialExpr::Var("x".into()));
+    // Serialize directly to exercise actual hostile intake, bypassing the
+    // producer's serialization guard. The kernel route must never see this.
+    let bytes = serde_json::to_vec(&carried).unwrap();
+    assert!(replay_json(&bytes, &trace.input, &trace.result, limits).is_err());
+}
