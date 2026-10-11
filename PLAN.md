@@ -429,7 +429,10 @@ failed a nonexistent context field; corrected, not credited as a test run.
 Wide suite has missing crate-doc warning to fix after current build.
 Python `cancel_trace(..., wide=True)` added; replay/getters carry wide values.
 Fresh native32955 running, uncredited: `/var/tmp/axeyum-cas-wide-guarded-native.log`.
-Next: Python runtime tests and stubs, separate-process replay, private
+Added10 Python runtime cases including separate-process replay with producer
+disabled; syntax compilation passed, runtime awaits native32955.
+Parent wide CAS2147 passed/0 failed/11 ignored,389.32s; this is parent evidence.
+Next: Python runtime run and stubs, private
 mutations and broad gates. Entire feedback goal remains active.
 
 ### SOL — Solver parity
