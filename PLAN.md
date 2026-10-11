@@ -725,7 +725,7 @@ Fresh native99af1a4c preserved:34trace tests pass0skip0.32s;25consumer files
 
 Python lint final rerun49809 passes after cc65885a3 doc fix; generator62778
 passes27modules/667items/5qualified integer annotations. Generated stubs committed.
-Sealed typed checker52388 is live; configured guarded LRAT export check is included.
+Sealed typed52388 passes drift27/1888, type95.4%, runtime44/0skip22.84s including configured guarded LRAT exports.
 Current CAS registry6894 passes:1310public/153certified/116checker/1041uncertified;
 no logging credit. Plan/link gates45795 pass. Merge hygiene36970 exits0 with
 shape duplicate/projection scopes explicitly skipped, not full population credit.
