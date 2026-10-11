@@ -440,3 +440,20 @@ built competition CLI configured. Build/native identities and actual pytest
 counts must be collected; queued work is not a pass. Logs
 `/var/tmp/axeyum-nested-final-cli-{after-clippy,build,python}.log`; final receipt
 `/var/tmp/axeyum-nested-final-cli-receipt.json`. Source remains frozen.
+
+### Shipped examples qualified on final native
+
+Helper1369 terminal0:5 examples run against sealed99af1a4c, artifact
+`/data0/axeyum/artifacts/python/final-user-examples-351ik7ir/` contains every
+stdout log, exported trace/proof files and source/nativeidentity receipt.
+Amortization2859/2849bits agrees with Fraction; zero-rate2500/3. CASstep example
+4unconditionalsteps, context corruption rejected atstep0,3guardedsteps and
+201bitwideguarded coefficients/2912bytes checked. OMTexample verifies4models
+and4portablecertificates:lex10/0 andbox10/3, each goldTrue for audited slice.
+Statute example computesJuly6 fromJuly3+1day, skippingJuly4/5, reportsvalidated
+native agreement (feasibilitySATverified, minimality/uniquenessUNSATnothing-to-check);
+no UNSATproofcredit added. Separate conditionalcertificate replay receipt holds.
+SATexport example retains guardedchecker19863c56 identity:2LRATexports verify
+with2rejectioncontrols each;6clausalroutes externally verify and SATmodelsreplay;
+2reference-miter cases reject substitutedsource/unrelatedvalidmiter. RawCNF
+LRATabsent; generaltheory source-mapping export remains explicitly absent.

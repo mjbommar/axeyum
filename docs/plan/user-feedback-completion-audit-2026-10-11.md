@@ -27,7 +27,7 @@ use actual terminal output before changing any item to complete.
 | A3 Boolean+LIA composition | [Boolean/LIA tests](../../crates/axeyum-solver/tests/boolean_lia_alethe.rs), internal integer-only evidence | Final supported Boolean/theory proofs and bad-cut/branch/premise controls; integer-only local artifact remains separately labelled until portable. |
 | O0 objectives never silently disappear | Explicit objective intake/optimization result routes in ancestry | Final Python/session/CLI/Rust bounded maximize/minimize comparisons and unsupported-route outcomes. |
 | O1 shared budgets/honest unboundedness | Intake, parsing, optimization and replay deadline repairs; quantifier polling controls | Final deterministic exhaustion/overflow checks. Resource ceilings cannot certify unboundedness; unsupported ray production must decline. |
-| O2 evidence-bearing Python gold answers | Box/lex results, source-bound model and strict-better UNSAT certificates | Final feasible/optimality replay, tampered value/model/order controls and objective-mode documentation; fresh OMT tests. |
+| O2 evidence-bearing Python gold answers | Box/lex results, source-bound model and strict-better UNSAT certificates | Final native OMT/certificate tests are in1166pass consumer population; shipped example now checks4models/4portable certificates (lex10/0,box10/3), goldTrue for audited slice. CLI closure and shared gates remain; unsupported integer-cut/BV proof credit stays false. |
 | CON-6 signed literal convenience/corrections | Signed integer compatibility parser; abs/distinct capability correction in audit | Final wide/quoted/declaration-precedence/roundtrip controls and all required parser frontdoors. Exact `notes/80` path remains unidentified; do not guess a historical file. |
 | R0 typed Date and existing-pack API | [Date tests](../../python/tests/test_rules_dates.py), [pack tests](../../python/tests/test_rules_packs.py) | Final native Date/pack/metadata controls included in1166pass population; bounded contracts accepted inADR3200/3300. Aggregate gates remain; Python Date facade is explicit, native Date sort is a separate decision. |
 | R1 real-statute computation-of-time template | [Statute tests](../../python/tests/test_rules_statute_deadline.py), pinned official-text identity and source validator in ancestry | Current validator20 tests,7packs/4source snapshots pass; one exported certificate now replays on final sealed native99af1a4c. Deadline/reference/minimality controls are included in1166pass native population. Aggregate gates and integration remain. Applicability is an explicit assumption; retrieval date does not establish effective dates. |
@@ -100,3 +100,26 @@ SAT, and runs all `test_smt.py` cases against final sealed native plus the fresh
 competition CLI (including signed literals and corpus comparisons). Actual
 exit/counts and binary digests remain pending; this queue entry supplies no
 completion credit.
+
+## Shipped example verification
+
+All five selected shipped examples exit zero against final sealed99af1a4c:
+`cas_amortization.py`, `cas_step_trace.py`, `smt_optimization.py`, the statute
+template's `example.py`, and `sat_certificate_export.py --census` with the
+pinned guarded LRAT checker configured. Artifact
+`/data0/axeyum/artifacts/python/final-user-examples-351ik7ir/` retains source/native
+identity, commands, outputs and exported bytes. The OMT example discharges
+all counted original-model and no-better obligations for four lex/box outputs.
+The CAS example checks four ordinary steps, guarded cancellation and a wide
+guarded coefficient, and rejects changed context. SAT export checks two LRAT
+artifacts with two external rejection controls each; its six-route census
+checks every available clausal artifact externally and replays every SAT model.
+Its two reference-miter cases bind original Boolean/BV queries and reject
+source/miter substitution. Raw-CNF LRAT remains absent; general-theory mapping
+export remains explicitly unsupported.
+
+The statute example reports `validated` agreement, not certified UNSAT, for
+its native minimality/uniqueness obligations. Its independently replayed finite
+conditional certificate is separate evidence. No applicability or calendar
+authenticity claim follows from this demonstration. Shared closing gates
+and actual integration remain open.
