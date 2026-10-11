@@ -34,7 +34,10 @@ use crate::backend::{
     CheckResult, ModelPreference, SolverConfig, SolverError, UnknownKind, UnknownReason,
 };
 use crate::model::Model;
-use crate::optimize::{OptOutcome, maximize_bv, maximize_lia, minimize_bv, minimize_lia};
+use crate::optimize::{
+    OptOutcome, maximize_bv_with_config, maximize_lia_with_config, minimize_bv_with_config,
+    minimize_lia_with_config,
+};
 use crate::route_trace::{front_door_stage, record_front_door_result};
 
 /// The branch-node budget the word-equation route (ADR-0053, T-B.4b) spends per
@@ -1782,7 +1785,23 @@ fn mentions_int_sort(arena: &TermArena, t: TermId) -> bool {
     go(arena, t, &mut HashMap::new())
 }
 
+fn require_satisfiability_script(script: &Script) -> Result<(), SolverError> {
+    if !script.objectives.is_empty() {
+        return Err(SolverError::Unsupported(
+            "optimization objectives require optimize_smtlib or optimize_smtlib_lexicographic; \
+             satisfiability/model/session APIs do not optimize objectives"
+                .to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 fn smtlib_single_query(script: &Script) -> Result<SmtLibSingleQuery, SolverError> {
+    require_satisfiability_script(script)?;
+    smtlib_single_optimization_query(script)
+}
+
+fn smtlib_single_optimization_query(script: &Script) -> Result<SmtLibSingleQuery, SolverError> {
     if script.check_sats > 1 {
         return Err(SolverError::Unsupported(
             "single-result SMT-LIB helper received multiple check-sat commands; use \
@@ -3061,9 +3080,9 @@ fn apply_bounded_completeness_unsat(input: &str, result: CheckResult) -> CheckRe
 /// for an objective outside the supported (`Int`/`BitVec`) optimization
 /// fragment, or any [`SolverError`] from the optimizer.
 pub fn optimize_smtlib(input: &str, config: &SolverConfig) -> Result<Vec<OptOutcome>, SolverError> {
-    let _ = config;
+    let started = std::time::Instant::now();
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
-    let query = smtlib_single_query(&script)?;
+    let query = smtlib_single_optimization_query(&script)?;
     let objectives = std::mem::take(&mut script.objectives);
     let mut outcomes = Vec::with_capacity(objectives.len());
     for (objective, is_max) in objectives {
@@ -3072,6 +3091,7 @@ pub fn optimize_smtlib(input: &str, config: &SolverConfig) -> Result<Vec<OptOutc
             &query.assertions,
             objective,
             is_max,
+            &text_optimization_config(config, started),
         )?);
     }
     Ok(outcomes)
@@ -3081,7 +3101,9 @@ pub fn optimize_smtlib(input: &str, config: &SolverConfig) -> Result<Vec<OptOutc
 /// optimized subject to the previous ones being **fixed at their optima**. The
 /// first objective is optimized over the assertions; if it has an exact optimum,
 /// the constraint `objective = optimum` is added before optimizing the next, and
-/// so on. Returns the optima in priority (declaration) order. (Z3's `lex` mode;
+/// so on. If one objective is unresolved, later objectives are reported unknown:
+/// they cannot be optimized without fixing the higher-priority optimum.
+/// Returns results in priority (declaration) order. (Z3's `lex` mode;
 /// [`optimize_smtlib`] gives the independent/`box` interpretation.)
 ///
 /// # Errors
@@ -3092,14 +3114,29 @@ pub fn optimize_smtlib_lexicographic(
     input: &str,
     config: &SolverConfig,
 ) -> Result<Vec<OptOutcome>, SolverError> {
-    let _ = config;
+    let started = std::time::Instant::now();
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
-    let query = smtlib_single_query(&script)?;
+    let query = smtlib_single_optimization_query(&script)?;
     let objectives = std::mem::take(&mut script.objectives);
     let mut assertions = query.assertions;
     let mut outcomes = Vec::with_capacity(objectives.len());
+    let mut stopped = false;
     for (objective, is_max) in objectives {
-        let outcome = optimize_one(&mut script.arena, &assertions, objective, is_max)?;
+        if stopped {
+            outcomes.push(OptOutcome::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: "lexicographic optimization: a higher-priority objective has no optimum"
+                    .to_owned(),
+            }));
+            continue;
+        }
+        let outcome = optimize_one(
+            &mut script.arena,
+            &assertions,
+            objective,
+            is_max,
+            &text_optimization_config(config, started),
+        )?;
         // Pin this objective at its optimum for the lower-priority ones.
         if let OptOutcome::Optimal(value) = outcome {
             let pin = match script.arena.sort_of(objective) {
@@ -3125,9 +3162,18 @@ pub fn optimize_smtlib_lexicographic(
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
             assertions.push(eq);
         }
+        stopped = !matches!(outcome, OptOutcome::Optimal(_));
         outcomes.push(outcome);
     }
     Ok(outcomes)
+}
+
+fn text_optimization_config(config: &SolverConfig, started: std::time::Instant) -> SolverConfig {
+    let mut remaining = config.clone();
+    remaining.timeout = config
+        .timeout
+        .map(|budget| budget.saturating_sub(started.elapsed()));
+    remaining
 }
 
 /// Optimizes one objective subject to `assertions`, dispatching by sort (`Int` /
@@ -3137,12 +3183,19 @@ fn optimize_one(
     assertions: &[axeyum_ir::TermId],
     objective: axeyum_ir::TermId,
     is_max: bool,
+    config: &SolverConfig,
 ) -> Result<OptOutcome, SolverError> {
+    if config.timeout.is_some_and(|timeout| timeout.is_zero()) {
+        return Ok(OptOutcome::Unknown(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: "SMT-LIB optimization: shared timeout reached".to_owned(),
+        }));
+    }
     match (arena.sort_of(objective), is_max) {
-        (Sort::Int, true) => maximize_lia(arena, assertions, objective),
-        (Sort::Int, false) => minimize_lia(arena, assertions, objective),
-        (Sort::BitVec(_), true) => maximize_bv(arena, assertions, objective),
-        (Sort::BitVec(_), false) => minimize_bv(arena, assertions, objective),
+        (Sort::Int, true) => maximize_lia_with_config(arena, assertions, objective, config),
+        (Sort::Int, false) => minimize_lia_with_config(arena, assertions, objective, config),
+        (Sort::BitVec(_), true) => maximize_bv_with_config(arena, assertions, objective, config),
+        (Sort::BitVec(_), false) => minimize_bv_with_config(arena, assertions, objective, config),
         (other, _) => Err(SolverError::Unsupported(format!(
             "optimization objective of sort {other:?} (only Int and BitVec are supported)"
         ))),
@@ -4115,6 +4168,7 @@ fn run_session(
     config: &SolverConfig,
     policy: SessionPolicy,
 ) -> Result<Vec<SmtLibResponse>, SolverError> {
+    require_satisfiability_script(script)?;
     // Source-first parse fallback (T-B.4d): fallback scripts are non-incremental
     // by construction, so decide their one query through only the checked
     // source-level ladder.

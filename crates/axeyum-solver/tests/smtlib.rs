@@ -2623,3 +2623,66 @@ fn verdict_label(result: &CheckResult) -> &'static str {
         CheckResult::Unknown(_) => "unknown",
     }
 }
+
+#[test]
+fn text_optimization_honors_zero_shared_budget_for_int_and_bv() {
+    use axeyum_solver::{OptOutcome, UnknownKind, optimize_smtlib, optimize_smtlib_lexicographic};
+    use std::time::Duration;
+    let expired = config().with_timeout(Duration::ZERO);
+    for text in [
+        "(set-logic QF_LIA)(declare-const x Int)(assert (and (>= x 0) (<= x 10)))(maximize x)(minimize x)(check-sat)",
+        "(set-logic QF_BV)(declare-const x (_ BitVec 8))(maximize x)(minimize x)(check-sat)",
+    ] {
+        let boxed = optimize_smtlib(text, &expired).unwrap();
+        assert_eq!(boxed.len(), 2);
+        assert!(
+            boxed.iter().all(
+                |o| matches!(o, OptOutcome::Unknown(r) if r.kind == UnknownKind::ResourceLimit)
+            ),
+            "{boxed:?}"
+        );
+        let lex = optimize_smtlib_lexicographic(text, &expired).unwrap();
+        assert!(
+            matches!(&lex[0], OptOutcome::Unknown(r) if r.kind == UnknownKind::ResourceLimit),
+            "{lex:?}"
+        );
+        assert!(matches!(&lex[1], OptOutcome::Unknown(_)), "{lex:?}");
+    }
+}
+
+#[test]
+fn text_lexicographic_cannot_optimize_after_an_unbounded_priority() {
+    use axeyum_solver::{OptOutcome, optimize_smtlib, optimize_smtlib_lexicographic};
+    let text = "(set-logic QF_LIA)(declare-const x Int)(declare-const y Int)(assert (>= x 0))(assert (and (>= y 0) (<= y 10)))(maximize x)(maximize y)(check-sat)";
+    let lex = optimize_smtlib_lexicographic(text, &config()).unwrap();
+    assert_eq!(lex.len(), 2);
+    assert_eq!(lex[0], OptOutcome::Unbounded);
+    assert!(
+        matches!(&lex[1], OptOutcome::Unknown(_)),
+        "a missing first optimum cannot be fixed: {lex:?}"
+    );
+    let boxed = optimize_smtlib(text, &config()).unwrap();
+    assert_eq!(boxed, vec![OptOutcome::Unbounded, OptOutcome::Optimal(10)]);
+}
+
+#[test]
+fn objective_bearing_scripts_cannot_silently_use_satisfiability_routes() {
+    use axeyum_solver::{
+        SolverError, solve_smtlib, solve_smtlib_get_model, solve_smtlib_get_value,
+        solve_smtlib_incremental, solve_smtlib_session,
+    };
+    let text = "(set-logic QF_LIA)(declare-const x Int)(assert (and (>= x 0) (<= x 10)))(maximize x)(check-sat)(get-model)(get-value (x))";
+    let cfg = config();
+    for result in [
+        solve_smtlib(text, &cfg).map(|_| ()),
+        solve_smtlib_get_model(text, &cfg).map(|_| ()),
+        solve_smtlib_get_value(text, &cfg).map(|_| ()),
+        solve_smtlib_incremental(text, &cfg).map(|_| ()),
+        solve_smtlib_session(text, &cfg).map(|_| ()),
+    ] {
+        assert!(
+            matches!(result, Err(SolverError::Unsupported(ref why)) if why.contains("optimize_smtlib")),
+            "{result:?}"
+        );
+    }
+}

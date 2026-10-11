@@ -8,13 +8,13 @@
 //!
 //! - feasibility of `assertions` gives a starting objective value;
 //! - an **exponential** search raises the bound `objective >= k` until it becomes
-//!   unsatisfiable (or a magnitude cap suggests the objective is unbounded);
+//!   unsatisfiable (or search reaches a resource/representation limit);
 //! - a **binary** search then finds the largest `k` with `objective >= k`
 //!   satisfiable — that `k` is the maximum.
 //!
 //! Every probe is a sound `unsat`/`sat` decision; the result is the exact optimum
-//! when one exists, [`OptOutcome::Unbounded`] when the objective grows past the
-//! magnitude cap, [`OptOutcome::Infeasible`] when the constraints are `unsat`, and
+//! when one exists, [`OptOutcome::Unbounded`] only after a checked linear
+//! recession direction, [`OptOutcome::Infeasible`] when the constraints are `unsat`, and
 //! [`OptOutcome::Unknown`] if a probe is undecided. `minimize` is `maximize` of
 //! the negated objective. Feasibility probes go through the full dispatcher
 //! ([`crate::check_auto`]: preprocessing, div/mod elimination, and all theory
@@ -23,7 +23,7 @@
 //! objective or constraint outside the deciding fragment makes the optimizer
 //! return a graceful [`OptOutcome::Unknown`], never a hard error.
 
-use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
+use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, Value, eval};
 
 use crate::auto::check_auto;
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
@@ -67,9 +67,181 @@ fn probe_unsupported_to_unknown(err: SolverError) -> Result<UnknownReason, Solve
     }
 }
 
-/// Doubling steps before the objective is declared unbounded. `2^126` overflows
-/// `i128` magnitude, so this is effectively an overflow guard, not a real bound.
+/// Bound search work; exhaustion is a resource limit, never an unboundedness proof.
 const MAX_DOUBLINGS: u32 = 126;
+
+/// Preserve one optimization deadline across every feasibility probe.
+fn remaining_config(config: &SolverConfig, deadline: Option<Instant>) -> SolverConfig {
+    let mut remaining = config.clone();
+    remaining.timeout = deadline.map(|at| at.saturating_duration_since(Instant::now()));
+    remaining
+}
+
+fn search_limit_reason() -> UnknownReason {
+    UnknownReason {
+        kind: UnknownKind::ResourceLimit,
+        detail: "optimization: integer bound search exhausted without an unboundedness witness"
+            .to_owned(),
+    }
+}
+
+/// A coefficient must be closed affine arithmetic, not merely evaluable under
+/// an empty assignment. Partial operations such as div/mod by zero have
+/// model-dependent interpretations; their evaluator default is not a constant.
+fn affine_constant(
+    arena: &TermArena,
+    term: TermId,
+    depth: usize,
+    work: &mut usize,
+) -> Option<i128> {
+    if depth >= 256 || *work == 0 {
+        return None;
+    }
+    *work -= 1;
+    match arena.node(term) {
+        TermNode::IntConst(value) => Some(*value),
+        TermNode::App {
+            op: Op::IntNeg,
+            args,
+        } if args.len() == 1 => affine_constant(arena, args[0], depth + 1, work)?.checked_neg(),
+        TermNode::App { op, args }
+            if args.len() == 2 && matches!(op, Op::IntAdd | Op::IntSub | Op::IntMul) =>
+        {
+            let left = affine_constant(arena, args[0], depth + 1, work)?;
+            let right = affine_constant(arena, args[1], depth + 1, work)?;
+            match op {
+                Op::IntAdd => left.checked_add(right),
+                Op::IntSub => left.checked_sub(right),
+                _ => left.checked_mul(right),
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Homogeneous part of an affine integer expression. Unsupported/nonlinear
+/// syntax declines; constants are zero and symbols denote integer directions.
+fn homogeneous(
+    arena: &mut TermArena,
+    term: TermId,
+    depth: usize,
+    work: &mut usize,
+) -> Option<TermId> {
+    if depth >= 256 || *work == 0 {
+        return None;
+    }
+    *work -= 1;
+    match arena.node(term).clone() {
+        TermNode::IntConst(_) | TermNode::WideIntConst(_) => Some(arena.int_const(0)),
+        TermNode::Symbol(_) if arena.sort_of(term) == Sort::Int => Some(term),
+        TermNode::App {
+            op: Op::IntNeg,
+            args,
+        } if args.len() == 1 => {
+            let h = homogeneous(arena, args[0], depth + 1, work)?;
+            arena.int_neg(h).ok()
+        }
+        TermNode::App {
+            op: Op::IntAdd | Op::IntSub,
+            args,
+        } if args.len() == 2 => {
+            let is_add = matches!(arena.node(term), TermNode::App { op: Op::IntAdd, .. });
+            let left = homogeneous(arena, args[0], depth + 1, work)?;
+            let right = homogeneous(arena, args[1], depth + 1, work)?;
+            if is_add {
+                arena.int_add(left, right).ok()
+            } else {
+                arena.int_sub(left, right).ok()
+            }
+        }
+        TermNode::App {
+            op: Op::IntMul,
+            args,
+        } if args.len() == 2 => {
+            for (constant, variable) in [(args[0], args[1]), (args[1], args[0])] {
+                if let Some(value) = affine_constant(arena, constant, 0, work) {
+                    let coefficient = arena.int_const(value);
+                    let h = homogeneous(arena, variable, depth + 1, work)?;
+                    return arena.int_mul(coefficient, h).ok();
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+/// A feasible starting point plus these homogeneous constraints establishes
+/// feasibility at base + n*direction for all natural n. This preserves strict
+/// inequalities using weak direction inequalities, and disequalities by a zero
+/// derivative. Only conjunctions of supported linear literals are admitted.
+/// The direction itself is independently replayed against the rebuilt query.
+fn has_improving_ray(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objective: TermId,
+    config: &SolverConfig,
+) -> Result<bool, SolverError> {
+    let mut work = 4096;
+    let Some(improvement) = homogeneous(arena, objective, 0, &mut work) else {
+        return Ok(false);
+    };
+    let one = arena.int_const(1);
+    let mut ray = vec![arena.int_ge(improvement, one)?];
+    let mut pending: Vec<_> = assertions.iter().map(|&a| (a, false)).collect();
+    while let Some((term, negated)) = pending.pop() {
+        if work == 0 {
+            return Ok(false);
+        }
+        work -= 1;
+        match arena.node(term).clone() {
+            TermNode::BoolConst(value) if value != negated => {}
+            TermNode::App {
+                op: Op::BoolNot,
+                args,
+            } if args.len() == 1 => {
+                pending.push((args[0], !negated));
+            }
+            TermNode::App {
+                op: Op::BoolAnd,
+                args,
+            } if !negated => {
+                pending.extend(args.iter().map(|&a| (a, false)));
+            }
+            TermNode::App {
+                op: Op::BoolOr,
+                args,
+            } if negated => {
+                pending.extend(args.iter().map(|&a| (a, true)));
+            }
+            TermNode::App { op, args }
+                if args.len() == 2
+                    && matches!(op, Op::Eq | Op::IntLe | Op::IntLt | Op::IntGe | Op::IntGt) =>
+            {
+                let Some(left) = homogeneous(arena, args[0], 0, &mut work) else {
+                    return Ok(false);
+                };
+                let Some(right) = homogeneous(arena, args[1], 0, &mut work) else {
+                    return Ok(false);
+                };
+                let constraint = match op {
+                    // Both equalities and disequalities are preserved by zero slope.
+                    Op::Eq => arena.eq(left, right)?,
+                    Op::IntLe | Op::IntLt if !negated => arena.int_le(left, right)?,
+                    Op::IntGe | Op::IntGt if negated => arena.int_le(left, right)?,
+                    _ => arena.int_ge(left, right)?,
+                };
+                ray.push(constraint);
+            }
+            _ => return Ok(false),
+        }
+    }
+    match check_auto(arena, &ray, config) {
+        Ok(CheckResult::Sat(direction)) => crate::check_model(arena, &ray, &direction),
+        Ok(_) | Err(SolverError::Unsupported(_)) => Ok(false),
+        Err(error) => Err(error),
+    }
+}
 
 /// The result of a linear-integer optimization.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -114,15 +286,32 @@ pub fn maximize_lia_with_config(
     config: &SolverConfig,
 ) -> Result<OptOutcome, SolverError> {
     let deadline = deadline_from(config);
-    // Starting point: any feasible value of the objective.
-    let mut lo = match objective_value(arena, assertions, objective, config)? {
+    if past_deadline(deadline) {
+        return Ok(OptOutcome::Unknown(timed_out_reason()));
+    }
+    // Starting point: a replay-checked feasible value of the objective.
+    let mut lo = match objective_value(
+        arena,
+        assertions,
+        objective,
+        &remaining_config(config, deadline),
+    )? {
         Probe::Sat(value) => value,
         Probe::Unsat => return Ok(OptOutcome::Infeasible),
         Probe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
     };
 
-    // Exponential search for an unsatisfiable upper bound `hi` (objective >= hi
-    // is infeasible). Bounded by MAX_DOUBLINGS / i128 overflow -> Unbounded.
+    if has_improving_ray(
+        arena,
+        assertions,
+        objective,
+        &remaining_config(config, deadline),
+    )? {
+        return Ok(OptOutcome::Unbounded);
+    }
+
+    // Exponential search for an unsatisfiable upper bound. Search ceilings are
+    // not mathematical unboundedness witnesses.
     let mut delta: i128 = 1;
     let mut doublings: u32 = 0;
     let mut hi = loop {
@@ -130,32 +319,45 @@ pub fn maximize_lia_with_config(
             return Ok(OptOutcome::Unknown(timed_out_reason()));
         }
         let Some(probe_point) = lo.checked_add(delta) else {
-            return Ok(OptOutcome::Unbounded);
+            return Ok(OptOutcome::Unknown(search_limit_reason()));
         };
-        match objective_ge(arena, assertions, objective, probe_point, config)? {
+        match objective_ge(
+            arena,
+            assertions,
+            objective,
+            probe_point,
+            &remaining_config(config, deadline),
+        )? {
             Probe::Sat(value) => lo = value.max(probe_point),
             Probe::Unsat => break probe_point,
             Probe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
         }
         doublings += 1;
         if doublings >= MAX_DOUBLINGS {
-            return Ok(OptOutcome::Unbounded);
+            return Ok(OptOutcome::Unknown(search_limit_reason()));
         }
         match delta.checked_mul(2) {
             Some(next) => delta = next,
-            None => return Ok(OptOutcome::Unbounded),
+            None => return Ok(OptOutcome::Unknown(search_limit_reason())),
         }
     };
 
     // Binary search in [lo, hi): objective >= lo is sat, objective >= hi is unsat.
-    while hi - lo > 1 {
+    while hi.abs_diff(lo) > 1 {
         if past_deadline(deadline) {
             // `lo` is a probe-verified feasible value but not certified optimal;
             // report it as undecided rather than a wrong optimum.
             return Ok(OptOutcome::Unknown(timed_out_reason()));
         }
-        let mid = lo + (hi - lo) / 2;
-        match objective_ge(arena, assertions, objective, mid, config)? {
+        let half = i128::try_from(hi.abs_diff(lo) / 2).expect("half of an i128 bracket fits i128");
+        let mid = lo + half;
+        match objective_ge(
+            arena,
+            assertions,
+            objective,
+            mid,
+            &remaining_config(config, deadline),
+        )? {
             Probe::Sat(value) => lo = value.max(mid),
             Probe::Unsat => hi = mid,
             Probe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
@@ -193,7 +395,7 @@ pub fn minimize_lia_with_config(
         match maximize_lia_with_config(arena, assertions, negated, config)? {
             OptOutcome::Optimal(max_of_neg) => match max_of_neg.checked_neg() {
                 Some(min) => OptOutcome::Optimal(min),
-                None => OptOutcome::Unbounded,
+                None => OptOutcome::Unknown(search_limit_reason()),
             },
             other => other,
         },
@@ -281,9 +483,19 @@ pub fn optimize_lia_lexicographic_with_config(
             });
         }
         let outcome = if obj.maximize {
-            maximize_lia_with_config(arena, &constraints, obj.objective, config)?
+            maximize_lia_with_config(
+                arena,
+                &constraints,
+                obj.objective,
+                &remaining_config(config, deadline),
+            )?
         } else {
-            minimize_lia_with_config(arena, &constraints, obj.objective, config)?
+            minimize_lia_with_config(
+                arena,
+                &constraints,
+                obj.objective,
+                &remaining_config(config, deadline),
+            )?
         };
         match outcome {
             OptOutcome::Optimal(value) => {
@@ -355,9 +567,19 @@ pub fn optimize_lia_box_with_config(
             continue;
         }
         let outcome = if obj.maximize {
-            maximize_lia_with_config(arena, assertions, obj.objective, config)?
+            maximize_lia_with_config(
+                arena,
+                assertions,
+                obj.objective,
+                &remaining_config(config, deadline),
+            )?
         } else {
-            minimize_lia_with_config(arena, assertions, obj.objective, config)?
+            minimize_lia_with_config(
+                arena,
+                assertions,
+                obj.objective,
+                &remaining_config(config, deadline),
+            )?
         };
         out.push(outcome);
     }
@@ -458,6 +680,11 @@ fn pareto_probe(
     let result = check_auto(arena, constraints, config);
     match result {
         Ok(CheckResult::Sat(model)) => {
+            if !crate::check_model(arena, constraints, &model)? {
+                return Err(SolverError::Backend(
+                    "optimization probe model failed replay".to_owned(),
+                ));
+            }
             let assignment = model.to_assignment();
             let mut vals = Vec::with_capacity(objectives.len());
             for obj in objectives {
@@ -535,7 +762,12 @@ pub fn optimize_lia_pareto_with_config(
         // A fresh candidate must not be weakly dominated by any recorded point.
         let mut query = assertions.to_vec();
         query.extend_from_slice(&exclusions);
-        let candidate = match pareto_probe(arena, &query, objectives, config)? {
+        let candidate = match pareto_probe(
+            arena,
+            &query,
+            objectives,
+            &remaining_config(config, deadline),
+        )? {
             MultiProbe::Sat(v) => v,
             MultiProbe::Unsat => return Ok(ParetoOutcome::Complete(front)),
             MultiProbe::Unknown(reason) => {
@@ -557,7 +789,7 @@ pub fn optimize_lia_pareto_with_config(
                 dom.push(pareto_better_eq(arena, *obj, vi)?);
             }
             dom.push(pareto_improves_somewhere(arena, objectives, &v)?);
-            match pareto_probe(arena, &dom, objectives, config)? {
+            match pareto_probe(arena, &dom, objectives, &remaining_config(config, deadline))? {
                 MultiProbe::Sat(w) => v = w, // w dominates v; keep climbing
                 MultiProbe::Unsat => {
                     certified = true; // nothing dominates v → Pareto-optimal
@@ -643,14 +875,30 @@ pub fn optimize_bv_lexicographic_with_config(
             });
         }
         let outcome = match (obj.signed, obj.maximize) {
-            (false, true) => maximize_bv_with_config(arena, &constraints, obj.objective, config)?,
-            (false, false) => minimize_bv_with_config(arena, &constraints, obj.objective, config)?,
-            (true, true) => {
-                maximize_bv_signed_with_config(arena, &constraints, obj.objective, config)?
-            }
-            (true, false) => {
-                minimize_bv_signed_with_config(arena, &constraints, obj.objective, config)?
-            }
+            (false, true) => maximize_bv_with_config(
+                arena,
+                &constraints,
+                obj.objective,
+                &remaining_config(config, deadline),
+            )?,
+            (false, false) => minimize_bv_with_config(
+                arena,
+                &constraints,
+                obj.objective,
+                &remaining_config(config, deadline),
+            )?,
+            (true, true) => maximize_bv_signed_with_config(
+                arena,
+                &constraints,
+                obj.objective,
+                &remaining_config(config, deadline),
+            )?,
+            (true, false) => minimize_bv_signed_with_config(
+                arena,
+                &constraints,
+                obj.objective,
+                &remaining_config(config, deadline),
+            )?,
         };
         match outcome {
             OptOutcome::Optimal(value) => {
@@ -731,14 +979,30 @@ pub fn optimize_bv_box_with_config(
             continue;
         }
         let outcome = match (obj.signed, obj.maximize) {
-            (false, true) => maximize_bv_with_config(arena, assertions, obj.objective, config)?,
-            (false, false) => minimize_bv_with_config(arena, assertions, obj.objective, config)?,
-            (true, true) => {
-                maximize_bv_signed_with_config(arena, assertions, obj.objective, config)?
-            }
-            (true, false) => {
-                minimize_bv_signed_with_config(arena, assertions, obj.objective, config)?
-            }
+            (false, true) => maximize_bv_with_config(
+                arena,
+                assertions,
+                obj.objective,
+                &remaining_config(config, deadline),
+            )?,
+            (false, false) => minimize_bv_with_config(
+                arena,
+                assertions,
+                obj.objective,
+                &remaining_config(config, deadline),
+            )?,
+            (true, true) => maximize_bv_signed_with_config(
+                arena,
+                assertions,
+                obj.objective,
+                &remaining_config(config, deadline),
+            )?,
+            (true, false) => minimize_bv_signed_with_config(
+                arena,
+                assertions,
+                obj.objective,
+                &remaining_config(config, deadline),
+            )?,
         };
         out.push(outcome);
     }
@@ -908,7 +1172,12 @@ pub fn optimize_bv_pareto_with_config(
         }
         let mut query = assertions.to_vec();
         query.extend_from_slice(&exclusions);
-        let candidate = match pareto_bv_probe(arena, &query, objectives, config)? {
+        let candidate = match pareto_bv_probe(
+            arena,
+            &query,
+            objectives,
+            &remaining_config(config, deadline),
+        )? {
             MultiProbe::Sat(v) => v,
             MultiProbe::Unsat => return Ok(ParetoOutcome::Complete(front)),
             MultiProbe::Unknown(reason) => {
@@ -930,7 +1199,7 @@ pub fn optimize_bv_pareto_with_config(
                 dom.push(pareto_bv_better_eq(arena, *obj, w, vi)?);
             }
             dom.push(pareto_bv_improves_somewhere(arena, objectives, &v)?);
-            match pareto_bv_probe(arena, &dom, objectives, config)? {
+            match pareto_bv_probe(arena, &dom, objectives, &remaining_config(config, deadline))? {
                 MultiProbe::Sat(w) => v = w,
                 MultiProbe::Unsat => {
                     certified = true;
@@ -1010,6 +1279,11 @@ fn decide_with_objective(
     let result = check_auto(arena, &query, config);
     match result {
         Ok(CheckResult::Sat(model)) => {
+            if !crate::check_model(arena, &query, &model)? {
+                return Err(SolverError::Backend(
+                    "optimization probe model failed replay".to_owned(),
+                ));
+            }
             let assignment = model.to_assignment();
             match eval(arena, objective, &assignment)? {
                 Value::Int(value) => Ok(Probe::Sat(value)),
@@ -1065,8 +1339,17 @@ pub fn maximize_bv_with_config(
     config: &SolverConfig,
 ) -> Result<OptOutcome, SolverError> {
     let deadline = deadline_from(config);
+    if past_deadline(deadline) {
+        return Ok(OptOutcome::Unknown(timed_out_reason()));
+    }
     let max = bv_objective_max(arena, objective)?;
-    let v0 = match bv_value(arena, assertions, objective, None, config)? {
+    let v0 = match bv_value(
+        arena,
+        assertions,
+        objective,
+        None,
+        &remaining_config(config, deadline),
+    )? {
         BvProbe::Sat(value) => value,
         BvProbe::Unsat => return Ok(OptOutcome::Infeasible),
         BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
@@ -1084,7 +1367,7 @@ pub fn maximize_bv_with_config(
             assertions,
             objective,
             Some((BvRel::Uge, mid)),
-            config,
+            &remaining_config(config, deadline),
         )? {
             BvProbe::Sat(value) => lo = value.max(mid),
             BvProbe::Unsat => hi = mid - 1,
@@ -1123,8 +1406,17 @@ pub fn minimize_bv_with_config(
     config: &SolverConfig,
 ) -> Result<OptOutcome, SolverError> {
     let deadline = deadline_from(config);
+    if past_deadline(deadline) {
+        return Ok(OptOutcome::Unknown(timed_out_reason()));
+    }
     bv_objective_max(arena, objective)?; // width check
-    let v0 = match bv_value(arena, assertions, objective, None, config)? {
+    let v0 = match bv_value(
+        arena,
+        assertions,
+        objective,
+        None,
+        &remaining_config(config, deadline),
+    )? {
         BvProbe::Sat(value) => value,
         BvProbe::Unsat => return Ok(OptOutcome::Infeasible),
         BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
@@ -1142,7 +1434,7 @@ pub fn minimize_bv_with_config(
             assertions,
             objective,
             Some((BvRel::Ule, mid)),
-            config,
+            &remaining_config(config, deadline),
         )? {
             BvProbe::Sat(value) => hi = value.min(mid),
             BvProbe::Unsat => lo = mid + 1,
@@ -1182,9 +1474,18 @@ pub fn maximize_bv_signed_with_config(
     config: &SolverConfig,
 ) -> Result<OptOutcome, SolverError> {
     let deadline = deadline_from(config);
+    if past_deadline(deadline) {
+        return Ok(OptOutcome::Unknown(timed_out_reason()));
+    }
     let width = bv_signed_width(arena, objective)?;
     let (_, max_s) = bv_signed_range(width);
-    let mut lo = match bv_value(arena, assertions, objective, None, config)? {
+    let mut lo = match bv_value(
+        arena,
+        assertions,
+        objective,
+        None,
+        &remaining_config(config, deadline),
+    )? {
         BvProbe::Sat(raw) => bv_signed(raw, width),
         BvProbe::Unsat => return Ok(OptOutcome::Infeasible),
         BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
@@ -1200,7 +1501,7 @@ pub fn maximize_bv_signed_with_config(
             assertions,
             objective,
             Some((BvRel::Sge, signed_to_bits(mid, width))),
-            config,
+            &remaining_config(config, deadline),
         )? {
             BvProbe::Sat(raw) => lo = bv_signed(raw, width).max(mid),
             BvProbe::Unsat => hi = mid - 1,
@@ -1239,9 +1540,18 @@ pub fn minimize_bv_signed_with_config(
     config: &SolverConfig,
 ) -> Result<OptOutcome, SolverError> {
     let deadline = deadline_from(config);
+    if past_deadline(deadline) {
+        return Ok(OptOutcome::Unknown(timed_out_reason()));
+    }
     let width = bv_signed_width(arena, objective)?;
     let (min_s, _) = bv_signed_range(width);
-    let mut hi = match bv_value(arena, assertions, objective, None, config)? {
+    let mut hi = match bv_value(
+        arena,
+        assertions,
+        objective,
+        None,
+        &remaining_config(config, deadline),
+    )? {
         BvProbe::Sat(raw) => bv_signed(raw, width),
         BvProbe::Unsat => return Ok(OptOutcome::Infeasible),
         BvProbe::Unknown(reason) => return Ok(OptOutcome::Unknown(reason)),
@@ -1257,7 +1567,7 @@ pub fn minimize_bv_signed_with_config(
             assertions,
             objective,
             Some((BvRel::Sle, signed_to_bits(mid, width))),
-            config,
+            &remaining_config(config, deadline),
         )? {
             BvProbe::Sat(raw) => hi = bv_signed(raw, width).min(mid),
             BvProbe::Unsat => lo = mid + 1,
@@ -1388,5 +1698,43 @@ fn bv_value(
         }
         CheckResult::Unsat => Ok(BvProbe::Unsat),
         CheckResult::Unknown(reason) => Ok(BvProbe::Unknown(reason)),
+    }
+}
+
+#[cfg(test)]
+mod ray_constant_controls {
+    use super::*;
+
+    #[test]
+    fn closed_affine_coefficients_have_their_exact_slope() {
+        let mut arena = TermArena::new();
+        let symbol = arena.declare("coefficient_x", Sort::Int).unwrap();
+        let x = arena.var(symbol);
+        let three = arena.int_const(3);
+        let four = arena.int_const(4);
+        let coefficient = arena.int_add(three, four).unwrap();
+        let product = arena.int_mul(coefficient, x).unwrap();
+        let slope = homogeneous(&mut arena, product, 0, &mut 4096).unwrap();
+        let mut assignment = axeyum_ir::Assignment::default();
+        assignment.set(symbol, Value::Int(2));
+        assert_eq!(eval(&arena, slope, &assignment).unwrap(), Value::Int(14));
+    }
+
+    #[test]
+    fn underspecified_ground_coefficients_cannot_be_fixed_by_default_evaluation() {
+        let mut arena = TermArena::new();
+        let symbol = arena.declare("partial_coefficient_x", Sort::Int).unwrap();
+        let x = arena.var(symbol);
+        let one = arena.int_const(1);
+        let zero = arena.int_const(0);
+        let div = arena.int_div(one, zero).unwrap();
+        let modulo = arena.int_mod(one, zero).unwrap();
+        for coefficient in [div, modulo] {
+            let product = arena.int_mul(coefficient, x).unwrap();
+            assert!(
+                homogeneous(&mut arena, product, 0, &mut 4096).is_none(),
+                "a model-dependent coefficient cannot certify a linear ray"
+            );
+        }
     }
 }

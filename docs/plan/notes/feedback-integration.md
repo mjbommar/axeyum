@@ -15,3 +15,10 @@ explicitly unavailable; that is not full-gate evidence. Pinned recount initially
 received no paths and exited usage-error; no pass is inferred from that command.
 The merge touches no kernel pin inventory; affected parser files are checked
 separately. Combined native/runtime gates await the remaining imports.
+
+Signed-literal integration landed as 6c0aeda87 (14 files). Post-merge hygiene
+passed with its existing explicitly skipped scopes; parser rounding-mode array
+recount found five declared/five actual entries. No pin found in sexpr.rs.
+OMT import from a536b76d0 merges cleanly in solver source; only generated views
+conflict and are rebuilt. Its source-lane full solver failure and live workspace
+are retained as evidence, not transformed into a combined green gate.

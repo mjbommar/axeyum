@@ -118,6 +118,29 @@ reproduction of ignored objectives and unboundedness classification; confirmed
 incorrect optimization claims invoke P0. Installed-extension probes are diagnostic,
 not a fresh solver board or a new parity measurement.
 
+**OMT correctness (`WIP`, omt-correctness, 2026-10-10).** CON-5 O0/O1 patch:
+generic objective-bearing solve/model/session calls explicitly decline; text
+optimizers share caller budgets and stop unresolved lexicographic prefixes;
+integer unboundedness uses replayed affine rays, not numeric search ceilings.
+Focused fresh tests: optimize 25, optimize_robustness 14, smtlib 102, all passed.
+Ray equality-guard mutation: baseline 4 pass, mutant 3 pass/1 fail. Closed-affine
+coefficient controls (including div/mod by zero): 2/2 pass.
+Workspace gate failed an untouched CAS timing test (isolated rerun passed).
+Initial front-door group failed a timed string fixture (isolated rerun passed);
+serial rerun passed all 158 tests. Five linear differential suites passed (20 tests).
+Fresh full-feature library gate: 2008 pass/1 fail (EUF pigeonhole timeout
+control returned Unknown under the generous budget). Workspace gate is live. Frontier finished 11 pass/1 NRA timing failure (degree 40 retained).
+Module-graph ratchet is red with the same parent findings.
+Both guard mutations killed exactly one test; independent finite oracle matched
+128/128 cases. Next: finish required gates, Python OMT result/model/optimality
+API, preemptible ingest. BV/multiobjective probes now receive remaining budgets;
+fresh optimize 25 and robustness 16 tests passed, including all four zero-budget
+BV entry points. ADR-2300 is
+proposed pending validation. Other feedback tracks remain open. Detail:
+[consumer plan](docs/plan/proof-api-consumer-plan-2026-10-10.md).
+
+Evidence and live validation handles: [lane notes](docs/plan/notes/omt-correctness.md).
+
 **Signed integer literals (`WIP`, signed-literals, 2026-10-10).** Implements
 optional ASCII minus with unbounded integer construction, declared-symbol
 precedence, and preserved quoted numeric identity. Writer stays canonical;
@@ -179,7 +202,8 @@ validation. No integration/completion claim.
 branch starts from wide CAS/signed-power/parser head da0e38a0a. Integrating Date/
 rules c3c747eb9 with generated plan/ADR views rebuilt; source merged cleanly.
 Historical audit conflicts retain the main planning correction. Signed literal import 343a289c8 merges cleanly in source; generated views rebuilt.
-Other lanes (traces, OMT, Boolean/LIA proofs) remain to integrate and verify.
+OMT import a536b76d0 also merges cleanly in source; source-lane gate red remains
+recorded. Other lanes (traces, Boolean/LIA proofs) remain to integrate and verify.
 Source lane branches/history are retained; integration imports are linear commits.
 No combined gate pass, main landing or overall completion claimed.
 

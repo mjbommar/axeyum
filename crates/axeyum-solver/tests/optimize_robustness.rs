@@ -20,8 +20,9 @@ use std::time::{Duration, Instant};
 
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_solver::{
-    BvLexObjective, LexObjective, OptOutcome, ParetoOutcome, SolverConfig, maximize_lia,
-    minimize_lia, optimize_bv_pareto, optimize_lia_pareto_with_config,
+    BvLexObjective, LexObjective, OptOutcome, ParetoOutcome, SolverConfig, UnknownKind,
+    maximize_lia, maximize_lia_with_config, minimize_lia, optimize_bv_pareto,
+    optimize_lia_pareto_with_config,
 };
 
 fn int_var(arena: &mut TermArena, name: &str) -> TermId {
@@ -211,5 +212,200 @@ fn a_pareto_honors_timeout_budget() {
         ParetoOutcome::Complete(_)
         | ParetoOutcome::Truncated(_)
         | ParetoOutcome::Unknown { .. } => {}
+    }
+}
+
+// CON-5: an unbounded verdict needs a preserving direction, not a search cap.
+#[test]
+fn improving_ray_preserves_coupled_equalities() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "ray_x");
+    let y = int_var(&mut arena, "ray_y");
+    let zero = arena.int_const(0);
+    let two = arena.int_const(2);
+    let twice_x = arena.int_mul(two, x).unwrap();
+    let coupling = arena.eq(y, twice_x).unwrap();
+    let nonnegative = arena.int_ge(x, zero).unwrap();
+    assert_eq!(
+        maximize_lia(&mut arena, &[coupling, nonnegative], y).unwrap(),
+        OptOutcome::Unbounded
+    );
+}
+
+#[test]
+fn ray_cannot_ignore_a_coupled_upper_bound() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "bounded_ray_x");
+    let y = int_var(&mut arena, "bounded_ray_y");
+    let zero = arena.int_const(0);
+    let ten = arena.int_const(10);
+    let coupling = arena.eq(y, x).unwrap();
+    let upper = arena.int_le(y, ten).unwrap();
+    let lower = arena.int_ge(x, zero).unwrap();
+    assert_eq!(
+        maximize_lia(&mut arena, &[coupling, upper, lower], x).unwrap(),
+        OptOutcome::Optimal(10)
+    );
+}
+
+#[test]
+fn ray_preserves_strict_and_negated_inequalities() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "strict_ray_x");
+    let ten = arena.int_const(10);
+    let le = arena.int_le(x, ten).unwrap();
+    let gt = arena.not(le).unwrap();
+    assert_eq!(
+        maximize_lia(&mut arena, &[gt], x).unwrap(),
+        OptOutcome::Unbounded
+    );
+    let lt = arena.int_lt(x, ten).unwrap();
+    let zero = arena.int_const(0);
+    let lower = arena.int_ge(x, zero).unwrap();
+    assert_eq!(
+        maximize_lia(&mut arena, &[lt, lower], x).unwrap(),
+        OptOutcome::Optimal(9)
+    );
+}
+
+#[test]
+fn representational_ceiling_is_not_an_unboundedness_witness() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "ceiling_x");
+    let ceiling = arena.int_const(i128::MAX);
+    let pin = arena.eq(x, ceiling).unwrap();
+    let config = SolverConfig::default().with_timeout(Duration::from_secs(2));
+    let outcome = maximize_lia_with_config(&mut arena, &[pin], x, &config).unwrap();
+    assert!(
+        matches!(
+            outcome,
+            OptOutcome::Unknown(_) | OptOutcome::Optimal(i128::MAX)
+        ),
+        "a fixed finite objective cannot be unbounded: {outcome:?}"
+    );
+}
+
+#[test]
+fn nonlinear_bounded_domain_cannot_be_homogenized_as_a_linear_ray() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "nonlinear_ray_x");
+    let square = arena.int_mul(x, x).unwrap();
+    let hundred = arena.int_const(100);
+    let zero = arena.int_const(0);
+    let upper = arena.int_le(square, hundred).unwrap();
+    let lower = arena.int_ge(x, zero).unwrap();
+    let config = SolverConfig::default().with_timeout(Duration::from_millis(200));
+    let outcome = maximize_lia_with_config(&mut arena, &[upper, lower], x, &config).unwrap();
+    assert!(
+        matches!(outcome, OptOutcome::Unknown(_) | OptOutcome::Optimal(10)),
+        "{outcome:?}"
+    );
+}
+
+#[test]
+fn integer_optimization_zero_budget_never_starts_a_probe() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "expired_x");
+    let config = SolverConfig::default().with_timeout(Duration::ZERO);
+    let outcome = maximize_lia_with_config(&mut arena, &[], x, &config).unwrap();
+    assert!(
+        matches!(outcome, OptOutcome::Unknown(ref reason) if reason.kind == UnknownKind::ResourceLimit)
+    );
+}
+
+#[test]
+fn ray_negative_coefficient_preserves_the_actual_upper_bound() {
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "negative_coefficient_ray_x");
+    let minus_one = arena.int_const(-1);
+    let minus_ten = arena.int_const(-10);
+    let zero = arena.int_const(0);
+    let negative_x = arena.int_mul(minus_one, x).unwrap();
+    let upper = arena.int_ge(negative_x, minus_ten).unwrap();
+    let lower = arena.int_ge(x, zero).unwrap();
+    assert_eq!(
+        maximize_lia(&mut arena, &[upper, lower], x).unwrap(),
+        OptOutcome::Optimal(10)
+    );
+}
+
+#[test]
+fn affine_optimization_matches_an_independent_finite_population() {
+    // Exhaustive witnesses supply the expected answer without sharing the ray
+    // or bound-search code. Explicit seed and small exact integer domain.
+    let mut seed = 0x2300_2026_1010_u64;
+    let mut coefficient = || {
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+        i128::from((seed >> 32) as u32 % 7) - 3
+    };
+    for case in 0..128 {
+        let a = coefficient();
+        let b = coefficient();
+        let cap = coefficient();
+        let c = coefficient();
+        let d = coefficient();
+        let offset = coefficient();
+        let expected = (-4_i128..=4)
+            .flat_map(|x| (-4_i128..=4).map(move |y| (x, y)))
+            .filter(|&(x, y)| a * x + b * y <= cap)
+            .map(|(x, y)| c * x + d * y + offset)
+            .max();
+        let mut arena = TermArena::new();
+        let x = int_var(&mut arena, "finite_x");
+        let y = int_var(&mut arena, "finite_y");
+        let lower = arena.int_const(-4);
+        let upper = arena.int_const(4);
+        let mut assertions = vec![
+            arena.int_ge(x, lower).unwrap(),
+            arena.int_le(x, upper).unwrap(),
+            arena.int_ge(y, lower).unwrap(),
+            arena.int_le(y, upper).unwrap(),
+        ];
+        let ac = arena.int_const(a);
+        let bc = arena.int_const(b);
+        let ax = arena.int_mul(ac, x).unwrap();
+        let by = arena.int_mul(bc, y).unwrap();
+        let lhs = arena.int_add(ax, by).unwrap();
+        let cap_term = arena.int_const(cap);
+        assertions.push(arena.int_le(lhs, cap_term).unwrap());
+        let cc = arena.int_const(c);
+        let dc = arena.int_const(d);
+        let cx = arena.int_mul(cc, x).unwrap();
+        let dy = arena.int_mul(dc, y).unwrap();
+        let sum = arena.int_add(cx, dy).unwrap();
+        let offset_term = arena.int_const(offset);
+        let objective = arena.int_add(sum, offset_term).unwrap();
+        let outcome = maximize_lia(&mut arena, &assertions, objective).unwrap();
+        assert_eq!(
+            outcome,
+            expected.map_or(OptOutcome::Infeasible, OptOutcome::Optimal),
+            "finite case {case}: constraint {a}x + {b}y <= {cap}, objective {c}x + {d}y + {offset}"
+        );
+    }
+}
+
+#[test]
+fn exhausted_budget_stops_every_single_bv_optimizer() {
+    use axeyum_solver::{
+        maximize_bv_signed_with_config, maximize_bv_with_config, minimize_bv_signed_with_config,
+        minimize_bv_with_config,
+    };
+    let mut arena = TermArena::new();
+    let symbol = arena.declare("budget_bv", Sort::BitVec(8)).unwrap();
+    let objective = arena.var(symbol);
+    let config = SolverConfig {
+        timeout: Some(Duration::ZERO),
+        ..SolverConfig::default()
+    };
+    for optimize in [
+        maximize_bv_with_config,
+        minimize_bv_with_config,
+        maximize_bv_signed_with_config,
+        minimize_bv_signed_with_config,
+    ] {
+        let result = optimize(&mut arena, &[], objective, &config).unwrap();
+        assert!(
+            matches!(result, OptOutcome::Unknown(reason) if reason.kind == UnknownKind::ResourceLimit)
+        );
     }
 }
