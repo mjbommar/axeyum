@@ -59,6 +59,9 @@ fn syntax(expr: &PolynomialExpr, limits: TraceLimits) -> Result<(), TraceError> 
             return Err(resource("conditional expression shape"));
         }
         match expr {
+            PolynomialExpr::Add(xs) | PolynomialExpr::Mul(xs) if xs.len() > limits.nodes => {
+                return Err(resource("conditional expression fanout"));
+            }
             PolynomialExpr::Const { .. } | PolynomialExpr::Var(_) => {
                 expr.to_cas_wide(limits)?;
             }
@@ -179,6 +182,12 @@ pub fn cancel_nested_with_trace(
     limits: TraceLimits,
 ) -> Result<ConditionalTrace, TraceError> {
     let limits = limits.policy()?;
+    if context.len() > limits.nodes {
+        return Err(resource("conditional assumption count"));
+    }
+    for assumption in context {
+        assumption.to_cas_wide(limits)?;
+    }
     syntax(input, limits)?;
     fn locations(expr: &PolynomialExpr, path: &mut Vec<usize>, out: &mut Vec<Vec<usize>>) {
         for (index, child) in expr.children().into_iter().enumerate() {
@@ -374,6 +383,15 @@ mod tests {
         let (input, context) = fixture();
         let limits = TraceLimits::default();
         let trace = cancel_nested_with_trace(&input, &context, limits).unwrap();
+        let oversized = PolynomialExpr::Add(vec![x(); limits.nodes + 1]);
+        assert!(matches!(
+            cancel_nested_with_trace(&oversized, &context, limits),
+            Err(TraceError::ResourceLimit(_))
+        ));
+        assert!(matches!(
+            cancel_nested_with_trace(&input, &vec![x(); limits.nodes + 1], limits),
+            Err(TraceError::ResourceLimit(_))
+        ));
         for policy in [
             TraceLimits { steps: 1, ..limits },
             TraceLimits { work: 1, ..limits },

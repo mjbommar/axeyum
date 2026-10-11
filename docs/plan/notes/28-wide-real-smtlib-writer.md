@@ -180,3 +180,10 @@ path/order/deletion/premise/context/source/zero/work/step rejection. Python
 syntax passes; Rust/Python compile gates remain pending (Py42846).
 Added existing workspace serde_json dependency for complete evidence transport.
 No native/runtime/checker completion credit yet.
+
+Python binding commit6c4077ab9 verified five-file stat. Source review added
+early conditional fanout/context count validation before allocation or producer
+work, with controls in the existing resource test. At edit time all three nested
+Cargo wrappers were still in host admission sleep loops, with no cargo children;
+no pre-edit compile pass is credited. Generator41978 and private miter guard
+remain live on parent source; generated-stub helper90059 waits for generator.
