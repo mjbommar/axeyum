@@ -303,7 +303,7 @@ mod tests {
                 .try_fold(Rational::integer(1), |product, _| {
                     product.wide_mul(evaluate(base, value)?)
                 }),
-            _ => None,
+            PolynomialExpr::Var(_) => None,
         }
     }
     #[test]

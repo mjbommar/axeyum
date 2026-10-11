@@ -185,3 +185,9 @@ Checkpoint push first failed the suite-gating L0 check: seven new suites had no
 hook/exception entry. Explicit paused-checkpoint exceptions record this registration
 debt in `scripts/suite-gating-excuses.txt`; automatic hook registration remains resume
 work. These exceptions do not provide test pass credit or close the final gates.
+
+The second checkpoint push passed L0, compilation and formatting, then failed
+complete Clippy on the test-only conditional-trace evaluator wildcard. Replaced
+that arm with `PolynomialExpr::Var(_)`, preserving behavior and making future
+variants exhaustiveness-checked. Previous runtime receipts predate this lint-only
+change; the publication hook rechecks the new commit.
