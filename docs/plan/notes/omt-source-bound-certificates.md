@@ -29,3 +29,14 @@ Their passes are not credited. Parent mutation cache migration80296 targets
 before restarting that mutation job. Root has 3.6 GiB available at last check.
 
 Continue the same live handles; never restart because a poll expires.
+
+## Recovery verified
+
+Migration68923 and80296 terminal zero; root available space increased to14GiB.
+Recovered gold Rust phase39580 terminal zero: 10 passed, 0 failed/ignored,
+0.12s (`/var/tmp/axeyum-omt-gold-recovered-rust.log`), source f829f2a92.
+Its native phase remains live. Source-binding mutation42006 remains compiling;
+parent replay mutation72743 reruns baseline and two guards on the migrated
+private cache, logs `/var/tmp/axeyum-omt-replay-recovered-*.log`. Gold stub
+generator89655 is live, log `/var/tmp/axeyum-omt-gold-stub.log`. No Python gold,
+mutation, or stub success is claimed yet.
