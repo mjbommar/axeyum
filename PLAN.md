@@ -605,42 +605,31 @@ Logs: /var/tmp/axeyum-feedback-cas-lint.log and
 Next: collect nonzero results, run complete lint, integrate with parent after
 its live tests terminate. Full feedback objective remains incomplete.
 
-**CON-7 R0 integration (`WIP`, rules-date-validation, 2026-10-11).**
-Child fddf0d2b2. Validator accepted invalid Gregorian dates, Unicode-digit date
-strings and bool as Int. Six input-control tests reproduce these failures;
-fix uses ASCII canonical syntax plus datetime.date validation, and excludes
-bool from integer inputs. Focused suite passed6/0 failures; existing validator
-passed all7 packs. Baseline red: /var/tmp/axeyum-rules-date-before.log.
-Metadata now validates both interval dates and a strictly later finite end,
-matching the facade half-open interval semantics. Expanded suite passed10/0
-failures; all7 packs still validate. Input controls stop at first failure per
-method so private guard deletion produces exactly one failure. Private snapshot cb15712ce: calendar/integer guards each kill exactly1 of6
-input tests; interval ordering kills exactly1 of4 metadata tests. Originals
-restored bytewise. Logs /var/tmp/axeyum-rules-date-v2-{calendar,integer,interval}.log.
-Pack loader now rejects invalid/noncanonical/empty/reversed intervals at load
-time. Local changed facade plus sealed combined native binary passed35 tests
-(metadata/packs/dates),2.33s; native source unchanged by this Python run.
-Runtime guard controls passed in private47c91033e snapshot: type/canonical/
-order removal each turns2 passing tests into1 failed/1 passed; originals restored.
-Logs /var/tmp/axeyum-rules-runtime-control-{type,canonical,order}.log.
-Pack intake now rejects duplicate JSON keys, non-object documents and bool
-schema versions. Local facade with sealed native passed52 metadata/pack/date/
-statute tests,3.81s. Intake controls: duplicate/object/version removals each kill exactly1 of2
-paired tests in private405b55811 snapshot with revised otherwise-valid duplicate
-fixture; restored originals. /var/tmp/axeyum-rules-intake-control-*.log.
-Next: source/calendar authority and applicability evidence, general obligation
-proof routes, intake controls and full feedback closure.
-Full CAS3957 passed2147/0 failed/11 ignored,411.14s; complete lint13564
-passed932/932 targets,27 crates,0 diagnostics,14576 fresh inputs. Workspace81069
-remains live. Logs /var/tmp/axeyum-cas-rust-parser-full-cas.log and
-/var/tmp/axeyum-rules-runtime-full-clippy.log. Full objective remains incomplete.
+**CON-7 (`WIP`, rules-date-validation, 2026-10-11).** Child fddf0d2b2.
+Gregorian/ASCII dates, bool-vs-Int, interval endpoints/order now validated in
+repository validator and Python pack loading. Duplicate pack fields, non-object
+JSON and Boolean schema versions reject. Focused Rules API52 passed; repository
+controls17 passed. Native-dependent Python runs used local changed facade with
+sealed combined package feedback-consolidation-zwt2z8bn, not a new native build.
+Private date/type/order controls and intake duplicate/object/version controls
+remove each guard and cause exactly1 failure with positive controls retained;
+original files restored bytewise. Logs /var/tmp/axeyum-rules-{date-v2-*,runtime-control-*,intake-control-*}.log.
 
-Validator now includes statute manifests, required files and fixture populations.
-Opt-in --statute-certificates checked1 native-backed conditional fixture; default
-reports0 replayed explicitly. Expanded suite17 passed. Private85932e31a snapshot
-with new tests:6 manifest guards each kill exactly1 of7 tests; native real replay
-rejects changed claim. Originals restored. /var/tmp/axeyum-statute-guard-*.log.
-Next: dashboard integration, authority/applicability and general proof routes.
+Statute validation includes manifests/required files/nonempty fixture population.
+Default reports0 certificate replays; --statute-certificates checked1 conditional
+fixture. Private85932e31a snapshot:6 manifest guards each kill exactly1 of7 tests;
+real native replay rejects a changed claim. /var/tmp/axeyum-statute-guard-*.log.
+No source authentication, holiday completeness or legal applicability follows.
+Dashboard now derives statute editions/effective status/fixture counts/evidence
+limits from manifests. Second generation byte-identical;17 controls and validator
+pass. Existing query artifacts unchanged. README updated.
+
+Full CAS3957 passed2147/0 failed/11 ignored,411.14s. Complete lint13564 passed
+932/932 targets,27 crates,0 diagnostics,14576 fresh inputs (Rust47c91033e).
+/var/tmp/axeyum-cas-rust-parser-full-cas.log and
+/var/tmp/axeyum-rules-runtime-full-clippy.log. Workspace81069 remains live.
+Next: source/calendar authority, applicability/effectivity evidence and general
+proof routes, plus integration. Entire feedback goal remains incomplete.
 
 ### SOL — Solver parity
 

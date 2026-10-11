@@ -979,6 +979,32 @@ def render(packs: list[dict[str, Any]]) -> str:
             + " |"
         )
 
+    lines.extend([
+        "", "## Statute Templates", "",
+        "Template manifests retain source identity, clause scope and unresolved",
+        "applicability. Fixture counts describe artifacts present on disk; generation",
+        "does not replay certificates. Run the Rules validator with",
+        "`--statute-certificates` to check their bounded conditional claims.", "",
+        "| Template | Source Editions | Effective Interval | Certificate Fixtures | Evidence Boundary |",
+        "|---|---|---|---:|---|",
+    ])
+    template_root = ROOT / "docs/rules-as-code/statute-templates"
+    for manifest_path in sorted(template_root.glob("*/manifest.json")):
+        manifest = load_json(manifest_path)
+        editions = sorted({str(source["edition"]) for source in manifest["sources"]})
+        interval = manifest["effective_interval"]
+        fixture_count = len(list((manifest_path.parent / "fixtures").glob("*.certificate.json")))
+        link = f"[{manifest['id']}](../statute-templates/{manifest_path.parent.name}/README.md)"
+        lines.append("| " + " | ".join([
+            link, table_cell(", ".join(editions)),
+            table_cell(interval.get("status", json.dumps(interval, sort_keys=True))),
+            str(fixture_count), table_cell(manifest["evidence_status"]),
+        ]) + " |")
+    lines.extend([
+        "", "Source hashes are recorded identities; dashboard generation does not",
+        "authenticate source text, supply holiday authority or establish legal applicability.",
+    ])
+
     lines.extend(
         [
             "",

@@ -30,6 +30,20 @@ workflow-reachability rows over a finite state graph.
 | [Example Tax Benefit Arithmetic With Phase-Out](../examples/tax-benefit-arithmetic-v0/README.md) | 66 | 126 | [queries/tax-benefit-arithmetic-v0.json](queries/tax-benefit-arithmetic-v0.json) | bounded benefit replay rows: 66<br>income phase-out adjacent scans: 60<br>threshold/temporal replay witnesses: 4<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:2 | Generate threshold, cap, and phase-out fixtures across the bounded income/date/household domain. |
 | [Example Workflow Reachability Policy](../examples/workflow-reachability-v0/README.md) | 24 | 168 | [queries/workflow-reachability-v0.json](queries/workflow-reachability-v0.json) | bounded workflow transition rows: 24<br>two-step reachability rows: 144<br>terminal-state transition rows: 12<br>transition replay witnesses: 4<br>checked Bool/QF_LIA fixtures: 3 | checked:3, replayed:1 | Generate workflow transition, terminal-state, and two-step reachability rows across the bounded state graph. |
 
+## Statute Templates
+
+Template manifests retain source identity, clause scope and unresolved
+applicability. Fixture counts describe artifacts present on disk; generation
+does not replay certificates. Run the Rules validator with
+`--statute-certificates` to check their bounded conditional claims.
+
+| Template | Source Editions | Effective Interval | Certificate Fixtures | Evidence Boundary |
+|---|---|---|---:|---|
+| [minnesota_64515_day_period_v0](../statute-templates/minnesota-64515-v0/README.md) | 2025 | not-established | 1 | computed; finite-window certificate replays native ground facts; native UNSAT obligations remain uncertified |
+
+Source hashes are recorded identities; dashboard generation does not
+authenticate source text, supply holiday authority or establish legal applicability.
+
 ## Trust Boundary
 
 - The source rule text and formal model remain human-authored inputs.
