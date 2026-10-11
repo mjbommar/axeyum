@@ -39,3 +39,14 @@ suite result, instead of the trace child's older Rust-only account. Trace wire
 still explicitly declines wide coefficients and conditional division; importing
 it does not satisfy those remaining requirements. Next: fresh combined build
 and regression gates, then remaining implementation work.
+
+Trace integration landed as 2a111e062 (20 files). Fresh combined gate runner
+63353 is live against source 2a111e062bd6242c13e96dac8b098ba68d7a188a.
+Logs: /var/tmp/axeyum-feedback-combined-gates-invfxf_7. Dedicated Cargo target:
+/home/mjbommar/projects/personal/axeyum/target/feedback-integration.
+Sequence: native extension build, immediate sealed package/hash, combined Python
+CAS/trace/rules/SMT suites, Rust CAS integration regressions, parser library and
+signed-literal controls, then full-feature solver proof/OMT/front-door regressions.
+All commands retain counts/exit status. Handle polling confirms it is live and
+its build log advances through CAS/solver compilation. No terminal result or
+combined pass is credited. Full required gates and remaining features still apply.
