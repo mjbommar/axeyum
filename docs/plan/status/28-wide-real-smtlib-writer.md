@@ -21,7 +21,7 @@ General theory correspondence and kernel admission are explicit separate gaps.
 
 Nested conditional composition checks source/path/context/congruence/continuity,
 partial domains, local guarded-v2 witnesses and bounded transport/work.
-Six Rust controls and13Python controls cover wide coefficients and partial declines.
+T0 surface reviewed;6Rust/13Python controls cover wide coefficients/partial declines.
 Private congruence guard:6baseline ->5pass/one intended failure; restored bytewise.
 Full CAS on lint-fixed0b829e980:2154pass/0fail/11ignored85.25s. CAS lint passes.
 Fresh native99af1a4c preserved:34trace tests pass0skip0.32s;25consumer files

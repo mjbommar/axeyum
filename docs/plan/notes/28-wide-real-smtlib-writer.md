@@ -502,3 +502,7 @@ Final workspace11433 now has3297 passing tests across ten completed crates,15 ig
 ### Final workspace kernel trace controls
 
 Current workspace11433 reports `ok` for all three CAS bridge controls:generated_step_trace_composes_kernel_proofs_with_empty_footprint,trace_kernel_intake_rejects_added_assumptions_before_reconstruction,trace_ring_translation_declines_fractional_wide_and_domain_sensitive_input. This directly rechecks bounded admission and negative controls on the final workspace binary; it is not a whole-kernel or whole-workspace pass. Final roadmap link gate99987 exits0/all links ok. Workspace feature tree explicitly enables axeyum-solver full; receipt:`/var/tmp/axeyum-nested-workspace-solver-features.log`. Latest read-only main merge preview exits0/conflict-free, treefbb081eb3c4f05d82ef4b5c6c1e29d97f61e0e18. Asked asynchronously for the missing notes/80 path; no dependent historical correction is guessed.
+
+### T0 final public surface review
+
+Reviewed polynomial/guarded/nested envelopes and all nested Rust/Python producer/replay entry points, native registration, Python re-export and generated stubs. Updated route inventory and T0 audit with source/context/version/resource/outcome boundaries. No new code or evidence claims; current full workspace remains live. Missing-path read attempts were corrected using rg file discovery, not treated as absence evidence.
