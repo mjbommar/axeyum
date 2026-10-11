@@ -28,4 +28,7 @@ SHA256aad1b5679a57484c64dfcef63849113bf16e2604ebe18cbff32b14a2b25f0702.
 Initial pytest command referenced nonexistent portable file:0 tests credited.
 Corrected actual two suites passed17/0 skipped,0.25s;
 /var/tmp/axeyum-omt-ingest-python-tests-v2.log. Added3 direct command controls
-(original start, no-deadline tokens/priority, resource mapping); run live.
+(original start, no-deadline tokens/priority, resource mapping);58300 passed3/0
+failed/ignored. Private initial lexical poll removal34997 live; no control pass
+credited yet. Stub generation33160 live. Portable checker parsing/Farkas replay
+still runs without a deadline, so checking-budget requirement remains open.
