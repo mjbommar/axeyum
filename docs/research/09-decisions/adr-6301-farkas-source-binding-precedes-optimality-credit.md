@@ -38,8 +38,10 @@ integer-only cuts and Boolean composition remain subsequent producers.
 Certificate generation runs after all objective solves, against the final
 source arena, so fresh relaxation column IDs stay stable during replay.
 An integer-cut optimum whose strict-better real relaxation is feasible carries
-no Farkas certificate. Python gold eligibility remains disabled until this route
-is validated.
+no Farkas certificate. Gold eligibility replays the feasible model and source-bound refutation.
+Lexicographic eligibility checks every earlier objective as well; independent
+box results only depend on their own pair of witnesses. Validation of the new
+gold API and portable transport remain pending.
 
 ## Remaining work
 

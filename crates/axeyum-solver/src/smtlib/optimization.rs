@@ -112,6 +112,29 @@ impl OptimizationReport {
             .map(Some)
     }
 
+    /// Gold eligibility requires original feasible models and source-bound
+    /// no-better refutations, including every earlier lexicographic objective.
+    ///
+    /// # Errors
+    /// Returns model or certificate replay errors.
+    pub fn gold_eligible(&self, index: usize) -> Result<bool, SolverError> {
+        if index >= self.objectives.len() {
+            return Ok(false);
+        }
+        let start = if self.mode == OptimizationMode::Lexicographic {
+            0
+        } else {
+            index
+        };
+        for current in start..=index {
+            if self.replay(current)? != Some(true) || self.replay_optimality(current)? != Some(true)
+            {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+
     /// User-declared model entries in declaration order; absent witnesses yield
     /// an empty list, and callers must inspect model availability separately.
     #[must_use]
@@ -469,6 +492,22 @@ mod tests {
         assert_eq!(report.objectives[0].value, Some(Value::Int(0)));
         assert_eq!(report.replay(0).unwrap(), Some(true));
         assert_eq!(report.replay_optimality(0).unwrap(), None);
+    }
+
+    #[test]
+    fn gold_credit_requires_every_lexicographic_prefix_refutation() {
+        let query = "(declare-const x Int)(declare-const y Int)(assert (>= x 0))(assert (<= (* 2 x) 1))(assert (and (>= y 0) (<= y 3)))(maximize x)(maximize y)(check-sat)";
+        for mode in [OptimizationMode::Box, OptimizationMode::Lexicographic] {
+            let report = run(query, mode);
+            assert_eq!(report.replay_optimality(0).unwrap(), None);
+            assert_eq!(report.replay_optimality(1).unwrap(), Some(true));
+            assert!(!report.gold_eligible(0).unwrap());
+            assert_eq!(
+                report.gold_eligible(1).unwrap(),
+                mode == OptimizationMode::Box
+            );
+            assert!(!report.gold_eligible(2).unwrap());
+        }
     }
 
     #[test]

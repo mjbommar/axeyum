@@ -236,8 +236,12 @@ strings; genuine bit-vector declarations remain bit-vector values. A missing
 witness returns `None` from replay. Unknown, infeasible, and unbounded results
 have no attained optimum value. Generic `smt.solve` declines objective scripts.
 
-`gold_eligible` currently remains false: feasible-model replay alone does not
-check the claim that no better solution exists. Run the
+`replay_optimality()` checks a retained source-bound strict-better refutation,
+or returns `None` when that evidence is missing. `gold_eligible` rechecks both
+the feasible model and refutation; lexicographic results also require all earlier
+objectives to pass. Currently the refutation route covers integer queries whose
+real relaxation is infeasible; integer-only cuts and BV refutations remain
+unavailable through this API. Run the
 [optimization example](../../python/examples/smt_optimization.py) to compare
 lexicographic `[10, 0]` and independent `[10, 3]` values with four actual model
 replays.

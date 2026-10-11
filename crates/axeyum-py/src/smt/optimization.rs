@@ -117,11 +117,12 @@ impl OptimizationObjective {
         py.detach(|| self.report.replay_optimality(self.index))
             .map_err(map_solver_error)
     }
-    /// False until a source-bound no-better certificate is checked. A model
-    /// replay alone never grants gold-answer credit.
+    /// Replay both witnesses, including every earlier lexicographic objective.
+    /// Missing or invalid evidence yields false; a model alone is insufficient.
     #[getter]
-    fn gold_eligible(&self) -> bool {
-        false
+    fn gold_eligible(&self, py: Python<'_>) -> PyResult<bool> {
+        py.detach(|| self.report.gold_eligible(self.index))
+            .map_err(map_solver_error)
     }
 }
 /// Explicit box/lex semantics and ordered per-objective results.
@@ -175,7 +176,7 @@ impl OptimizationResult {
     }
 }
 /// Optimize Int/unsigned-BV objectives explicitly. Feasible model replay is
-/// provided; checked no-better evidence and gold eligibility remain unavailable.
+/// provided; gold eligibility additionally rechecks source-bound refutations.
 #[cfg_attr(
     feature = "stub-gen",
     pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")

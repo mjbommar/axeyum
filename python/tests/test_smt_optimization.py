@@ -16,7 +16,7 @@ def test_maximize_minimize_models_and_copies():
         assert row.sort == "Int" and row.bit_width is None
         assert row.direction == direction and row.model_available
         assert row.model["x"] == expected and row.replay() is True
-        assert not row.gold_eligible
+        assert row.gold_eligible
         model = row.model
         model["x"] = 999
         assert row.model["x"] == expected and row.replay() is True
@@ -30,7 +30,7 @@ def test_box_and_lex_have_distinct_per_objective_witnesses():
         result = smt.optimize(query, mode=mode)
         assert result.mode == mode and result.complete
         assert [row.value for row in result.objectives] == expected
-        assert all(row.replay() is True and not row.gold_eligible for row in result.objectives)
+        assert all(row.replay() is True and row.gold_eligible for row in result.objectives)
         assert result[1].model["y"] == expected[1]
 
 
@@ -127,3 +127,16 @@ def test_optimality_replay_checks_a_separate_original_query():
     bv = smt.optimize("(declare-const b (_ BitVec 4))(maximize b)(check-sat)")[0]
     assert bv.value == 15 and bv.replay() is True
     assert bv.replay_optimality() is None
+
+
+
+def test_gold_requires_all_prior_lexicographic_optimality_evidence():
+    query = """(declare-const x Int)(declare-const y Int)
+(assert (>= x 0))(assert (<= (* 2 x) 1))
+(assert (and (>= y 0) (<= y 3)))(maximize x)(maximize y)(check-sat)"""
+    for mode in ("lex", "box"):
+        result = smt.optimize(query, mode=mode)
+        assert [row.value for row in result.objectives] == [0, 3]
+        assert not result[0].gold_eligible
+        assert result[1].replay_optimality() is True
+        assert result[1].gold_eligible is (mode == "box")

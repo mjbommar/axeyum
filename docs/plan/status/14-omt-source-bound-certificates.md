@@ -17,8 +17,10 @@ zero: 9 passed, 0 failed/ignored, 0.10s;
 `/var/tmp/axeyum-omt-strict-better.log`.
 Added Python replay_optimality with explicit None for missing evidence and
 controls for max/min, integer-only cuts, unknown and BV results. Native rebuild
-runner 30090 live (`/var/tmp/axeyum-omt-source-bound-native.log`); Python tests
-pending. Gold stays false.
+runner 30090 terminal pass. Sealed extension SHA-256
+dbf382f850c122c5f4c84e74e8ce307eb53422013c30aacd69f543fc9762b87c:
+24 Python tests passed, zero skipped. Added gold eligibility requiring model
+and refutation replay for the entire lex prefix; new gold changes unverified.
 Next: compile/test, checker guard mutations, Boolean lowering binding,
 strict-better certificates, model-plus-optimality Python results, serialization
-and independent process replay, then required full gates. Gold still false.
+and independent process replay, then required full gates. Missing evidence never receives gold credit.
