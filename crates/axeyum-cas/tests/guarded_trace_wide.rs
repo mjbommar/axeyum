@@ -1,3 +1,4 @@
+//! Wide conditional quotient replay and version/domain corruption controls.
 use axeyum_cas::guarded_trace::{
     QuotientSubject, cancel_factor_with_trace, cancel_factor_with_trace_wide, check_guarded_trace,
     replay_guarded_json,
