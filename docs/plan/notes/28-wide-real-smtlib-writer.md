@@ -156,3 +156,10 @@ Inspected guarded_trace and rewrite_trace: conditional cancellation is currently
 source/context-bound at the quotient root; unconditional polynomial steps bind
 full surrounding expressions and paths. Nested conditional composition remains
 an explicit open item requiring a versioned public contract and checker controls.
+
+Nested conditional composition child worktree
+`/data0/axeyum/worktrees/nested-conditional-cas-trace`, base04f5337fd.
+ADR8400 selects full-context guarded cancellation steps under partial rational
+semantics, without claiming outer expressions total. Source/context/path
+continuity and aggregate limits are explicit; polynomial witness scope remains
+checked. Implement separately while parent source gates finish.

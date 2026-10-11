@@ -733,6 +733,10 @@ terminal143/-15, not passes. Next: exact guard controls, fresh Python checks,
 current workspace18900 live; integration and conditional trace evidence remain.
 Overall goal remains active.
 
+Nested conditional child04f5337fd started in isolated worktree; ADR8400
+binds congruence, definedness, caller context and aggregate replay limits.
+Implementation/controls pending; no new trace completion claim.
+
 ### SOL — Solver parity
 
 Close the measured gap to the named reference division by division, never

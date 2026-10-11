@@ -36,3 +36,7 @@ Older datatype workspace87947 still running, no pass credited. Earlier workspace
 terminal143/-15, not passes. Next: exact guard controls, fresh Python checks,
 current workspace18900 live; integration and conditional trace evidence remain.
 Overall goal remains active.
+
+Nested conditional child04f5337fd started in isolated worktree; ADR8400
+binds congruence, definedness, caller context and aggregate replay limits.
+Implementation/controls pending; no new trace completion claim.

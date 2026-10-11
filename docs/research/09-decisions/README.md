@@ -1109,3 +1109,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [7300](adr-7300-wide-decimal-intake-is-exact-bounded-and-resource-typed.md) | Wide decimal intake is exact, bounded, and resource typed | proposed |
 | [8000](adr-8000-python-sat-replay-binds-restored-clausal-text-to-source-terms.md) | Python SAT replay binds restored clausal text to source terms | proposed |
 | [8300](adr-8300-reference-miter-replay-reconstructs-both-source-correspondences.md) | Reference-miter replay reconstructs both source correspondences | proposed |
+| [8400](adr-8400-nested-conditional-cas-steps-bind-congruence-and-domain.md) | Nested conditional CAS steps bind congruence and domain | proposed; implementation in progress |
