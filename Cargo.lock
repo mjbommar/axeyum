@@ -317,6 +317,8 @@ dependencies = [
  "axeyum-smtlib",
  "axeyum-strings",
  "criterion",
+ "serde",
+ "serde_json",
  "web-time",
  "z3",
 ]
