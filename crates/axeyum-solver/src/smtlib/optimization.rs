@@ -721,3 +721,44 @@ mod tests {
         ));
     }
 }
+
+#[cfg(test)]
+mod intake_budget_controls {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn command_intake_uses_the_original_start() {
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(1));
+        let started = Instant::now().checked_sub(Duration::from_secs(2)).unwrap();
+        let reason = commands_with_budget("(maximize x)", &config, started)
+            .unwrap()
+            .unwrap_err();
+        assert_eq!(reason.kind, UnknownKind::ResourceLimit);
+        assert!(reason.detail.contains("s-expression intake"));
+    }
+
+    #[test]
+    fn command_intake_preserves_tokens_without_a_deadline() {
+        let source = "(set-option :opt.priority lex)(maximize x)(check-sat)";
+        let commands = commands_with_budget(source, &SolverConfig::new(), Instant::now())
+            .unwrap()
+            .unwrap();
+        assert_eq!(commands, read_all(source).unwrap());
+        assert_eq!(
+            active_priority_from_commands(&commands).as_deref(),
+            Some("lex")
+        );
+    }
+
+    #[test]
+    fn intake_resource_exhaustion_is_not_a_parse_error() {
+        let reason = intake_result::<Script>(Err(axeyum_smtlib::SmtError::ResourceLimit(
+            "sentinel limit".into(),
+        )))
+        .unwrap()
+        .unwrap_err();
+        assert_eq!(reason.kind, UnknownKind::ResourceLimit);
+        assert!(reason.detail.contains("sentinel limit"));
+    }
+}

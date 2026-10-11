@@ -678,6 +678,13 @@ full solver/workspace/front-door gates and controls. Full goal remains incomplet
 User guide now documents shared intake timeout and checking intake_unknown before
 indexing. Native build57554 remains live; no fresh Python result credited.
 
+Native build57554 passed56.73s; sealed omt-ingest-deadline-_59vtrwq/package,
+SHA256aad1b5679a57484c64dfcef63849113bf16e2604ebe18cbff32b14a2b25f0702.
+Initial pytest command referenced nonexistent portable file:0 tests credited.
+Corrected actual two suites passed17/0 skipped,0.25s;
+/var/tmp/axeyum-omt-ingest-python-tests-v2.log. Added3 direct command controls
+(original start, no-deadline tokens/priority, resource mapping); run live.
+
 ### SOL — Solver parity
 
 Close the measured gap to the named reference division by division, never
