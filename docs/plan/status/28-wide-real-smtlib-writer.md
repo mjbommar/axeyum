@@ -19,7 +19,7 @@ separate. Parent generated stubs committed d826846b9 (one file verified); lint82
 
 Nested conditional Rust/Python production/replay committed1a8eab81d/6c4077ab9:
 full source/path/context/congruence/continuity binding, bounded transport and
-witness work, partial rational domains. Six Rust and nine Python controls written.
+witness work, partial rational domains. Six Rust and ten Python controls written (including wide surrounding coefficients).
 Doc plan/ADR/link gates and CAS registry pass:153 certified floor held,116 checker,
 1041 uncertified; no logging credit. Native/runtime/new code not qualified yet.
 Initial compile/test/private baseline failed before compilation on an invalid

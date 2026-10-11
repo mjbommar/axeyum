@@ -80,3 +80,22 @@ print("NESTED_CONDITIONAL_REPLAY_OK")
     checked = subprocess.run([sys.executable, "-c", code, str(path)], capture_output=True, text=True, timeout=30)
     assert checked.returncode == 0, checked.stdout + checked.stderr
     assert "NESTED_CONDITIONAL_REPLAY_OK" in checked.stdout
+
+
+def test_wide_surrounding_coefficient_survives_nested_replay():
+    """Conditional transport must preserve the wide CAS surface end to end."""
+    x = cas.Expr.var("x")
+    numerator, denominator = 2**200 + 17, 2**181 + 3
+    coefficient = cas.Expr.rat(numerator, denominator)
+    source = coefficient * ((x * x) / x)
+    expected = coefficient * x
+    produced = cas.cancel_nested_trace(source, nonzero=[x])
+    assert produced.status == "produced" and produced.step_count == 1
+    assert produced.result is not None and produced.json is not None
+    checked = cas.replay_conditional_trace(produced.json, source, expected, nonzero=[x])
+    assert checked.status == "checked" and checked.step_count == 1
+    assert checked.json == produced.json
+    changed = cas.Expr.rat(numerator + 1, denominator) * x
+    rejected = cas.replay_conditional_trace(produced.json, source, changed, nonzero=[x])
+    assert rejected.status == "rejected"
+    assert rejected.json is None and rejected.result is None

@@ -289,3 +289,7 @@ Parent generated proof-stub commit46874 still live at this observation.
 ## Continuation: full CAS verification and parent stub commit
 
 Authoritative parent HEAD is d826846b9, the generated reference-miter proof stub commit; git show confirms exactly one file, 56 insertions. Current nested child remains clean at 5459911cc. Native Cargo2790977 and both private mutation helper processes were confirmed live; their results remain uncredited. Started full CAS library suite session6544 using serialized admission, CPU nice10 and best-effort I/O7, target nested-conditional-cas, log /var/tmp/axeyum-nested-conditional-full-cas.log. This expands verification beyond the six conditional tests; no broad pass assumed.
+
+## Wide nested Python transport regression
+
+Added a tenth conditional Python control: a surrounding rational with 201-bit numerator and 182-bit denominator must survive cancellation, typed endpoint reconstruction and serialized source-bound replay; a changed coefficient must reject without evidence. Python syntax compilation passes. Native runtime remains pending; no pass credited. No Rust source changed while native compilation runs.
