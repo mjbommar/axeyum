@@ -275,3 +275,13 @@ annotations. Fresh sealed typed package
 runtime drift27 modules/1883 symbols/5 aliases/319 synthetic dunders passes,
 type gate passes; combined runtime stub tests remain live. Python nested check
 12773 still compiling, no pass yet.
+
+Nested Py-check12773 terminal0,1m13s. Fresh native54673 builds source3f2411431
+with existing CPU nice10 and best-effort I/O7; serialized memory/admission caps
+remain in effect. Helper72160 waits on confirmed builder2790914, requires
+completed build, seals native identity and runs new nine conditional controls
+plus existing polynomial/root-guarded suites. CAS warning-denied Clippy launched.
+Parent generated-stub helper90059 terminal0: runtime/type/name checks pass;
+combined stub/reference-miter tests31 pass0 skips27.18s. Type gate1837 params,
+1752 typed,131 allowed Any,46 Any returns95.4%; drift27/1883/5 aliases.
+Parent generated proof-stub commit46874 still live at this observation.
