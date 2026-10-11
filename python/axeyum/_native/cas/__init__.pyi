@@ -2516,10 +2516,11 @@ def cancel(expr: Expr) -> typing.Optional[Expr]:
     Cancels common factors in a quotient.
     """
 
-def cancel_trace(numerator: Expr, denominator: Expr, *, nonzero: typing.Sequence[Expr], max_steps: builtins.int = 128, max_work: builtins.int = 1000000) -> GuardedTraceOutcome:
+def cancel_trace(numerator: Expr, denominator: Expr, *, nonzero: typing.Sequence[Expr], max_steps: builtins.int = 128, max_work: builtins.int = 1000000, wide: builtins.bool = False) -> GuardedTraceOutcome:
     r"""
     Cancel a denominator factor under caller-supplied nonzero assumptions.
     Missing assumptions explicitly reject; this never produces an unconditional identity.
+    `wide=True` selects version-two promoted coefficient arithmetic.
     """
 
 def carmichael_lambda(n: builtins.int) -> typing.Optional[builtins.int]:

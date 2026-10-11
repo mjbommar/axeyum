@@ -17,8 +17,9 @@ Fresh native32955 passed,1m35s; sealed package
 `2d37d850399ac8caf485f41ba64625995d5587531fcd39f64cc1d10f29e62fe7`.
 Added10 Python runtime cases including separate-process replay with producer
 disabled; syntax compilation passed. All4 trace suites7355 passed44/0 skipped,9.81s,
-`/var/tmp/axeyum-cas-wide-guarded-python.log`; stub generator53068 running,
-`/var/tmp/axeyum-cas-wide-guarded-stubs.log`; stub result uncredited.
+`/var/tmp/axeyum-cas-wide-guarded-python.log`; stub generator53068 passed27 modules/658 items.
+Runtime stub check passed1867 symbols; type check1818 params/1733 typed,
+131 Any all allowlisted. `wide: bool=False` generated in CAS stub.
 Parent wide CAS2147 passed/0 failed/11 ignored,389.32s; this is parent evidence.
 Private version mutation79117 completed:baseline4 pass; removed guard3 pass
 and exactly `wide_identity_versions_are_bound_to_the_envelope` failed, exit101;
