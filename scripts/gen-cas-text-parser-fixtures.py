@@ -3,7 +3,7 @@
 import hashlib
 import json
 from pathlib import Path
-from axeyum import cas
+from axeyum._cas_reference_parser import ParseError, parse
 import axeyum._native as native
 
 texts = [
@@ -18,8 +18,8 @@ texts = [
 rows = []
 for text in texts:
     try:
-        rows.append({"source": text, "expression": json.loads(cas.parse(text).to_json())})
-    except cas.ParseError:
+        rows.append({"source": text, "expression": json.loads(parse(text).to_json())})
+    except ParseError:
         rows.append({"source": text, "rejected": True})
 path = Path(native.__file__).resolve()
 out = Path(__file__).resolve().parents[1] / "crates/axeyum-cas/tests/data/python_text_parser.json"

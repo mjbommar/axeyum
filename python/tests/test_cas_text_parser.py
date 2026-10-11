@@ -35,3 +35,38 @@ def test_zero_divisor_seed_class_fraction_differential():
     for num, den, exponent in cases:
         expected = None if den == 0 or (num == 0 and exponent < 0) else (Fraction(num, den) ** exponent)
         assert cas.parse(f'({num}/{den})^{exponent}').eval({}) == expected
+
+
+def test_shared_native_parser_matches_private_reference_fixtures():
+    import json
+    from pathlib import Path
+    from axeyum._cas_reference_parser import parse as reference
+    fixture = Path(__file__).resolve().parents[2] / 'crates/axeyum-cas/tests/data/python_text_parser.json'
+    rows = json.loads(fixture.read_text())['cases']
+    assert len(rows) == 37
+    for row in rows:
+        if 'expression' in row:
+            assert json.loads(cas.parse(row['source']).to_json()) == row['expression']
+            assert cas.parse(row['source']).to_json() == reference(row['source']).to_json()
+        else:
+            with pytest.raises(cas.ParseError):
+                cas.parse(row['source'])
+
+
+def test_native_byte_budget_preserves_python_character_spans():
+    assert cas.parse('π' + ' ' * 8190) == cas.Expr.pi()
+    with pytest.raises(cas.ParseError, match='source limit') as caught:
+        cas.parse('π' + ' ' * 8191)
+    assert (caught.value.start, caught.value.end) == (8191, 8192)
+    with pytest.raises(cas.ParseError) as caught:
+        cas.parse('π + 💥')
+    assert (caught.value.start, caught.value.end) == (4, 5)
+    with pytest.raises(cas.ParseError) as caught:
+        cas.parse('x + ' + chr(0xd800))
+    assert (caught.value.start, caught.value.end) == (4, 5)
+
+
+def test_native_final_ast_limits_include_subtraction_nodes():
+    assert cas.parse('-'.join(['x'] * 22)) is not None
+    with pytest.raises(cas.ParseError, match='node'):
+        cas.parse('-'.join(['x'] * 23))

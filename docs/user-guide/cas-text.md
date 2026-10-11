@@ -3,8 +3,8 @@
 Rust callers can use `axeyum_cas::text_parser::parse("x^-2 + 0.125")`.
 The result is a `CasExpr`; parsing constructs syntax and does not establish
 nonzero assumptions or certify a simplification. `ParseError` reports a reason
-and a half-open UTF-8 byte span. Python's existing `cas.parse` reports character
-spans, so offsets differ after non-ASCII input.
+and a half-open UTF-8 byte span. Python's `cas.parse` uses the same native grammar and reports character
+spans, translating native byte diagnostics. Unpaired surrogates reject.
 
 The grammar accepts exact integers and decimals, ASCII identifiers, π/`pi`,
 parentheses, `+ - * /`, and signed integer powers with `^` or `**`.
@@ -16,7 +16,9 @@ parentheses. Exponents have magnitude at most4294967295. Functions are `sin`,
 Native intake limits are8192 source bytes,512 tokens,1024 numeral digits,
 64 syntax nodes and depth32, with16384-bit coefficients. The final lowered
 expression is also bounded; subtraction and negative powers add nodes. Exhaustion
-returns a parse error. Division and reciprocal powers retain their domain
+returns a parse error. These native byte/final-AST bounds also apply in Python;
+non-ASCII text and subtraction can reach them earlier than the former Python
+character/builder limits. Division and reciprocal powers retain their domain
 requirements; `1/0` can be parsed but is not thereby defined.
 
 Build the Rust JSON-export example with:
