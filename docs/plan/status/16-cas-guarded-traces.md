@@ -34,10 +34,11 @@ Twenty-one Python guarded/unconditional trace tests passed, 0 skips, 0.47s;
 separate-process replay and assumption/subject/result/premise/witness/envelope
 controls included. Updated example checked guarded cancellation with x != 0 and
 rejected the missing context. Logs `/var/tmp/axeyum-cas-guarded-python-tests.log`.
-Rust return-signature rerun14760 and stub generation launched, not credited.
+Rust return-signature rerun14760 passed: 3 tests, 0 failed/ignored. Stub
+generation24855 running, `/var/tmp/axeyum-cas-guarded-stubs.log`.
 
-Parent post-lint focused tests passed 17; lint-v2 exposed docs/test-naming errors,
-repaired in parent source; lint-v3 is running. This child still needs those source
+Parent post-lint focused tests passed 17; full lint-v3 passed: all 925 targets
+across 27 crates, 0 diagnostics. Source fixes committed as 61d220a4d/5dfed320c. This child still needs those source
 repairs imported after parent commit, plus generated SMT stubs from e48755b70.
 
 Next: complete Rust/stub gates, private mutation controls and broader CAS gates. Nested cancellation, wide trace
