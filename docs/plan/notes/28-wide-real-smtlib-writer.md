@@ -355,3 +355,7 @@ Checker52388 exits0. Sealed typed package /data0/axeyum/artifacts/python/nested-
 ## Current fact ledger terminal evidence
 
 Facts60449 exits0:2971checked/0errors; DEPENDS_DERIVED kernel_facts2586/named2408/graph3092/missing_edges0. Log /var/tmp/axeyum-nested-final-facts.log. No facts or theorem counts changed by trace logging. Current workspace11433 and sequential all-target check22417 remain pending; main integration still waits for green.
+
+## ADR contract reconciliation begins
+
+Branch adds32ADRs, all initially proposed. ADR3100 is now superseded by6800/6900: source _cas_parser.py public parse calls Expr._parse_text; old character/builder-only parser is a private reference, not runtime fallback. Added explicit replacement/Pi links without claiming final acceptance of replacement ADRs. Remaining decision statuses require per-contract review before final integration.

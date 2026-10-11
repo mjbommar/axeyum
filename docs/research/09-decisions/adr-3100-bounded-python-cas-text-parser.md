@@ -1,6 +1,6 @@
 # ADR-3100: Bounded Python CAS text parsing constructs the existing exact IR
 
-Status: proposed
+Status: superseded by ADR-6800 and ADR-6900
 Date: 2026-10-10
 
 The public Python CAS surface needs text input without executing host code.
@@ -26,3 +26,16 @@ retain existing symbolic domain semantics; arbitrary function calls are rejected
 Validation compares constructor-built expressions, exact independent Fraction
 results, precedence, signed powers, zero denominators, malformed inputs and each
 limit. Later constant/serialization work must extend this contract explicitly.
+
+## Superseded production route
+
+The original Python implementation is retained only as a private differential
+reference. Production `axeyum.cas.parse` calls `Expr._parse_text`, uses native
+UTF-8 byte and final lowered-AST limits, and translates diagnostic byte spans
+back to Python character offsets. See
+[ADR-6800](adr-6800-rust-cas-text-parser-shares-the-bounded-exact-grammar.md) and
+[ADR-6900](adr-6900-python-cas-parsing-uses-the-native-bounded-grammar.md).
+Distinguished pi support is governed by
+[ADR-6000](adr-6000-distinguished-cas-pi-has-constant-identity.md).
+The original character/builder bounds and pending-pi statement above describe
+the initial implementation, not the current public route.

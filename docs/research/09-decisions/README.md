@@ -1086,7 +1086,7 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [2800](adr-2800-bounded-boolean-lia-composition-keeps-integer-lemmas-internal.md) | bounded Boolean/LIA composition keeps integer lemmas internal | proposed; pending validation and portable integer elaboration |
 | [2900](adr-2900-python-cas-rationals-reuse-the-promoted-carrier.md) | Python CAS rationals reuse the promoted carrier | proposed; pending full validation |
 | [3000](adr-3000-signed-integer-powers-lower-to-partial-rational-expressions.md) | signed integer powers lower to partial rational expressions | proposed; pending full validation and domain-aware trace integration |
-| [3100](adr-3100-bounded-python-cas-text-parser.md) | Bounded Python CAS text parsing constructs the existing exact IR | proposed |
+| [3100](adr-3100-bounded-python-cas-text-parser.md) | Bounded Python CAS text parsing constructs the existing exact IR | superseded by ADR-6800 and ADR-6900 |
 | [3200](adr-3200-python-date-facade-preserves-sort-and-range.md) | Python Date facade preserves source sorts over ordinal Int terms | proposed |
 | [3300](adr-3300-python-rule-packs-reuse-native-obligations.md) | Python rule packs reuse metadata and native obligations | proposed |
 | [3400](adr-3400-statute-time-template-carries-calendar-and-applicability-inputs.md) | Statute time template carries calendar and applicability inputs | proposed |
