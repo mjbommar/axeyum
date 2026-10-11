@@ -335,3 +335,7 @@ At6051bcad0 (Rust0b829e980), started consumer71291 using sealed nested native99a
 ## Fresh consumer population and generated nested stubs
 
 Consumer71291 exits0:1167collected,1166passed/1skipped65.53s. Sole skip is external LRAT checker unconfigured (test_sat_certificate_export.py skipif); do not claim zero skips. Stubgen9262 exits0:27modules/667items/5qualified integer annotations2m35s. Generated diff onlyCASstub50newlines plus three proof-doc backtick corrections. Started52388 sealed typed-package drift/type/runtime checks against preserved99af1a4c native, with pinned guarded LRAT checker configured so external export tests execute. Stub generation is not itself drift/type verification. Full CASv2/workspace/Py lint and second miter guard remain pending.
+
+## Fixed-source full CAS and route inventory reconciliation
+
+Full CASv2 session37290 exits0 at Rust0b829e980:2154passed/0failed/11ignored/0filtered85.25s. Original result67.12s remains earlier-source evidence. Added nested conditional composition to authoritative route inventory notes/cas-trace-kernel.md with producer, independent-from-search replay, caller-bound context, partial-domain semantics and explicit absent kernel admission. Shared arithmetic and aggregate declared witness-work limits are stated precisely. Current type/lint/workspace and second miter mutation remain pending.
