@@ -91,3 +91,31 @@ Runner 88821 remains live, independently confirmed by PID 3700375 and active
 cargo child 3707885. Five required front-door suites completed with
 2/48/13/82/13 passes (158 total), each exit 0/nonzero. Full solver is active;
 workspace has not yet started. Broad completion remains unproven.
+
+SAT export increment (Python-only; live Rust gate source remains unchanged):
+`python/examples/sat_certificate_export.py` writes source SMT-LIB, DIMACS, DRAT,
+optional LRAT and file/checker hashes. Two small Boolean/BV routes have LRAT;
+the raw native CNF route emits checked DRAT only. External process validation
+requires exact VERIFIED/NOT VERIFIED verdicts, with deadlines; parse errors,
+missing checker and timeouts cannot satisfy rejection controls. Translation
+binding remains explicitly not independently checked.
+
+Pinned DRAT-trim 2e3b2dc0ecf938addbd779d42877b6ed69d9a985 was cloned privately
+in /var/tmp/axeyum-lrat-reference-1rg8dt6y/source. Original lrat-check.c SHA
+bf07c2ac96b9035da1ebcc578cb95e956a2b795629d613154cdb307f8a8f4a95;
+original binary SHA 13108f32c74cdd9cff6280e0763670a7c273e7ab24db242d024ed0fe90079810.
+The unmodified checker accepts an empty-clause LRAT against satisfiable repeated
+positive units, and accepts missing hints. This blocks an unmodified-checker
+validation claim. Tracked private patch requires an actual RUP conflict for the
+empty clause (there is no RAT pivot); patched binary SHA
+19863c56cd7ee5e5e69f85a6134e6de13262bb9062b08b89ae83cd5580f33daf.
+Both exports pass and their altered-CNF/missing-hint controls reject under the
+patch. Export report: /var/tmp/axeyum-lrat-reference-1rg8dt6y/guarded-export/report.json.
+New test module: two collected/two pass/zero skips, 0.18 seconds, fresh sealed
+native extension. Guard-removal control uses only this isolated reference
+checkout: targeted baseline one pass (0.21s), original one fail (0.12s), logs
+guarded.log and guard-removed.log in the same private directory. No shared-tree
+mutation or upstream message. This is a scoped checker guard, not a global
+checker soundness or EVD-5 completion claim.
+Next SAT work: route census, explicit source/lowering-map export and independently
+checked translation binding, plus full required evidence populations.

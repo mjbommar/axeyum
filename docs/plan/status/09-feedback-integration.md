@@ -12,7 +12,9 @@ native build succeeds; sealed Python now 384 pass/zero skipped with CLI, CAS int
 18 pass, parser 101 pass, solver regressions 160 pass. Focused runner completed.
 Required runner 88821 is live: five front-door suites pass 158 tests; full solver
 and workspace remain uncredited. CLI route comparisons are same-engine checks.
-Lint and independent oracle gates remain.
+Lint and independent oracle gates remain. New Python SAT export example and two
+tests pass with pinned private empty-clause LRAT guard; unmodified checker accepts
+a SAT control. Source translation remains unverified independently (see notes).
 Next: complete interactions/full gates, then
 remaining trace width/domains/kernel bridges, pi/serialization, OMT Python gold,
 SAT routes and consumer validation. Source branches retained; imports are linear.

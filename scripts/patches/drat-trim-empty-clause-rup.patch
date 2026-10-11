@@ -1,0 +1,13 @@
+diff --git a/lrat-check.c b/lrat-check.c
+index 8fe998a..5764e9a 100644
+--- a/lrat-check.c
++++ b/lrat-check.c
+@@ -153,6 +153,8 @@ int checkClause (int* list, int size, int* hints, int print) {
+ 
+   if (res == CONFLICT) { return SUCCESS; }
+   if (res == FAILED  ) { return FAILED;  }
++  // The empty clause has no RAT pivot; it requires an actual RUP conflict.
++  if (size == 0) return FAILED;
+ 
+   int *first = hints; first++; while (*first > 0) first++;
+   int start = intro[pivot ^ 1];

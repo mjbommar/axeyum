@@ -276,11 +276,14 @@ checked-in file under `examples/`, not only the runnable targets.
 `python/examples/` is not part of the Cargo target population below — nothing
 here changes the `N`-example inventory count or its markers, which are
 generated from `cargo metadata` alone (`scripts/gen-example-inventory.py`).
-Two examples, both requiring the built native module
+These examples require the built native module
 ([Python bindings](../user-guide/python.md)):
 
 | Example | Run with | Classification | What it demonstrates |
 |---|---|---|---|
+| [`sat_certificate_export.py`](../../python/examples/sat_certificate_export.py) | `python python/examples/sat_certificate_export.py --output <new-dir> --lrat-check <checker>` | Artifact generator and rejection controls | Exports Boolean/BV DIMACS, DRAT and optional LRAT with source hashes, and raw CNF DRAT without inventing LRAT. Runs a pinned external checker with satisfiable-CNF and missing-hint controls; see [checker guard](../../scripts/patches/README.md#drat-trim-empty-clause-guard). Checks clausal evidence; source translation remains unverified independently. |
+| [`cas_amortization.py`](../../python/examples/cas_amortization.py) | `python python/examples/cas_amortization.py` | Learning | Exact wide-rational arithmetic for a 360-period loan. |
+| [`cas_step_trace.py`](../../python/examples/cas_step_trace.py) | `python python/examples/cas_step_trace.py --output <dir>` | Artifact generator | Produces and replays bounded CAS step certificates, including a corrupted-context rejection. |
 | [`gallery.py`](../../python/examples/gallery.py) | `uv run --no-sync python python/examples/gallery.py` | Learning | One short, real-output demo per `axeyum` submodule (`smt`, `ir`, `solver`, `cas`, `kernel`, `knowledge`, the `m` Mathematica-shaped layer) — prints every result, including the certificate check behind a CAS answer, never a mocked value. |
 | [`cindergraph_defects/check.py`](../../python/examples/cindergraph_defects/check.py) | `.venv/bin/python python/examples/cindergraph_defects/check.py --out <dir>` after `uv sync --dev` (which installs the pinned `cindergraph`); **gated** by `bash scripts/check-cindergraph-defects.sh`, a step of `just py-check` | Artifact generator, and a gate | Lifts twelve textbook C defect/fix pairs through [cindergraph](https://github.com/mjbommar/cindergraph)'s typed AST into QF_BV queries, decides each with `axeyum.smt.solve` (or, with `--cli`, the `axeyum_cli` subprocess), and replays every `sat` witness under AddressSanitizer/UBSan/MSan at the finding's own line. Writes queries, harness sources, and `results.tsv` under `--out`; the Markdown table in the README is a reviewed, hand-refreshed copy of that output, not a mocked one. The first line of a run names the cindergraph version and commit it ran against and the commit `pyproject.toml` pins. Since 2026-09-17 the gate re-reads `results.tsv` (every `// expect:` line met, every witness replayed at its own line, the wrong-line replay control refused, the pinned cindergraph) and prints `CINDERGRAPH_DEFECTS|rows=N|…|PASS`; it refuses without the native module or cindergraph and skips loudly without `clang`. |
 
