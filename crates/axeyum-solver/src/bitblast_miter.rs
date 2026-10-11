@@ -32,7 +32,8 @@ use web_time::Instant;
 use axeyum_aig::{Aig, AigInputId, AigLit, AigNode};
 use axeyum_bv::{first_unsupported_op, first_unsupported_sort, lower_terms};
 use axeyum_cnf::{
-    ProofSolveOutcome, check_drat, solve_with_drat_proof_within, tseitin_encode, write_drat,
+    CnfEncoding, ProofSolveOutcome, check_drat, solve_with_drat_proof_within, tseitin_encode,
+    write_drat,
 };
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode};
 
@@ -91,14 +92,52 @@ pub fn certify_bitblast_by_miter_within(
     roots: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<BitblastMiterOutcome, SolverError> {
+    let encoding = match construct_bitblast_miter(arena, roots)? {
+        MiterConstruction::Encoded(encoding) => encoding,
+        MiterConstruction::Diverged => return Ok(BitblastMiterOutcome::Diverged),
+        MiterConstruction::NotCertifiable => return Ok(BitblastMiterOutcome::NotCertifiable),
+    };
+    let formula = encoding.formula();
+    match solve_with_drat_proof_within(formula, deadline) {
+        ProofSolveOutcome::Sat(_) => Ok(BitblastMiterOutcome::Diverged),
+        ProofSolveOutcome::ResourceOut | ProofSolveOutcome::Interrupted => {
+            Ok(BitblastMiterOutcome::Inconclusive)
+        }
+        ProofSolveOutcome::Unsat(proof) => match check_drat(formula, &proof) {
+            Ok(true) => Ok(BitblastMiterOutcome::Certified {
+                dimacs: formula.to_dimacs(),
+                drat: write_drat(&proof),
+            }),
+            Ok(false) => Err(SolverError::Backend(
+                "bit-blast miter proof did not derive the empty clause".to_owned(),
+            )),
+            Err(error) => Err(SolverError::Backend(format!(
+                "bit-blast miter proof failed to check: {error}"
+            ))),
+        },
+    }
+}
+
+// Deterministic construction is shared by production and saved-certificate
+// replay. This helper never invokes SAT search or accepts a refutation.
+enum MiterConstruction {
+    Encoded(Box<CnfEncoding>),
+    Diverged,
+    NotCertifiable,
+}
+
+fn construct_bitblast_miter(
+    arena: &TermArena,
+    roots: &[TermId],
+) -> Result<MiterConstruction, SolverError> {
     // Anything the production bit-blaster cannot lower is out of scope.
     if first_unsupported_sort(arena, roots).is_some()
         || first_unsupported_op(arena, roots).is_some()
     {
-        return Ok(BitblastMiterOutcome::NotCertifiable);
+        return Ok(MiterConstruction::NotCertifiable);
     }
     let Ok(lowering) = lower_terms(arena, roots) else {
-        return Ok(BitblastMiterOutcome::NotCertifiable);
+        return Ok(MiterConstruction::NotCertifiable);
     };
 
     // One combined AIG holds both encodings; shared inputs are created per
@@ -124,7 +163,7 @@ pub fn certify_bitblast_by_miter_within(
         let Some(reference_bits) =
             reference_bits(arena, root, &symbol_bit_to_shared, &mut aig, &mut memo)
         else {
-            return Ok(BitblastMiterOutcome::NotCertifiable);
+            return Ok(MiterConstruction::NotCertifiable);
         };
         let production_bits: Vec<AigLit> = lowering.roots()[k]
             .bits()
@@ -133,7 +172,7 @@ pub fn certify_bitblast_by_miter_within(
             .collect();
         if production_bits.len() != reference_bits.len() {
             // A width disagreement is itself a faithfulness divergence.
-            return Ok(BitblastMiterOutcome::Diverged);
+            return Ok(MiterConstruction::Diverged);
         }
         for (fast, refb) in production_bits.into_iter().zip(reference_bits) {
             let differ = aig.xor(fast, refb);
@@ -143,25 +182,7 @@ pub fn certify_bitblast_by_miter_within(
 
     let encoding = tseitin_encode(&aig, &[miter])
         .map_err(|error| SolverError::Backend(format!("miter CNF encoding failed: {error}")))?;
-    let formula = encoding.formula();
-    match solve_with_drat_proof_within(formula, deadline) {
-        ProofSolveOutcome::Sat(_) => Ok(BitblastMiterOutcome::Diverged),
-        ProofSolveOutcome::ResourceOut | ProofSolveOutcome::Interrupted => {
-            Ok(BitblastMiterOutcome::Inconclusive)
-        }
-        ProofSolveOutcome::Unsat(proof) => match check_drat(formula, &proof) {
-            Ok(true) => Ok(BitblastMiterOutcome::Certified {
-                dimacs: formula.to_dimacs(),
-                drat: write_drat(&proof),
-            }),
-            Ok(false) => Err(SolverError::Backend(
-                "bit-blast miter proof did not derive the empty clause".to_owned(),
-            )),
-            Err(error) => Err(SolverError::Backend(format!(
-                "bit-blast miter proof failed to check: {error}"
-            ))),
-        },
-    }
+    Ok(MiterConstruction::Encoded(Box::new(encoding)))
 }
 
 /// An **end-to-end** `QF_BV` `unsat` certificate: the reduction is certified
@@ -198,7 +219,10 @@ impl EndToEndUnsatOutcome {
     /// re-check; `Ok(false)` for [`Satisfiable`](EndToEndUnsatOutcome::Satisfiable)
     /// / [`NotCertified`](EndToEndUnsatOutcome::NotCertified) (no term-level
     /// certificate to validate). The consumer-side counterpart to the
-    /// producer-side self-check, completing the self-rechecking certificate family
+    /// producer-side clausal self-check. This checks the two stored CNFs, not
+    /// their correspondence to a caller's original query. Use
+    /// [`Self::recheck_for_bool_terms`] for source-bound replay.
+    /// It completes the text self-rechecking certificate family
     /// ([`UnsatProof::recheck`], [`crate::SafetyCertificate::recheck`],
     /// [`crate::FarkasCertificate::verify`]).
     ///
@@ -224,6 +248,50 @@ impl EndToEndUnsatOutcome {
             }
             EndToEndUnsatOutcome::Satisfiable | EndToEndUnsatOutcome::NotCertified => Ok(false),
         }
+    }
+    /// Replays this certificate against the caller's original Boolean assertions.
+    /// Rebuilds the expected independent-reference miter without SAT search,
+    /// requires exact miter DIMACS correspondence, and binds the final refutation
+    /// to the same term query before checking both stored refutations.
+    ///
+    /// The reference bit-blaster and Tseitin encoder remain explicit trusted
+    /// code. This does not admit a kernel theorem or authenticate original bytes.
+    /// Replay is unlimited, like [`Self::recheck`]; production's deadline is not
+    /// a fictitious replay timeout.
+    ///
+    /// # Errors
+    /// Returns [`SolverError`] for unsupported source terms, malformed proof
+    /// text, or construction failures. Uncertified outcomes, miter divergence,
+    /// and source/CNF mismatches return false, never an accepted certificate.
+    pub fn recheck_for_bool_terms(
+        &self,
+        arena: &TermArena,
+        assertions: &[TermId],
+    ) -> Result<bool, SolverError> {
+        let Self::Certified {
+            faithfulness_dimacs,
+            faithfulness_drat,
+            unsat,
+        } = self
+        else {
+            return Ok(false);
+        };
+        if !unsat.recheck_for_bool_terms(arena, assertions)? {
+            return Ok(false);
+        }
+        let MiterConstruction::Encoded(expected) = construct_bitblast_miter(arena, assertions)?
+        else {
+            return Ok(false);
+        };
+        if expected.formula().to_dimacs() != *faithfulness_dimacs {
+            return Ok(false);
+        }
+        UnsatProof {
+            dimacs: faithfulness_dimacs.clone(),
+            drat: faithfulness_drat.clone(),
+            lrat: None,
+        }
+        .recheck()
     }
 }
 

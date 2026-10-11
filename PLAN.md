@@ -727,8 +727,11 @@ bytewise. Stub generation qualifies5 integer annotations shadowed by Expr.int;
 proof/stub35 tests pass0 skips2.17s, including mypy runtime comparison. Drift
 27 modules/1876 symbols and type ratchet95.4% pass. Generator Clippy-D passes.
 Current export/census exits0; two source-bound routes, six Z3 UNSAT sources.
-Next: fresh native tests, private source-binding guard control, collect broad
-gate outputs, integrate, and finish remaining proof/conditional trace gaps. No broad completion claim;
+Reference-miter replay childef595e7de: ADR8300 factors deterministic miter
+construction out of search and binds both saved CNFs to the same original
+assertions. Seven correspondence controls plus existing producer fixtures
+running8798; no pass credited. Next: collect controls, private guard mutations,
+Python end-to-end export/replay, broad gates and integration. No broad completion claim;
 overall goal stays active.
 
 ### SOL — Solver parity
