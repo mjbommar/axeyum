@@ -1,3 +1,4 @@
+//! Controls for shared optimization intake and replay deadlines.
 #![cfg(feature = "full")]
 use axeyum_solver::smtlib::optimization::{OptimizationMode, optimize_with_models};
 use axeyum_solver::smtlib::{optimize_smtlib, optimize_smtlib_lexicographic};

@@ -348,9 +348,9 @@ impl OptimizationCertificate {
         subject: &str,
         deadline: Option<std::time::Instant>,
     ) -> Result<CertificateCheckReport, SolverError> {
+        use crate::Model;
         use crate::lra::{FarkasAtom, FarkasCertificate};
-        use crate::{Model, check_model};
-        use axeyum_ir::{Sort, eval};
+        use axeyum_ir::{Sort, eval_within};
         if expired(deadline) {
             return Ok(limited(0, 0));
         }
@@ -464,10 +464,33 @@ impl OptimizationCertificate {
             let mut feasible = context.clone();
             feasible.push(pin);
             examined += 1;
-            if !check_model(&script.arena, &feasible, &model)?
-                || eval(&script.arena, objective, &model.to_assignment()).ok()
-                    != Some(Value::Int(value))
-            {
+            let assignment = model.to_assignment();
+            for &assertion in &feasible {
+                match eval_within(&script.arena, assertion, &assignment, deadline).map_err(
+                    |error| SolverError::Backend(format!("optimization model replay: {error}")),
+                )? {
+                    None => return Ok(limited(examined, discharged)),
+                    Some(Value::Bool(true)) => (),
+                    Some(Value::Bool(false)) => {
+                        return Ok(rejected(
+                            examined,
+                            discharged,
+                            "original feasible model/value",
+                        ));
+                    }
+                    Some(_) => {
+                        return Err(SolverError::Backend(
+                            "non-Boolean optimization assertion".into(),
+                        ));
+                    }
+                }
+            }
+            let actual = match eval_within(&script.arena, objective, &assignment, deadline) {
+                Ok(None) => return Ok(limited(examined, discharged)),
+                Ok(Some(value)) => Some(value),
+                Err(_) => None,
+            };
+            if actual != Some(Value::Int(value)) {
                 return Ok(rejected(
                     examined,
                     discharged,

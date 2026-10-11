@@ -24,7 +24,10 @@ Latest checker needs fresh native build/stubs/private controls and broad gates.
 ADR7100 adds eval_within: None is resource exhaustion, Some is actual Value.
 Same deadline propagates through iterative terms and finite quantified bindings;
 existing eval/memo signatures unchanged. Primitive operators remain atomic.
-IR library92005 running; no new IR pass credited. Next: evaluator controls,
-OMT model wiring, fresh Python, full solver/workspace/front-door gates, integration.
+IR library92005 passed104/0 failed. Evaluator integration passed3/0 failed;
+portable model replay now uses eval_within for original assertions/objective;
+OMT integration passed4/0 failed. Controls prove expired intake vs false and
+preserve nested finite quantifier semantics, not mid-enumeration interruption.
+Next: producer replay budgets, fresh Python, private controls, broad gates, integration.
 Logs /var/tmp/axeyum-omt-{ingest-*,checker-budget-tests,deadline-ir-tests}.log.
 Entire feedback objective remains incomplete.
