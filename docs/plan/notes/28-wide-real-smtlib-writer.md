@@ -359,3 +359,7 @@ Facts60449 exits0:2971checked/0errors; DEPENDS_DERIVED kernel_facts2586/named240
 ## ADR contract reconciliation begins
 
 Branch adds32ADRs, all initially proposed. ADR3100 is now superseded by6800/6900: source _cas_parser.py public parse calls Expr._parse_text; old character/builder-only parser is a private reference, not runtime fallback. Added explicit replacement/Pi links without claiming final acceptance of replacement ADRs. Remaining decision statuses require per-contract review before final integration.
+
+## Bounded CAS trace contract adoption
+
+Reviewed ADR2500/6400/6500/6600 plus8400 against actual source, existing private context/identity/zero/version/bit/domain controls, current2154CAS passes and fresh native replay suites. Adopted those five bounded architecture contracts. Status explicitly does not claim main integration, broad kernel coverage or universal arithmetic support; final workspace/all-target gates remain open. ADR3100 remains superseded. Other26new ADRs still need individual contract review.

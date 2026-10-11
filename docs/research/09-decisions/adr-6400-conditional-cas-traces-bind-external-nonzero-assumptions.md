@@ -1,6 +1,6 @@
 # ADR-6400: Conditional CAS traces bind external nonzero assumptions
 
-Status: proposed
+Status: accepted; bounded contract adopted, final integration gates remain open
 Date: 2026-10-11
 
 The unconditional polynomial trace contract (ADR-2500) deliberately excludes
@@ -32,3 +32,15 @@ kernel lemmas. Checked conditional evidence grants no kernel admission receipt.
 Validation requires original-subject/context controls, the zero corner, an
 incorrect quotient result, independent byte replay, and a private one-guard
 mutation control. Rust/Python public exposure follows the checked contract.
+
+## Adoption evidence and remaining scope
+
+The bounded contract is adopted on the feedback implementation branch. See the
+[trace route inventory](../../plan/notes/cas-trace-kernel.md) and
+[current validation receipts](../../plan/notes/28-wide-real-smtlib-writer.md).
+Full CAS validation passes 2,154 tests with zero failures and 11 ignored;
+fresh native trace suites, source-bound replay and independent exact-value
+controls pass. Private checker guard controls establish targeted rejection.
+This status records the architecture decision, not a main landing or completion
+of broader arithmetic/kernel coverage. Final workspace/all-target integration
+verification remains open; unsupported bridges remain explicit declines.

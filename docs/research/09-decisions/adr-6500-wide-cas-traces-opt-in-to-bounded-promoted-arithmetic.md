@@ -1,6 +1,6 @@
 # ADR-6500: Wide CAS traces opt in to bounded promoted arithmetic
 
-Status: proposed
+Status: accepted; bounded contract adopted, final integration gates remain open
 Date: 2026-10-11
 
 Polynomial trace v1 explicitly declines coefficients beyond i128. Rust Rational
@@ -38,3 +38,15 @@ transport and step replay; closed rational-power/division steps; Python and
 separate-process replay; independent 30-year amortization fractions; private
 bit-cap/canonical/witness/domain mutation controls; broad gates. Guarded wide
 quotients and automatic kernel reconstruction remain required follow-up work.
+
+## Adoption evidence and remaining scope
+
+The bounded contract is adopted on the feedback implementation branch. See the
+[trace route inventory](../../plan/notes/cas-trace-kernel.md) and
+[current validation receipts](../../plan/notes/28-wide-real-smtlib-writer.md).
+Full CAS validation passes 2,154 tests with zero failures and 11 ignored;
+fresh native trace suites, source-bound replay and independent exact-value
+controls pass. Private checker guard controls establish targeted rejection.
+This status records the architecture decision, not a main landing or completion
+of broader arithmetic/kernel coverage. Final workspace/all-target integration
+verification remains open; unsupported bridges remain explicit declines.

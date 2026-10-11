@@ -1,6 +1,6 @@
 # ADR-8400: Nested conditional CAS steps bind congruence and domain
 
-Status: proposed; implementation in progress
+Status: accepted; bounded contract adopted, final integration gates remain open
 Date: 2026-10-11
 
 ADR6400/6600 certify a quotient cancellation at the root. LIB-5 also needs
@@ -44,3 +44,15 @@ steps; zero denominator and unsupported nested operands; aggregate resource
 exhaustion. In a private snapshot, remove the surrounding-expression guard and
 require exactly its targeted corruption test to fail. Kernel reconstruction is
 a separate route and retains its explicit admitted-statement/axiom accounting.
+
+## Adoption evidence and remaining scope
+
+The bounded contract is adopted on the feedback implementation branch. See the
+[trace route inventory](../../plan/notes/cas-trace-kernel.md) and
+[current validation receipts](../../plan/notes/28-wide-real-smtlib-writer.md).
+Full CAS validation passes 2,154 tests with zero failures and 11 ignored;
+fresh native trace suites, source-bound replay and independent exact-value
+controls pass. Private checker guard controls establish targeted rejection.
+This status records the architecture decision, not a main landing or completion
+of broader arithmetic/kernel coverage. Final workspace/all-target integration
+verification remains open; unsupported bridges remain explicit declines.

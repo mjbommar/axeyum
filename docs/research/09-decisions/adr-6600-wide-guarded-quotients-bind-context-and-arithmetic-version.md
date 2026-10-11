@@ -1,6 +1,6 @@
 # ADR-6600: Wide guarded quotients bind context and arithmetic version
 
-Status: proposed
+Status: accepted; bounded contract adopted, final integration gates remain open
 Date: 2026-10-11
 
 ADR6400 conditional cancellation binds the caller's exact ordered nonzero
@@ -25,3 +25,15 @@ changed contexts/results/versions, zero denominator and budget controls;
 separate-process byte replay; private checker mutations; existing v1 tests;
 fresh Python extension/stubs and required broad gates. Nested conditional steps
 and kernel reconstruction remain separate required work.
+
+## Adoption evidence and remaining scope
+
+The bounded contract is adopted on the feedback implementation branch. See the
+[trace route inventory](../../plan/notes/cas-trace-kernel.md) and
+[current validation receipts](../../plan/notes/28-wide-real-smtlib-writer.md).
+Full CAS validation passes 2,154 tests with zero failures and 11 ignored;
+fresh native trace suites, source-bound replay and independent exact-value
+controls pass. Private checker guard controls establish targeted rejection.
+This status records the architecture decision, not a main landing or completion
+of broader arithmetic/kernel coverage. Final workspace/all-target integration
+verification remains open; unsupported bridges remain explicit declines.

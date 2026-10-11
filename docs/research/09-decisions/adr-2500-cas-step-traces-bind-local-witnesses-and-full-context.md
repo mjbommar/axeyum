@@ -1,6 +1,6 @@
 # ADR-2500: CAS step traces bind local witnesses and full context
 
-Status: proposed; first implementation and validation in progress
+Status: accepted; bounded contract adopted, final integration gates remain open
 Date: 2026-10-10
 
 ## Decision
@@ -48,3 +48,15 @@ standalone replay; deleted/reordered/forged steps, witness/context/endpoint and
 path changes; zero versus unsupported conditional division; explicit resource
 exhaustion; independent rational evaluation. A private-snapshot guard deletion
 must kill exactly one targeted test before accepting the checker increment.
+
+## Adoption evidence and remaining scope
+
+The bounded contract is adopted on the feedback implementation branch. See the
+[trace route inventory](../../plan/notes/cas-trace-kernel.md) and
+[current validation receipts](../../plan/notes/28-wide-real-smtlib-writer.md).
+Full CAS validation passes 2,154 tests with zero failures and 11 ignored;
+fresh native trace suites, source-bound replay and independent exact-value
+controls pass. Private checker guard controls establish targeted rejection.
+This status records the architecture decision, not a main landing or completion
+of broader arithmetic/kernel coverage. Final workspace/all-target integration
+verification remains open; unsupported bridges remain explicit declines.
