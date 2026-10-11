@@ -9,7 +9,12 @@ Implemented native tokenizer/Pratt parser, exact BigInt decimal conversion,
 Pi/unary/signed powers and byte errors. Final lowered AST also checks64 nodes/
 depth32 because subtraction/negative powers add syntax nodes. Initial compiles
 caught NthRoot(3) and fallible Rational conversion; corrected, no tests credited.
-Compile4076 live: `/var/tmp/axeyum-cas-rust-parser-check-v3.log`.
+Compile4076 passed9.82s: `/var/tmp/axeyum-cas-rust-parser-check-v3.log`.
 Next: structural/negative/resource
 controls, Python differential corpus, canonical wire agreement and broad gates.
 Entire feedback goal remains active; parent consolidated build remains separate.
+
+Added5 behavioral tests with constructor/precedence/wide/Pi/wire agreement,
+unary heads, malformed UTF8 byte spans and paired resource controls. Test51221
+running, uncredited: `/var/tmp/axeyum-cas-rust-parser-tests.log`.
+Parent kernel release controls passed3/0 failed/ignored,72.62s.
