@@ -598,7 +598,8 @@ Child of native-parser source 5bd364e9b; parent source remains frozen for live
 CAS3957/workspace81069. Complete lint32519 terminated101: gamma_and_polygamma_head
 has102 lines, limit100. Split functional values into a separate behavioral test;
 retain every existing assertion without suppressing the lint. Targeted CAS
-lint46807 and gamma-filter tests are running; no pass credited yet.
+lint46807 passed with warnings denied,16.67s. Gamma-filter tests35379
+remain live; complete lint rerun launched against e170ddfcd, not yet credited.
 Logs: /var/tmp/axeyum-feedback-cas-lint.log and
 /var/tmp/axeyum-feedback-cas-lint-tests.log.
 Next: collect nonzero results, run complete lint, integrate with parent after
