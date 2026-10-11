@@ -36,9 +36,24 @@ def main() -> None:
     if rejected.status != "rejected":
         raise RuntimeError("corrupted context was not rejected")
     print(f"corrupted context: {rejected.status} at step {rejected.failing_step}")
+    numerator = x * x
+    conditional = cas.cancel_trace(numerator, x, nonzero=[x])
+    if conditional.status != "produced" or conditional.trace is None:
+        raise RuntimeError(f"{conditional.status}: {conditional.detail}")
+    guarded = conditional.trace
+    guarded_json = guarded.to_json()
+    replayed = cas.replay_guarded_trace(guarded_json, numerator, x, guarded.result, nonzero=[x])
+    if replayed.status != "checked":
+        raise RuntimeError(f"{replayed.status}: {replayed.detail}")
+    missing = cas.replay_guarded_trace(guarded_json, numerator, x, guarded.result, nonzero=[])
+    if missing.status != "rejected":
+        raise RuntimeError("cancellation without its nonzero context was accepted")
+    print(f"({numerator}) / ({x}) -> {guarded.result} assuming x != 0; "
+          f"{guarded.step_count} checked witness/cancellation steps")
     if args.output:
         args.output.mkdir(parents=True, exist_ok=True)
         (args.output / "trace.json").write_text(exported)
+        (args.output / "guarded-trace.json").write_text(guarded_json)
         (args.output / "statement.json").write_text(
             json.dumps({"input": payload["input"], "result": payload["result"]})
         )

@@ -200,7 +200,7 @@ pub fn replay_guarded_json(
     result: &PolynomialExpr,
     nonzero_assumptions: &[PolynomialExpr],
     limits: TraceLimits,
-) -> Result<(), TraceError> {
+) -> Result<GuardedQuotientTrace, TraceError> {
     if bytes.len() > limits.bytes {
         return Err(TraceError::ResourceLimit(
             "guarded certificate byte limit".into(),
@@ -208,7 +208,8 @@ pub fn replay_guarded_json(
     }
     let trace: GuardedQuotientTrace =
         serde_json::from_slice(bytes).map_err(|_| reject("malformed guarded JSON"))?;
-    check_guarded_trace(&trace, subject, result, nonzero_assumptions, limits)
+    check_guarded_trace(&trace, subject, result, nonzero_assumptions, limits)?;
+    Ok(trace)
 }
 
 #[cfg(test)]

@@ -24,6 +24,21 @@ Parent lint45243 is terminal101: missing panic documentation for midpoint expect
 173-line portable checker and collapsible priority if. These require repair;
 no full-lint pass claimed.
 
-Next: inspect focused result, Python exposure, private mutation controls and
-broader CAS gates. Nested cancellation, wide trace
+Python now exposes `cancel_trace`, `replay_guarded_trace`, guarded trace/result
+classes and explicit produced/checked/rejected/unsupported/resource-limited
+outcomes. JSON replay returns the checked object after one parse. Fresh native
+77101 passed; sealed package
+`/var/tmp/axeyum-cas-guarded-python-04jfnbsk/package`, SHA256
+`4e100b9c0f070c4af1e0983f3ca063c5604b763977625dc6c7c7055ded153708`.
+Twenty-one Python guarded/unconditional trace tests passed, 0 skips, 0.47s;
+separate-process replay and assumption/subject/result/premise/witness/envelope
+controls included. Updated example checked guarded cancellation with x != 0 and
+rejected the missing context. Logs `/var/tmp/axeyum-cas-guarded-python-tests.log`.
+Rust return-signature rerun14760 and stub generation launched, not credited.
+
+Parent post-lint focused tests passed 17; lint-v2 exposed docs/test-naming errors,
+repaired in parent source; lint-v3 is running. This child still needs those source
+repairs imported after parent commit, plus generated SMT stubs from e48755b70.
+
+Next: complete Rust/stub gates, private mutation controls and broader CAS gates. Nested cancellation, wide trace
 coefficients and kernel admission remain required follow-up work.
