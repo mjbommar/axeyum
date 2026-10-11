@@ -229,6 +229,13 @@ widths 1–127 are supported; unsupported sorts and modes are explicit errors.
 `mode="lex"` pins earlier optima, while `mode="box"` optimizes each objective
 independently and retains a separate model for each.
 
+The timeout covers lexical and typed intake, objective/priority command reads,
+search and witness recovery. If intake expires before objective identities are
+known, `result.intake_unknown` explains the decline, `result.complete` is false,
+and `result.objectives` is empty. Check this condition before indexing a result;
+no objective, optimum or gold answer is invented from an unfinished parse.
+Once intake succeeds, resource exhaustion is reported on the affected objectives.
+
 Each objective exposes `model`, `model_available`, `model_unavailable_reason`,
 and `replay()`. Replay checks its original constraints, any earlier lexicographic
 pins, and the reported objective value. Declared strings are lifted back to

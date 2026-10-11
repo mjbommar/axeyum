@@ -670,10 +670,13 @@ passed3/0 failed/ignored, /var/tmp/axeyum-omt-ingest-optimization-tests.log.
 Python tests now require zero-budget intake reason/no fabricated rows, including
 long comment inputs in both modes. Fresh Python run pending. Next: command
 reread now uses shared deadline; typed priority reuses same command list.
-Command rerun86284 passed3/0 failed/ignored; Python check16361 live.
+Command rerun86284 passed3/0 failed/ignored; Python check16361 passed30.02s; getter compiles.
 Fresh native build launched, source frozen; no Python pass credited yet. Next: direct command-budget
 controls, fresh Python,
 full solver/workspace/front-door gates and controls. Full goal remains incomplete.
+
+User guide now documents shared intake timeout and checking intake_unknown before
+indexing. Native build57554 remains live; no fresh Python result credited.
 
 ### SOL — Solver parity
 
