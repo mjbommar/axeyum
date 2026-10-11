@@ -413,3 +413,16 @@ bounded design; final workspace still uncredited. Generated admission and kernel
 empty-footprint evidence are distinct from ordinary checked-trace production.
 All32 new contracts now reviewed:31 bounded accepted,3100 superseded by native
 grammar6800/6900. Architecture acceptance does not mark full feedback complete.
+
+### Final-native external proof population
+
+Helper7626 exits0:18 exports derived from the authoritative Rust arrays,
+13Boolean+5negativeReal, each deterministic native proof, UNSAT, emptyfinalclause,
+noholes; patchedCarcara exactvalid/exit0 for every case. Also reruns committed
+sourcebindingchecker positive/changed-coefficient negative; both expectations
+pass. Artifact `/data0/axeyum/artifacts/proofs/final-native-alethe-419vke_m/`
+includes18query/proofpairs and identity-boundreceipt.json. Native99af1a4c;
+checker32422f24, base6624ea80 plus recorded unary-minusguardpatch. No unmodified
+checker, internalLIA portability, or kernel admission claim.
+Older datatype87947 is terminal143, notpass; finalworkspace11433 andparent18900
+remain live after independent polling. Finalchild replaces, not credits, oldrun.

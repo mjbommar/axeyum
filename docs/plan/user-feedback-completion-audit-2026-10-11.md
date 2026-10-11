@@ -22,8 +22,8 @@ use actual terminal output before changing any item to complete.
 | X2 distinguished pi/enclosures/native parser | [Pi certificate tests](../../python/tests/test_cas_pi_certificate.py), [text parser tests](../../python/tests/test_cas_text_parser.py) | Final native and Rust suites, malformed/oversized input and enclosure corruption controls; constructor/parse/print agreement. |
 | EVD-5 SAT export census/independent checking/source binding | Six clausal routes plus two reference fixtures; parent focused Python49/census15/existing consumers1154 pass; [miter source tests](../../crates/axeyum-solver/tests/source_bound_miter_replay.rs) | Both private source-correspondence controls complete:7baseline ->6pass/one intended failure each, original bytes independently verified. Current branch runtime/stubs pass production; final typed checks44pass0skip include configured external export checks; Py lint passes. Retain optional LRAT and guarded external checker provenance. |
 | A0 fresh mandatory proof regressions | Three reported formulas and paired controls implemented in ancestry | Final-source evidence must distinguish solving, emission, local checking, external checking and kernel reconstruction. |
-| A1 pure Boolean Alethe | [Boolean front-door tests](../../crates/axeyum-solver/tests/boolean_alethe_front_door.rs) | Final mandatory source-bound/no-hole proof run and altered-query/premise controls; pinned Carcara patch identity must stay explicit. |
-| A2 negative real multiplication | [Negative-real tests](../../crates/axeyum-solver/tests/negative_real_alethe.rs) | Final coefficient/operand-order/nested-negation and omitted-bridge controls; external checker results. |
+| A1 pure Boolean Alethe | [Boolean front-door tests](../../crates/axeyum-solver/tests/boolean_alethe_front_door.rs) | Final sealed native emits all13 authoritative Boolean cases; patched pinned Carcara accepts13/13 valid/no holes. Changed-source external control rejects; altered-premise/pivot controls remain in Rust integration suites. Final workspace/aggregate gates remain; checker patch provenance explicit. |
+| A2 negative real multiplication | [Negative-real tests](../../crates/axeyum-solver/tests/negative_real_alethe.rs) | Final native emits all5 authoritative negative-real cases (both operand orders, unary minus, nested negation, fractional coefficient); patched Carcara accepts5/5 valid/no holes, source-sign guard rejects. Omitted-bridge and variable-scalar controls remain in Rust integration suites; final broad gates open. |
 | A3 Boolean+LIA composition | [Boolean/LIA tests](../../crates/axeyum-solver/tests/boolean_lia_alethe.rs), internal integer-only evidence | Final supported Boolean/theory proofs and bad-cut/branch/premise controls; integer-only local artifact remains separately labelled until portable. |
 | O0 objectives never silently disappear | Explicit objective intake/optimization result routes in ancestry | Final Python/session/CLI/Rust bounded maximize/minimize comparisons and unsupported-route outcomes. |
 | O1 shared budgets/honest unboundedness | Intake, parsing, optimization and replay deadline repairs; quantifier polling controls | Final deterministic exhaustion/overflow checks. Resource ceilings cannot certify unboundedness; unsupported ray production must decline. |
@@ -67,3 +67,24 @@ cargo shim wraps the script's heavy Clippy call with cargo-serialized while
 leaving read-only metadata direct; the wrapper's memory/admission limits remain.
 Read-only complete-format gate88573 passes:2294 Rust files checked. None of the pending gates
 is counted as a pass.
+
+## Final-native Alethe external replay
+
+Derived the population from the two mandatory Rust integration-test arrays:
+13 Boolean bodies and 5 real products. The sealed99af1a4c native solves each
+UNSAT, emits deterministic proof text with an empty final clause and no holes,
+and exports exact original queries. Guard-patched Carcara checks all18 as
+`valid` with zero exit status. The repository source-binding control accepts
+the honest negative coefficient and rejects the changed original coefficient.
+Receipt and all exported bytes are retained in
+`/data0/axeyum/artifacts/proofs/final-native-alethe-419vke_m/`.
+Checker base6624ea80cf1985ada473c0705869c78353e4282d; patch SHA-256
+21c57d11fbe0db7c025ab58cde9613c706e07520a6e9308407fb5e09b9015166;
+checker binary SHA-25632422f249b9bb18022f50b2cf15031e23ad50a0ab2c4435c5c818a5e5fa34505.
+These are patched-reference results, not unmodified-Carcara or kernel claims.
+Boolean+LIA `lia_generic` remains internal-only and is not included in this
+external population.
+
+Older datatype workspace87947 is terminal143 (terminated), not a pass; it
+cannot qualify the final child. Current final workspace11433 and parent18900
+were independently polled and remain live. No terminated job was restarted.
