@@ -187,3 +187,10 @@ work, with controls in the existing resource test. At edit time all three nested
 Cargo wrappers were still in host admission sleep loops, with no cargo children;
 no pre-edit compile pass is credited. Generator41978 and private miter guard
 remain live on parent source; generated-stub helper90059 waits for generator.
+
+User guide now explains nested conditional production/saved replay, the exact
+external nonzero-context interpretation and partial definedness through outer
+quotients. It distinguishes aggregate declared witness-work units from total
+wall time or every validation operation, shared arithmetic from independent
+checking, and trace validity from kernel admission. Current compile/test jobs
+remain live/pending; no additional pass credited.
