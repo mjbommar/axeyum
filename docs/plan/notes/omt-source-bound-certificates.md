@@ -119,3 +119,14 @@ First z3 LRA differential: 8 passed, zero failures/ignored. Other gates live.
 Next: Boolean lowering binding,
 strict-better certificates, model-plus-optimality Python results, serialization
 and independent process replay, then required full gates. Missing evidence never receives gold credit.
+
+## Five arithmetic differential gates
+
+Source f829f2a92: qf_lra differential8, simplex fallback1, qf_uflra2,
+difference logic4, qf_lia5: total20 passed, zero failed/ignored. Each terminal
+exit file is0, and each log has an actual positive test count. Same required
+runner54092 continues the corpus/string front doors, solver and workspace.
+Initial lint invocation used the cargo wrapper without --batch, so it attempted
+`cargo bash` and ran no lint. Corrected runner32215 uses wrapper --batch,
+log `/var/tmp/axeyum-omt-gold-clippy-corrected.log` and raw JSON
+`/var/tmp/axeyum-omt-gold-clippy.json`. No lint result yet.

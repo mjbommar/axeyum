@@ -18,8 +18,8 @@ Generated stubs: 27 modules/652 items; runtime gate1856 symbols; type gate
 recovery details live in [notes](../notes/omt-source-bound-certificates.md).
 
 Required runner54092 remains live: five z3 arithmetic suites, five front doors,
-full solver, workspace. First qf_lra differential passes8; remaining phases
-uncredited. Logs `/var/tmp/axeyum-omt-gold-required-_volk68z/`. Rust is frozen.
+full solver, workspace. All five z3 suites pass20 tests, zero failed/ignored;
+front doors and remaining phases uncredited. Clippy runner32215 is live. Logs `/var/tmp/axeyum-omt-gold-required-_volk68z/`. Rust is frozen.
 Next: complete required gates, portable source-bearing certificate transport and
 independent process replay; Boolean/integer-cut/BV proof producers, bounded
 ingest and replay, then kernel reconstruction. Overall goal remains active.
