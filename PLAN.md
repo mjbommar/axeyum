@@ -588,6 +588,11 @@ Cross-language payment roundtrip passed:9 replayed steps/40141 bytes, Fraction
 agreement and4 malformed refusals, `/var/tmp/axeyum-cas-rust-parser-roundtrip.log`.
 [User guide](docs/user-guide/cas-text.md) documents grammar, spans and limits.
 
+Source87753b5d4 frozen for full CAS3957, workspace81069, complete lint32519;
+`/var/tmp/axeyum-cas-rust-parser-{full-cas,workspace,full-clippy}.log`, uncredited.
+Parent full solver2028 passed/0 failed/ignored,1123.99s. Fact validation33874
+passed2971 facts/0 errors and dependency-derived checks; links passed.
+
 ### SOL — Solver parity
 
 Close the measured gap to the named reference division by division, never
