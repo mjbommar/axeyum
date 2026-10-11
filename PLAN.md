@@ -11,9 +11,13 @@
 for current project status, ordered work, blockers, and resume guidance. Read it
 first; a lane updates its own file under `docs/plan/status/`, never this one.
 
-- Last consolidated: **2026-10-05**, against `main` at `a38d5f5da`
-  (2026-09-17). All work has been paused since that commit; nothing is in
-  flight, and every lane file was archived the same day.
+- Historical consolidation: **2026-10-05**, against `main` at `a38d5f5da`
+  (2026-09-17). That consolidation archived the earlier campaign lanes.
+- Current feedback work: **2026-10-11**, in isolated implementation branches.
+  The [completion audit](docs/plan/user-feedback-completion-audit-2026-10-11.md)
+  records bounded capabilities and verification; final aggregate gates and
+  main integration remain open. Active lane files below supersede the earlier
+  paused state. Main currently carries the research plans and corrections.
 - Status vocabulary: `TODO` · `WIP` · `BLOCKED` · `DONE` · `PAUSED`.
 - History moved out of this file. The 770 lane files of the August–September
   campaigns are in [`docs/plan/archive/lanes/`](docs/plan/archive/README.md);
@@ -113,10 +117,15 @@ first. Otherwise work runs in five tracks; within a track, take the first
 unblocked item. Tracks may run in parallel, one lane per item.
 
 User feedback researched on 2026-10-10 is recorded in the
-[audit](docs/plan/user-feedback-audit-2026-10-10.md). CON-5 starts with fresh
-reproduction of ignored objectives and unboundedness classification; confirmed
-incorrect optimization claims invoke P0. Installed-extension probes are diagnostic,
-not a fresh solver board or a new parity measurement.
+[research audit](docs/plan/user-feedback-audit-2026-10-10.md). Implementation
+and final-source verification are tracked in the
+[completion audit](docs/plan/user-feedback-completion-audit-2026-10-11.md):
+LIB-5/6, EVD-5/6 and CON-5/6/7 remain active until their exit evidence and main
+integration are complete. Objective intake now declines unsupported routes
+explicitly in the implementation branch; bounded typed OMT routes carry checked
+models and separately labelled evidence. Confirmed incorrect optimization claims
+invoke P0. Installed-extension probes are diagnostic, not a fresh solver board
+or a new parity measurement.
 
 **OMT correctness (`WIP`, omt-correctness, 2026-10-10).** CON-5 O0/O1 patch:
 generic objective-bearing solve/model/session calls explicitly decline; text

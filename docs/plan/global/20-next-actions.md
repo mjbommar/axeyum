@@ -6,10 +6,15 @@ first. Otherwise work runs in five tracks; within a track, take the first
 unblocked item. Tracks may run in parallel, one lane per item.
 
 User feedback researched on 2026-10-10 is recorded in the
-[audit](docs/plan/user-feedback-audit-2026-10-10.md). CON-5 starts with fresh
-reproduction of ignored objectives and unboundedness classification; confirmed
-incorrect optimization claims invoke P0. Installed-extension probes are diagnostic,
-not a fresh solver board or a new parity measurement.
+[research audit](docs/plan/user-feedback-audit-2026-10-10.md). Implementation
+and final-source verification are tracked in the
+[completion audit](docs/plan/user-feedback-completion-audit-2026-10-11.md):
+LIB-5/6, EVD-5/6 and CON-5/6/7 remain active until their exit evidence and main
+integration are complete. Objective intake now declines unsupported routes
+explicitly in the implementation branch; bounded typed OMT routes carry checked
+models and separately labelled evidence. Confirmed incorrect optimization claims
+invoke P0. Installed-extension probes are diagnostic, not a fresh solver board
+or a new parity measurement.
 
 <!-- plan-generated: lane-status -->
 

@@ -4,9 +4,13 @@
 for current project status, ordered work, blockers, and resume guidance. Read it
 first; a lane updates its own file under `docs/plan/status/`, never this one.
 
-- Last consolidated: **2026-10-05**, against `main` at `a38d5f5da`
-  (2026-09-17). All work has been paused since that commit; nothing is in
-  flight, and every lane file was archived the same day.
+- Historical consolidation: **2026-10-05**, against `main` at `a38d5f5da`
+  (2026-09-17). That consolidation archived the earlier campaign lanes.
+- Current feedback work: **2026-10-11**, in isolated implementation branches.
+  The [completion audit](docs/plan/user-feedback-completion-audit-2026-10-11.md)
+  records bounded capabilities and verification; final aggregate gates and
+  main integration remain open. Active lane files below supersede the earlier
+  paused state. Main currently carries the research plans and corrections.
 - Status vocabulary: `TODO` · `WIP` · `BLOCKED` · `DONE` · `PAUSED`.
 - History moved out of this file. The 770 lane files of the August–September
   campaigns are in [`docs/plan/archive/lanes/`](docs/plan/archive/README.md);
