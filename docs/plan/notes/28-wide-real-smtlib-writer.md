@@ -82,8 +82,16 @@ invalid hints, missing empty clause, unsupported sorts, foreign handles, malform
 text and both byte caps have discriminating controls. Py warning-denied Clippy
 passes2m13s (including build-lock wait).
 
-Private snapshot30a4e434e guard runner95810 and stub generator91359 running;
-no passes credited until their terminal results are checked. Documentation adds
+Private snapshot30a4e434e guard baseline9 passes; mutation95810 still live.
+Stub generator91359 passed1m40s,27 modules/661 items. Runtime drift and type
+ratchets pass (1829 parameters,1744 typed,131 allowed Any,46 Any returns95.4%).
+Combined proof/stub tests:34 pass,1 stubtest failure; mypy blocks checking on
+three CAS annotation errors where Expr.int shadows unqualified int. No stubtest
+pass credited. Generator-only metadata qualification now maps bare integer and
+Optional integer annotations inside classes with an int method to builtins.int.
+It does not rewrite generated text or silence mypy. Generator48361 still live.
+Both live Cargo processes were observed blocked in filesystem I/O after work;
+observation is not terminal and neither was restarted. Documentation adds
 actual caller-supplied arena terms; the Python Script arena remains distinct.
 The older independent-reference miter route does exist in Rust, but its saved
 `EndToEndUnsatOutcome::recheck` checks the two text refutations without rebuilding

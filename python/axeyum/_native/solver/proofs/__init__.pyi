@@ -40,6 +40,13 @@ class UnsatProof:
         (a RAT step, say). **`None` is not `False`** — the DRAT certificate
         still stands.
         """
+    def __new__(cls, dimacs: builtins.str, drat: builtins.str, lrat: typing.Optional[builtins.str] = None) -> UnsatProof:
+        r"""
+        Restores certificate text without invoking proof production or accepting
+        its claim. Call `recheck` or `recheck_for_bool_terms` to check it.
+        Each component is limited to 8 MiB, and the total to 16 MiB; exceeding
+        those limits raises `ValueError` with a resource-limit message.
+        """
     def dimacs_bytes(self) -> bytes:
         r"""
         The DIMACS as `bytes`, without building a Python `str`.
@@ -83,6 +90,19 @@ class UnsatProof:
         (RUP+RAT) — what an external `drat-trim` run would do. When an LRAT is
         also present it must independently confirm the same refutation; a
         present-but-failing LRAT rejects the whole certificate.
+        """
+    def recheck_for_bool_terms(self, arena: ir.Arena, assertions: typing.Sequence[ir.Term]) -> builtins.bool:
+        r"""
+        Checks this certificate against the supplied Boolean assertions, including
+        supported bit-vector terms. Rebuilds the deterministic term-to-AIG-to-CNF
+        encoding and compares its exact DIMACS before checking the refutation.
+        No SAT search runs. The existing bit-blasting/Tseitin reduction is trusted;
+        this is source-bound replay, not an independent translation proof.
+        
+        False means a CNF/source mismatch or a rejected refutation. Unsupported
+        operators/sorts and malformed certificates raise `AxeyumError`; foreign
+        arena handles raise `EpochError`. Replay has no wall-clock deadline, like
+        `recheck` and the existing Rust checker.
         """
     def recheck_lrat(self) -> typing.Optional[builtins.bool]:
         r"""
