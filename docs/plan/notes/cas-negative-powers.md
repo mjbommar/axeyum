@@ -95,3 +95,16 @@ warnings denied passes. Public Python runtime validation of this new native
 change and workspace gates remain required; prior 251 Python passes predate it.
 Other narrow-access routes still require auditing. This repair is not a claim
 that every CAS operation supports promoted constants.
+
+Fresh public validation of the approximation repair at 1170294df completed:
+native build runner 85135 exited zero (18.98 seconds); isolated package
+`/var/tmp/axeyum-wide-evalf-python-4x_9qo0x` loads extension SHA-256
+`e0fc5d60da33153038bc552ba51709ecc309959638d9e828ed478ab157d1b48b`.
+256 Python tests pass, 256 collected (0.34 seconds): prior 251 plus five new
+public approximation tests. Independent Fraction conversion agrees for balanced
+4097-bit ratios, both signs, extreme scales, unary application and the exact
+360-period payment; exact evaluation remains unchanged. This is a fresh source
+build, not reuse of the pre-repair extension. Exploratory radical equality probes
+with 193-bit nonsquare constants did not reproduce a panic; no speculative guard
+change or comprehensive radical-support claim was made. Workspace and integration
+gates remain open.
