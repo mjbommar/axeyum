@@ -13079,7 +13079,17 @@ pub fn nsimplify(value: f64, max_denominator: i128) -> Option<CasExpr> {
 #[allow(clippy::cast_precision_loss)] // evalf is an approximation by definition
 pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
     match expr {
-        CasExpr::Const(value) => Some(value.numerator() as f64 / value.denominator() as f64),
+        CasExpr::Const(value) => {
+            if let (Some(numerator), Some(denominator)) =
+                (value.checked_numerator(), value.checked_denominator())
+            {
+                Some(numerator as f64 / denominator as f64)
+            } else {
+                // Convert the ratio jointly: converting large components separately
+                // would produce infinity/infinity for a finite balanced fraction.
+                value.to_big_rational().to_f64()
+            }
+        }
         CasExpr::Var(name) => bindings
             .iter()
             .find(|(bound, _)| bound == name)

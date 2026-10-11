@@ -77,3 +77,21 @@ package; no new native build was required. ADR index regeneration/check and
 diff whitespace checks pass. Historical duplicate ADRs 0166/0167 remain unchanged.
 Next is distinguished π and its checked enclosure/encoding route; this parser
 increment alone does not fulfill X2 or the full goal.
+
+## Promoted approximation crash repair — 2026-10-11
+
+Source audit found evalf(Const) unconditionally calling narrow numerator and
+denominator accessors, which panic on promoted values. The small path now uses
+checked accessors; promoted constants convert BigRational jointly using
+ToPrimitive::to_f64. Separate component conversion would give infinity/infinity
+for a finite balanced fraction, so it is deliberately avoided. Approximation
+retains its existing floating-point semantics and supplies no certified bounds.
+
+Two Rust integration tests pass (nonzero count, zero failures): 4097-bit balanced
+positive/negative fractions and unary composition, 193-bit numerator/denominator
+scales, small rationals and missing variables. Initial test compilation required
+explicit BigInt type annotations; corrected run passed. Focused clippy with
+warnings denied passes. Public Python runtime validation of this new native
+change and workspace gates remain required; prior 251 Python passes predate it.
+Other narrow-access routes still require auditing. This repair is not a claim
+that every CAS operation supports promoted constants.
