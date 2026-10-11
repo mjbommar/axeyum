@@ -75,7 +75,7 @@ fn decode(expr: &PolynomialExpr) -> Result<CasExpr, TraceError> {
 )]
 #[derive(Debug, Clone)]
 pub struct ConditionalTraceOutcome {
-    /// produced, checked, rejected, unsupported, or resource_limited.
+    /// produced, checked, rejected, unsupported, or `resource_limited`.
     #[pyo3(get)]
     status: String,
     /// Complete serialized evidence, absent on refusal.
