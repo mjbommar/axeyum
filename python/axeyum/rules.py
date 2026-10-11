@@ -148,6 +148,24 @@ class Pack:
             raise ValueError('unsupported pack schema version')
         if self.expected.get('pack_id') != self.metadata.get('id'):
             raise ValueError('pack metadata and expected identity differ')
+        interval = self.metadata.get('effective_interval')
+        if not isinstance(interval, dict) or set(interval) != {'from', 'to'}:
+            raise ValueError('pack effective_interval requires from and to')
+        def parse_date(value):
+            if type(value) is not str:
+                raise ValueError('pack effective date must be YYYY-MM-DD')
+            try:
+                parsed = _date.fromisoformat(value)
+            except ValueError:
+                raise ValueError('pack effective date must be a valid Gregorian date') from None
+            if parsed.isoformat() != value:
+                raise ValueError('pack effective date must be YYYY-MM-DD')
+            return parsed
+        start = parse_date(interval['from'])
+        end = None if interval['to'] is None else parse_date(interval['to'])
+        if end is not None and end <= start:
+            raise ValueError('pack effective interval must have a later end')
+
 
     def check_obligations(self, *, timeout_ms=10000):
         """Return native outcomes; UNSAT alone is not a proof-check claim."""

@@ -272,7 +272,7 @@ impl Expr {
     }
 
     /// Decode bounded tagged syntax without normalization or proof search.
-    /// Malformed data raises ValueError; hard caps raise BudgetExceeded.
+    /// Malformed data raises `ValueError`; hard caps raise `BudgetExceeded`.
     #[staticmethod]
     fn from_json(encoded: &str) -> PyResult<Expr> {
         axeyum_cas::expression_wire::from_json(encoded)
