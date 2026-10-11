@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::rewrite_trace::{
     PolynomialExpr, RewriteTrace, TraceError, TraceLimits, check_trace, normalize_with_trace,
+    normalize_with_trace_wide,
 };
 use crate::{CasExpr, Rational, normalize};
 
@@ -44,6 +45,24 @@ fn reject(reason: &str) -> TraceError {
 fn product(subject: &QuotientSubject, result: &PolynomialExpr) -> PolynomialExpr {
     PolynomialExpr::Mul(vec![subject.denominator.clone(), result.clone()])
 }
+fn expression(
+    expr: &PolynomialExpr,
+    limits: TraceLimits,
+    wide: bool,
+) -> Result<CasExpr, TraceError> {
+    if wide {
+        expr.to_cas_wide(limits)
+    } else {
+        expr.to_cas(limits)
+    }
+}
+fn identity(expr: &CasExpr, limits: TraceLimits, wide: bool) -> Result<RewriteTrace, TraceError> {
+    if wide {
+        normalize_with_trace_wide(expr, limits)
+    } else {
+        normalize_with_trace(expr, limits)
+    }
+}
 /// Check a conditional equality against the caller's subject, result and context.
 ///
 /// # Errors
@@ -56,8 +75,20 @@ pub fn check_guarded_trace(
     nonzero_assumptions: &[PolynomialExpr],
     limits: TraceLimits,
 ) -> Result<(), TraceError> {
-    if trace.version != "cas-guarded-quotient-v1" {
-        return Err(TraceError::Unsupported("guarded quotient version".into()));
+    let wide = match trace.version.as_str() {
+        "cas-guarded-quotient-v1" => false,
+        "cas-guarded-quotient-v2" => true,
+        _ => return Err(TraceError::Unsupported("guarded quotient version".into())),
+    };
+    let identity_version = if wide {
+        "cas-polynomial-trace-v2"
+    } else {
+        "cas-polynomial-trace-v1"
+    };
+    if trace.numerator_identity.version != identity_version
+        || trace.product_identity.version != identity_version
+    {
+        return Err(reject("identity arithmetic version mismatch"));
     }
     if trace.input != *subject
         || trace.result != *result
@@ -71,16 +102,21 @@ pub fn check_guarded_trace(
         return Err(TraceError::ResourceLimit("assumption count".into()));
     }
     for assumption in nonzero_assumptions {
-        assumption.to_cas(limits)?;
+        expression(assumption, limits, wide)?;
     }
     if nonzero_assumptions.get(trace.denominator_premise) != Some(&subject.denominator) {
         return Err(reject("missing exact denominator-nonzero premise"));
     }
-    let denominator = subject.denominator.to_cas(limits)?;
-    if normalize(&denominator)
-        .ok_or_else(|| TraceError::ResourceLimit("denominator arithmetic".into()))?
-        .is_zero()
-    {
+    let denominator = expression(&subject.denominator, limits, wide)?;
+    let zero = if wide {
+        matches!(crate::wide_polynomial::normalize_with_limits(&denominator, limits)?,
+            CasExpr::Const(value) if value.is_zero())
+    } else {
+        normalize(&denominator)
+            .ok_or_else(|| TraceError::ResourceLimit("denominator arithmetic".into()))?
+            .is_zero()
+    };
+    if zero {
         return Err(reject("zero denominator"));
     }
     let multiplied = product(subject, result);
@@ -110,9 +146,28 @@ pub fn cancel_factor_with_trace(
     nonzero_assumptions: &[PolynomialExpr],
     limits: TraceLimits,
 ) -> Result<GuardedQuotientTrace, TraceError> {
+    cancel_factor_with_trace_mode(subject, nonzero_assumptions, limits, false)
+}
+/// Produce conditional cancellation using bounded promoted arithmetic.
+///
+/// # Errors
+/// Declines missing assumptions, absent factors, zero denominators or exhausted limits.
+pub fn cancel_factor_with_trace_wide(
+    subject: &QuotientSubject,
+    nonzero_assumptions: &[PolynomialExpr],
+    limits: TraceLimits,
+) -> Result<GuardedQuotientTrace, TraceError> {
+    cancel_factor_with_trace_mode(subject, nonzero_assumptions, limits, true)
+}
+fn cancel_factor_with_trace_mode(
+    subject: &QuotientSubject,
+    nonzero_assumptions: &[PolynomialExpr],
+    limits: TraceLimits,
+    wide: bool,
+) -> Result<GuardedQuotientTrace, TraceError> {
     // Validate before cloning or running normalization.
-    subject.numerator.to_cas(limits)?;
-    subject.denominator.to_cas(limits)?;
+    expression(&subject.numerator, limits, wide)?;
+    expression(&subject.denominator, limits, wide)?;
     if nonzero_assumptions.len() > limits.nodes {
         return Err(TraceError::ResourceLimit("assumption count".into()));
     }
@@ -133,16 +188,19 @@ pub fn cancel_factor_with_trace(
                     })?;
                 let mut factors = factors.clone();
                 factors.remove(position);
-                PolynomialExpr::Mul(factors).to_cas(limits)?
+                expression(&PolynomialExpr::Mul(factors), limits, wide)?
             }
             PolynomialExpr::Pow { base, exponent }
                 if **base == subject.denominator && *exponent > 0 =>
             {
-                PolynomialExpr::Pow {
-                    base: base.clone(),
-                    exponent: exponent - 1,
-                }
-                .to_cas(limits)?
+                expression(
+                    &PolynomialExpr::Pow {
+                        base: base.clone(),
+                        exponent: exponent - 1,
+                    },
+                    limits,
+                    wide,
+                )?
             }
             _ => {
                 return Err(TraceError::Unsupported(
@@ -151,12 +209,21 @@ pub fn cancel_factor_with_trace(
             }
         }
     };
-    let result = normalize_with_trace(&raw_result, limits)?.result;
-    let numerator_identity = normalize_with_trace(&subject.numerator.to_cas(limits)?, limits)?;
-    let product_identity =
-        normalize_with_trace(&product(subject, &result).to_cas(limits)?, limits)?;
+    let result = identity(&raw_result, limits, wide)?.result;
+    let numerator_identity =
+        identity(&expression(&subject.numerator, limits, wide)?, limits, wide)?;
+    let product_identity = identity(
+        &expression(&product(subject, &result), limits, wide)?,
+        limits,
+        wide,
+    )?;
     let trace = GuardedQuotientTrace {
-        version: "cas-guarded-quotient-v1".into(),
+        version: if wide {
+            "cas-guarded-quotient-v2"
+        } else {
+            "cas-guarded-quotient-v1"
+        }
+        .into(),
         input: subject.clone(),
         result,
         nonzero_assumptions: nonzero_assumptions.to_vec(),
