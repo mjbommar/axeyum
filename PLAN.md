@@ -750,7 +750,7 @@ workspace18900 cancelled duplicate/143; datatype87947 terminal143, no credit.
 ADR3200/3300/3400/3500/7200 accepted as bounded contracts; validator20pass.
 Final native costs/statute replay and5shipped examples pass; fmt2294files passes.
 ADR6700 accepted:release3pass and current workspace3controls pass. Next: collect workspace/all-targets and
-queued completeClippy12036 and CLI43772 (missing skipped comparisons),
+queued Clippy12036/CLI43772/frontier54766 (old timing failure),
 archive lanes, integrate and audit.
 
 ### SOL — Solver parity

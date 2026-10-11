@@ -132,3 +132,13 @@ no completion credit. The current workspace11433 covers the parent libraries
 and later CAS/Python additions, so removing this duplicate compilation reduces
 I/O contention without removing any required final test population. The
 current run and all queued final gates remain required.
+
+## Required frontier rerun
+
+The original frontier gate has an authoritative failure:11 passed/1 NRA timing
+failure (39.4ms calibrated versus23.0ms ceiling) in the retained
+`/var/tmp/axeyum-omt-gates-7pwuny00/frontier.log`. This is unresolved; library
+passes do not close it. Final-source session54766 is queued after verified CLI
+completion, requiring all12 source-derived tests and retaining timing frames.
+It writes only to a separate absolute artifact directory. No baseline or timing
+threshold was relaxed. Integration remains pending that gate as well.

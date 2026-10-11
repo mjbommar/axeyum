@@ -506,3 +506,9 @@ Current workspace11433 reports `ok` for all three CAS bridge controls:generated_
 ### T0 final public surface review
 
 Reviewed polynomial/guarded/nested envelopes and all nested Rust/Python producer/replay entry points, native registration, Python re-export and generated stubs. Updated route inventory and T0 audit with source/context/version/resource/outcome boundaries. No new code or evidence claims; current full workspace remains live. Missing-path read attempts were corrected using rg file discovery, not treated as absence evidence.
+
+### Required frontier gate reopened from authoritative failure
+
+Audited original validation obligations and retained output. `/var/tmp/axeyum-omt-gates-7pwuny00/frontier.log` is terminal failure:11pass/1fail, NRA degree40 retained but calibrated pinned time39.4ms exceeds unchanged23.0ms ceiling. No subsequent passing frontier receipt found. Queued final-source session54766 after independently confirmed live CLI watcher3404801; it requires FINAL_CLI_PASS before serialized execution. Script:`/var/tmp/axeyum-nested-final-frontier-after-cli.py`; gate log:`/var/tmp/axeyum-nested-final-progress-frontier.log`. Source authority contains12 tests, all required unfiltered. Artifact override uses `/data0/axeyum/artifacts/gates/nested-final-progress-frontier`; committed benchmark files remain untouched. No queued pass credited.
+
+Directly inspected all five actual arithmetic differential logs at `/var/tmp/axeyum-proof-arithmetic-gates-ci2gxh9w/` and `/var/tmp/axeyum-omt-gold-required-_volk68z/`:each population8/1/2/4/5 has0 failures/ignored,20pass total. `lra.rs` is unchanged from f829f2a92. Five required parser fronts on b8b237c65 already passed158; all SMT parser/writer source files are byte-unchanged since that revision. Current final workspace includes full solver feature, but frontier has its own unresolved timing requirement and cannot inherit library-pass credit.
