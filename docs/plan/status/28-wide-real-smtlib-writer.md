@@ -17,7 +17,9 @@ Round-trip controls6 passed, including zero divisor preservation; SMT/FP broad
 run passed486 tests (before added zero control),0 failed/ignored. Clippy SMT/FP
 passed; solver Clippy passed38.49s. New front-door2 passed after finding/fixing
 NRA sign-narrowing panic; existing NRA controls12 passed (2021 filtered).
-Doc plan/ADR/link gates passed. Private guard runner4715 active in snapshot
-69c3e0d7d; decimal cap, FP representation and NRA sign mutations pending.
-No mutation pass credited yet. Next: collect controls, full gates, datatype export.
+Doc plan/ADR/link gates passed. Private snapshot69c3e0d7d controls completed:
+syntax baseline6 and NRA baseline12 passed; removing decimal cap, FP
+representation and NRA sign guards each caused exactly one intended failure.
+All sources restored bytewise. Full solver serial gate74254 running on final
+source; no pass credited yet. Next: full gates, datatype export.
 No solver-wide completion or integration claim. Overall goal stays active.
