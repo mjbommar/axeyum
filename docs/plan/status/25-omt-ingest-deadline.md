@@ -15,8 +15,9 @@ Fresh native build2415 passed46.62s at ca62f7bf2. Sealed package
 SHA25691e40f6df3ba95ae20f808c83939cfa0dec45412c82df7de0ebbdabc426bc2ae.
 OMT Python18 passed/0 skipped,0.30s. Stub72102 passed27 modules/661 items;
 drift27 modules/1874 symbols and type1824 params/1739 typed/131 allowed Any
-passed against this binary. Broad CAS/OMT/Rules Python18641 running;
-private model-guard mutation4465 running in snapshot ca62f7bf2; no pass credited.
+passed against this binary. Broad CAS/OMT/Rules Python18641 passed1123/0
+skipped,67.49s. Private mutation4465 baseline12 passed; mutant pending in
+snapshot ca62f7bf2. Full solver59611 running; neither gate credited yet.
 
 Portable check_within shares parsing/command/Farkas deadline and reports explicit
 resource_limited. Python checker has timeout_ms default2000. Compile44161 passed
