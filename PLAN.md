@@ -413,7 +413,16 @@ backend results, not completed wide-trace evidence. The initial v1 lib filter
 ran0 and was not credited; corrected integration suite16750 passed8, 0 failed/
 ignored, `/var/tmp/axeyum-cas-wide-v1-integration.log`.
 
-Next: v2 codec/step replay and recorded nonzero conditions; fresh Python and independent Fraction
+Added explicit wide coefficient codec and v2 trace producer/replay using the
+promoting backend. Canonical fractions are checked before interning; arithmetic
+shares the trace's remaining work across steps. Root version/context markers
+select narrow or wide behavior. Closed constant powers through512 do not grant
+symbolic degree beyond32. Four v2 integration tests passed, 0 failed/ignored,
+0.14s (`/var/tmp/axeyum-cas-wide-trace-v2-tests.log`); all8 v1 integration tests
+still passed (`/var/tmp/axeyum-cas-wide-trace-v1-gate.log`). Division remains
+outside the trace wire pending explicit constant-denominator side conditions.
+
+Next: closed division wire/rules and recorded nonzero conditions; fresh Python and independent Fraction
 amortization; private guard controls and broad gates. No wide-trace completion
 or kernel-admission claim yet; the full user-feedback goal remains active.
 

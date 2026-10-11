@@ -210,14 +210,23 @@ pub fn normalize_with_limits(
     expression: &CasExpr,
     limits: TraceLimits,
 ) -> Result<CasExpr, TraceError> {
+    let mut remaining = limits.work;
+    normalize_with_budget(expression, limits, &mut remaining)
+}
+pub(crate) fn normalize_with_budget(
+    expression: &CasExpr,
+    limits: TraceLimits,
+    remaining: &mut u64,
+) -> Result<CasExpr, TraceError> {
     let limits = limits.policy()?;
-    Normalizer {
+    let mut normalizer = Normalizer {
         limits,
-        remaining: limits.work,
+        remaining: (*remaining).min(limits.work),
         nodes: 0,
-    }
-    .expression(expression, 0)
-    .map(|p| p.to_expr())
+    };
+    let result = normalizer.expression(expression, 0).map(|p| p.to_expr());
+    *remaining = normalizer.remaining;
+    result
 }
 #[cfg(test)]
 mod tests {

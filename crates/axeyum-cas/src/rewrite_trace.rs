@@ -141,6 +141,35 @@ fn decode_coefficient(numerator: &str, denominator: &str) -> Result<Rational, Tr
     Ok(r)
 }
 
+fn decode_wide_coefficient(numerator: &str, denominator: &str) -> Result<Rational, TraceError> {
+    use num_bigint::BigInt;
+    use num_rational::BigRational;
+    if numerator.len() > 5000 || denominator.len() > 5000 {
+        return Err(resource("wide coefficient text cap"));
+    }
+    let digits = |text: &str| !text.is_empty() && text.bytes().all(|b| b.is_ascii_digit());
+    if !digits(numerator.strip_prefix('-').unwrap_or(numerator)) || !digits(denominator) {
+        return Err(reject(None, "malformed wide coefficient"));
+    }
+    let n: BigInt = numerator
+        .parse()
+        .map_err(|_| reject(None, "wide numerator"))?;
+    let d: BigInt = denominator
+        .parse()
+        .map_err(|_| reject(None, "wide denominator"))?;
+    if d <= BigInt::from(0) {
+        return Err(reject(None, "wide denominator must be positive"));
+    }
+    if n.bits().max(d.bits()) > crate::wide_polynomial::COEFFICIENT_BITS {
+        return Err(resource("wide coefficient bit cap"));
+    }
+    let rational = BigRational::new(n, d);
+    if rational.numer().to_string() != numerator || rational.denom().to_string() != denominator {
+        return Err(reject(None, "wide coefficient is not canonical"));
+    }
+    Rational::from_big_rational(&rational).ok_or_else(|| resource("wide rational carrier"))
+}
+
 /// One local equality, with complete surrounding-expression binding.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -188,6 +217,7 @@ pub struct RewriteTrace {
 }
 
 struct Work {
+    wide: bool,
     remaining: u64,
     limits: TraceLimits,
 }
@@ -198,6 +228,15 @@ impl Work {
             .checked_sub(amount)
             .ok_or_else(|| resource("trace work exhausted"))?;
         Ok(())
+    }
+    fn normal_form(&mut self, value: &CasExpr) -> Result<CasExpr, TraceError> {
+        if self.wide {
+            crate::wide_polynomial::normalize_with_budget(value, self.limits, &mut self.remaining)
+        } else {
+            normalize(value)
+                .map(|p| p.to_expr())
+                .ok_or_else(|| resource("exact coefficient arithmetic exhausted"))
+        }
     }
     fn expression_at(
         &mut self,
@@ -235,7 +274,11 @@ impl Work {
                 numerator,
                 denominator,
             } => (
-                CasExpr::Const(decode_coefficient(numerator, denominator)?),
+                CasExpr::Const(if self.wide {
+                    decode_wide_coefficient(numerator, denominator)?
+                } else {
+                    decode_coefficient(numerator, denominator)?
+                }),
                 1,
                 0,
             ),
@@ -277,7 +320,11 @@ impl Work {
                     } else {
                         CasExpr::Add(converted)
                     },
-                    terms.max(1),
+                    if self.wide && degree == 0 {
+                        1
+                    } else {
+                        terms.max(1)
+                    },
                     degree,
                 )
             }
@@ -288,7 +335,7 @@ impl Work {
             PolynomialExpr::Pow { base, exponent } => {
                 // Charge even powers of constants; a huge exponent cannot bypass
                 // the work/degree contract just because its formal degree is zero.
-                if *exponent > self.limits.degree {
+                if *exponent > if self.wide { 512 } else { self.limits.degree } {
                     return Err(resource("power limit exhausted"));
                 }
                 let (value, terms, degree) = self.convert(base, depth + 1, nodes)?;
@@ -315,11 +362,22 @@ impl PolynomialExpr {
     /// # Errors
     /// Declines nonpolynomials, wide coefficients, or policy exhaustion.
     pub fn from_cas(expr: &CasExpr, limits: TraceLimits) -> Result<Self, TraceError> {
+        Self::from_cas_mode(expr, limits, false)
+    }
+    /// Encode version-2 wide rational polynomial syntax with the same local caps.
+    ///
+    /// # Errors
+    /// Nonpolynomial syntax, oversized coefficients or exhausted shape/work policy.
+    pub fn from_cas_wide(expr: &CasExpr, limits: TraceLimits) -> Result<Self, TraceError> {
+        Self::from_cas_mode(expr, limits, true)
+    }
+    fn from_cas_mode(expr: &CasExpr, limits: TraceLimits, wide: bool) -> Result<Self, TraceError> {
         fn encode(
             expr: &CasExpr,
             depth: usize,
             limits: TraceLimits,
             nodes: &mut usize,
+            wide: bool,
         ) -> Result<PolynomialExpr, TraceError> {
             if depth > limits.depth {
                 return Err(resource("expression depth exhausted"));
@@ -337,8 +395,21 @@ impl PolynomialExpr {
                 }
                 _ => {}
             }
-            let mut child = |value: &CasExpr| encode(value, depth + 1, limits, nodes);
+            let mut child = |value: &CasExpr| encode(value, depth + 1, limits, nodes, wide);
             Ok(match expr {
+                CasExpr::Const(r) if wide => {
+                    let numerator = r.numerator_big();
+                    let denominator = r.denominator_big();
+                    if numerator.bits().max(denominator.bits())
+                        > crate::wide_polynomial::COEFFICIENT_BITS
+                    {
+                        return Err(resource("wide coefficient bit cap"));
+                    }
+                    PolynomialExpr::Const {
+                        numerator: numerator.to_string(),
+                        denominator: denominator.to_string(),
+                    }
+                }
                 CasExpr::Const(r) => PolynomialExpr::Const {
                     numerator: r
                         .checked_numerator()
@@ -369,8 +440,9 @@ impl PolynomialExpr {
             })
         }
         let limits = limits.policy()?;
-        let encoded = encode(expr, 0, limits, &mut 0)?;
+        let encoded = encode(expr, 0, limits, &mut 0, wide)?;
         Work {
+            wide,
             remaining: limits.work,
             limits,
         }
@@ -382,8 +454,19 @@ impl PolynomialExpr {
     /// # Errors
     /// Invalid coefficients, syntax limits, or polynomial-expansion exhaustion.
     pub fn to_cas(&self, limits: TraceLimits) -> Result<CasExpr, TraceError> {
+        self.to_cas_mode(limits, false)
+    }
+    /// Decode version-2 wide rational polynomial syntax.
+    ///
+    /// # Errors
+    /// Noncanonical coefficients or exceeded local syntax/work/bit bounds.
+    pub fn to_cas_wide(&self, limits: TraceLimits) -> Result<CasExpr, TraceError> {
+        self.to_cas_mode(limits, true)
+    }
+    fn to_cas_mode(&self, limits: TraceLimits, wide: bool) -> Result<CasExpr, TraceError> {
         let limits = limits.policy()?;
         Work {
+            wide,
             remaining: limits.work,
             limits,
         }
@@ -436,6 +519,23 @@ pub fn normalize_with_trace(
     input: &CasExpr,
     limits: TraceLimits,
 ) -> Result<RewriteTrace, TraceError> {
+    normalize_trace_mode(input, limits, false)
+}
+/// Produce version-2 local certificates using bounded promoted rational arithmetic.
+///
+/// # Errors
+/// Unsupported syntax or exhausted coefficient, syntax, expansion or work policy.
+pub fn normalize_with_trace_wide(
+    input: &CasExpr,
+    limits: TraceLimits,
+) -> Result<RewriteTrace, TraceError> {
+    normalize_trace_mode(input, limits, true)
+}
+fn normalize_trace_mode(
+    input: &CasExpr,
+    limits: TraceLimits,
+    wide: bool,
+) -> Result<RewriteTrace, TraceError> {
     fn locations(expr: &PolynomialExpr, path: &mut Vec<usize>, out: &mut Vec<Vec<usize>>) {
         for (index, child) in expr.children().into_iter().enumerate() {
             path.push(index);
@@ -447,11 +547,16 @@ pub fn normalize_with_trace(
         }
     }
     let limits = limits.policy()?;
-    let source = PolynomialExpr::from_cas(input, limits)?;
+    let source = PolynomialExpr::from_cas_mode(input, limits, wide)?;
     let mut paths = Vec::new();
     locations(&source, &mut Vec::new(), &mut paths);
     let mut trace = RewriteTrace {
-        version: "cas-polynomial-trace-v1".to_owned(),
+        version: if wide {
+            "cas-polynomial-trace-v2"
+        } else {
+            "cas-polynomial-trace-v1"
+        }
+        .to_owned(),
         sort: "rational".to_owned(),
         input: source.clone(),
         result: source.clone(),
@@ -460,6 +565,7 @@ pub fn normalize_with_trace(
         steps: Vec::new(),
     };
     let mut work = Work {
+        wide,
         remaining: limits.work,
         limits,
     };
@@ -472,9 +578,8 @@ pub fn normalize_with_trace(
             .rule()
             .ok_or_else(|| reject(None, "producer operation disappeared"))?;
         let value = work.expression(local)?;
-        let normal =
-            normalize(&value).ok_or_else(|| resource("exact coefficient arithmetic exhausted"))?;
-        let witness = PolynomialExpr::from_cas(&normal.to_expr(), limits)?;
+        let normal = work.normal_form(&value)?;
+        let witness = PolynomialExpr::from_cas_mode(&normal, limits, wide)?;
         work.expression(&witness)?;
         if *local == witness {
             continue;
@@ -496,7 +601,7 @@ pub fn normalize_with_trace(
             rule: rule.to_owned(),
             exponent,
             premises: id.checked_sub(1).into_iter().collect(),
-            context: "empty-v1".to_owned(),
+            context: if wide { "empty-v2" } else { "empty-v1" }.to_owned(),
             side_conditions: Vec::new(),
             witness,
         });
@@ -519,7 +624,12 @@ pub fn check_trace(
     policy: TraceLimits,
 ) -> Result<(), TraceError> {
     let policy = policy.policy()?;
-    if trace.version != "cas-polynomial-trace-v1" || trace.sort != "rational" {
+    let wide = match trace.version.as_str() {
+        "cas-polynomial-trace-v1" => false,
+        "cas-polynomial-trace-v2" => true,
+        _ => return Err(TraceError::Unsupported("trace version".into())),
+    };
+    if trace.sort != "rational" {
         return Err(TraceError::Unsupported(
             "trace version or scalar sort".to_owned(),
         ));
@@ -533,6 +643,7 @@ pub fn check_trace(
         ));
     }
     let mut work = Work {
+        wide,
         remaining: trace.limits.work,
         limits: trace.limits,
     };
@@ -553,7 +664,9 @@ pub fn check_trace(
         if step.premises != index.checked_sub(1).into_iter().collect::<Vec<_>>() {
             return Err(fail("premise binding mismatch"));
         }
-        if step.context != "empty-v1" || !step.side_conditions.is_empty() {
+        if step.context != if wide { "empty-v2" } else { "empty-v1" }
+            || !step.side_conditions.is_empty()
+        {
             return Err(fail("step context mismatch"));
         }
         if step.location.len() > trace.limits.depth {
@@ -570,12 +683,10 @@ pub fn check_trace(
         }
         let before = work.expression_at(local, index)?;
         let witness = work.expression_at(&step.witness, index)?;
-        let normal =
-            normalize(&before).ok_or_else(|| resource("exact coefficient arithmetic exhausted"))?;
-        let claimed =
-            normalize(&witness).ok_or_else(|| resource("exact witness arithmetic exhausted"))?;
+        let normal = work.normal_form(&before)?;
+        let claimed = work.normal_form(&witness)?;
         if normal != claimed
-            || PolynomialExpr::from_cas(&normal.to_expr(), trace.limits)? != step.witness
+            || PolynomialExpr::from_cas_mode(&normal, trace.limits, wide)? != step.witness
         {
             return Err(fail("local arithmetic witness mismatch"));
         }
