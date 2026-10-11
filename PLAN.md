@@ -701,7 +701,7 @@ Entire feedback objective remains incomplete.
 **LIB-5/6 / EVD-5 / P0 (`WIP`, wide-real-smtlib-writer, 2026-10-11).**
 Current Rust cc65885a3 (last change is Python documentation); generated stub
 6c11a0008. [Detailed receipts](docs/plan/notes/28-wide-real-smtlib-writer.md).
-Overall feedback goal remains active; implementation has not landed on main.
+Goal active; not on main. Freed231.68GiB; active caches/evidence kept.
 
 Earlier exact Real intake/writer, wide NRA/FP safety, datatype source export
 and source-bound SAT/ref-miter replay are in ancestry. SMT396 and required
