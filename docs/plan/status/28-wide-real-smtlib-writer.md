@@ -25,7 +25,7 @@ Doc plan/ADR/link gates and CAS registry pass:153 certified floor held,116 check
 Initial compile/test/private baseline failed before compilation on an invalid
 workspace serde_json inheritance. Fixed e0a90431b with direct dependency and
 full offline metadata; lock diff adds only that Py dependency.
-Six-test29625 passes6/0/0; private v2 baseline6 passes. Py-check12773 passes1m13s; native54673 + sealed-tests72160 live.
+Six-test29625 passes6/0/0; private v2 baseline6 passes. Py-check12773 passes1m13s; native54673 + sealed-tests72160 pass34/0skip0.32s.
 Parent stubs27/664 generated; drift27/1883 and type gate pass; runtime stub31 pass0 skips27.18s.
 Private v2 helper72923 passes:6 baseline ->5 pass/one intended congruence failure; restored bytewise.
 Original failed baseline source restored and failure logs preserved.
@@ -33,6 +33,6 @@ Original failed baseline source restored and failure logs preserved.
 Older datatype workspace87947 and parent current workspace18900 remain live;
 no pass credited. Two owned parent build trees moved from idle to lowest
 best-effort I/O7 without restarts or changing CPU/memory/serialization caps.
-Full CAS6544 passes2154/0failed/11ignored67.12s. CAS lint59232 fails one helper-order lint; fix after native terminal.
+Full CAS6544 passes2154/0failed/11ignored67.12s. Lint fixes0b829e980 committed; CAS lint v2 passes11.75s. Fixed-source full CAS/Py lint started.
 Next: actual nested tests/native/stubs/lint/private guards, broad gates,
 integration and requirement-by-requirement completion audit.
