@@ -24,3 +24,8 @@ credited. Fact-ledger/link validation33874 running, uncredited.
 
 Compatibility launched after verifying installed toolchains:wasm84951 and
 MSRV1.88 check53910, uncredited; `/var/tmp/axeyum-cas-trace-kernel-{wasm,msrv}.log`.
+
+Parent guarded CAS39650 passed2147/0 failed/11 ignored,478.13s; release44600
+built successfully in4m55s and now runs1 kernel test (still uncredited).
+Source check:existing text parser lives in python/axeyum/_cas_parser.py; native
+Rust parsing entry point remains a required LIB-6 extension.
