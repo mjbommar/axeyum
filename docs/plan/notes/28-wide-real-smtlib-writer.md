@@ -163,3 +163,11 @@ ADR8400 selects full-context guarded cancellation steps under partial rational
 semantics, without claiming outer expressions total. Source/context/path
 continuity and aggregate limits are explicit; polynomial witness scope remains
 checked. Implement separately while parent source gates finish.
+
+Nested Rust conditional_trace producer/replay implemented with full before/after
+trees, ordered predecessor/location/context, checked guarded-v2 witnesses,
+syntax/aggregate witness-work/byte bounds. Five unit controls cover two nested
+steps, deterministic bytes, exact rational evaluations, surrounding subtree
+corruption, source/path/order/witness/context changes, zero and resource corners.
+Cargo check32748 live; no build/test result credited. Python exposure and private
+surrounding-expression guard mutation remain required.

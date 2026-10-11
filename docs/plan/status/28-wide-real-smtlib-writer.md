@@ -39,4 +39,5 @@ Overall goal remains active.
 
 Nested conditional child04f5337fd started in isolated worktree; ADR8400
 binds congruence, definedness, caller context and aggregate replay limits.
-Implementation/controls pending; no new trace completion claim.
+Rust producer/replay implemented with five controls; compile gate32748 live.
+Python and private congruence mutation pending; no completion claim.

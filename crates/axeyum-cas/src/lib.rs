@@ -59,6 +59,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+/// Source-bound composition of conditional rewrites under rational congruence.
+pub mod conditional_trace;
 pub mod guarded_trace;
 /// Source-bound, bounded polynomial rewrite traces (ADR-2500).
 pub mod rewrite_trace;

@@ -518,7 +518,7 @@ impl PolynomialExpr {
         .expression(self)
     }
 
-    fn children(&self) -> Vec<&Self> {
+    pub(crate) fn children(&self) -> Vec<&Self> {
         match self {
             Self::Add(xs) | Self::Mul(xs) => xs.iter().collect(),
             Self::Div {
@@ -529,14 +529,14 @@ impl PolynomialExpr {
             Self::Const { .. } | Self::Var(_) => Vec::new(),
         }
     }
-    fn local(&self, path: &[usize]) -> Option<&Self> {
+    pub(crate) fn local(&self, path: &[usize]) -> Option<&Self> {
         if let Some((index, rest)) = path.split_first() {
             self.children().get(*index).copied()?.local(rest)
         } else {
             Some(self)
         }
     }
-    fn replace(&self, path: &[usize], value: &Self) -> Option<Self> {
+    pub(crate) fn replace(&self, path: &[usize], value: &Self) -> Option<Self> {
         let Some((index, rest)) = path.split_first() else {
             return Some(value.clone());
         };
