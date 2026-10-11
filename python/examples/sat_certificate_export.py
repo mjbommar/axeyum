@@ -54,6 +54,12 @@ def export(output: Path, checker: Path | None) -> dict:
         proof = outcome.proof
         if proof.recheck() is not True:
             raise RuntimeError(f"{route}: exported text rejected in tree")
+        restored = proofs.UnsatProof(proof.dimacs, proof.drat, proof.lrat)
+        if restored.recheck_for_bool_terms(arena, assertions) is not True:
+            raise RuntimeError(f"{route}: restored text does not bind to original terms")
+        changed_assertions = [assertions[0]]
+        if restored.recheck_for_bool_terms(arena, changed_assertions) is not False:
+            raise RuntimeError(f"{route}: changed satisfiable source accepted")
         directory = output / route
         directory.mkdir()
         blobs = {"source.smt2": arena.write_script(assertions).encode(),
@@ -65,7 +71,8 @@ def export(output: Path, checker: Path | None) -> dict:
             (directory / name).write_bytes(data)
         item = {"files": {name: sha256(data) for name, data in blobs.items()},
                 "lrat": "present" if lrat is not None else "absent",
-                "external_cnf_check": "not-run"}
+                "external_cnf_check": "not-run",
+                "source_binding": "replayed-with-trusted-bv-encoding"}
         if checker:
             if lrat is None:
                 raise RuntimeError(f"{route}: mandatory example LRAT is absent")

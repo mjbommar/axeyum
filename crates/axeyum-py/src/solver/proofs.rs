@@ -10,6 +10,7 @@
 use std::time::{Duration, Instant};
 
 use axeyum_solver::{UnsatProof, UnsatProofOutcome};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyModule};
 
@@ -40,6 +41,30 @@ impl PyUnsatProof {
 #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyUnsatProof {
+    /// Restores certificate text without invoking proof production or accepting
+    /// its claim. Call `recheck` or `recheck_for_bool_terms` to check it.
+    /// Each component is limited to 8 MiB, and the total to 16 MiB; exceeding
+    /// those limits raises `ValueError` with a resource-limit message.
+    #[new]
+    #[pyo3(signature = (dimacs, drat, lrat = None))]
+    fn new(dimacs: &str, drat: &str, lrat: Option<&str>) -> PyResult<Self> {
+        const COMPONENT_LIMIT: usize = 8 * 1024 * 1024;
+        const TOTAL_LIMIT: usize = 16 * 1024 * 1024;
+        let sizes = [dimacs.len(), drat.len(), lrat.map_or(0, str::len)];
+        if sizes.iter().any(|&size| size > COMPONENT_LIMIT)
+            || sizes.iter().sum::<usize>() > TOTAL_LIMIT
+        {
+            return Err(PyValueError::new_err(
+                "certificate resource limit: 8 MiB per text component, 16 MiB total",
+            ));
+        }
+        Ok(Self::build(UnsatProof {
+            dimacs: dimacs.to_owned(),
+            drat: drat.to_owned(),
+            lrat: lrat.map(str::to_owned),
+        }))
+    }
+
     /// The bit-blasted CNF in DIMACS.
     #[getter]
     fn dimacs(&self) -> &str {
@@ -111,6 +136,29 @@ impl PyUnsatProof {
     fn recheck(&self, py: Python<'_>) -> PyResult<bool> {
         let proof = &self.proof;
         py.detach(|| proof.recheck())
+            .map_err(|error| map_solver_error(&error))
+    }
+
+    /// Checks this certificate against the supplied Boolean assertions, including
+    /// supported bit-vector terms. Rebuilds the deterministic term-to-AIG-to-CNF
+    /// encoding and compares its exact DIMACS before checking the refutation.
+    /// No SAT search runs. The existing bit-blasting/Tseitin reduction is trusted;
+    /// this is source-bound replay, not an independent translation proof.
+    ///
+    /// False means a CNF/source mismatch or a rejected refutation. Unsupported
+    /// operators/sorts and malformed certificates raise `AxeyumError`; foreign
+    /// arena handles raise `EpochError`. Replay has no wall-clock deadline, like
+    /// `recheck` and the existing Rust checker.
+    fn recheck_for_bool_terms(
+        &self,
+        py: Python<'_>,
+        arena: PyRef<'_, Arena>,
+        assertions: Vec<Term>,
+    ) -> PyResult<bool> {
+        let ids = arena.resolve_terms(&assertions)?;
+        let subject = &arena.arena;
+        let proof = &self.proof;
+        py.detach(|| proof.recheck_for_bool_terms(subject, &ids))
             .map_err(|error| map_solver_error(&error))
     }
 
