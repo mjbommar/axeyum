@@ -298,7 +298,10 @@ controls for max/min, integer-only cuts, unknown and BV results. Native rebuild
 runner 30090 terminal pass. Sealed extension SHA-256
 dbf382f850c122c5f4c84e74e8ce307eb53422013c30aacd69f543fc9762b87c:
 24 Python tests passed, zero skipped. Added gold eligibility requiring model
-and refutation replay for the entire lex prefix; new gold changes unverified.
+and refutation replay for the entire lex prefix; new gold changes unverified. Build 28856 and mutation baseline 89277
+failed from root filesystem ENOSPC, no test failures or green credit. Lane-owned
+targets move to /data0; recovered gold runner39580 and mutation runner42006
+use disk-backed targets. Migration handle36457 remains live.
 Next: compile/test, checker guard mutations, Boolean lowering binding,
 strict-better certificates, model-plus-optimality Python results, serialization
 and independent process replay, then required full gates. Missing evidence never receives gold credit.
