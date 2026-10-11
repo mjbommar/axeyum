@@ -136,3 +136,33 @@ The detailed milestones are in the [CAS plan](cas-certified-trace-plan-2026-10-1
 and [proof/API/consumer plan](proof-api-consumer-plan-2026-10-10.md). Track IDs
 and project-wide order live only in the global queue. Each implementing lane
 opens its own status file and records completion in its own evidence artifact.
+
+## Fresh implementation replay of the six diagnostics
+
+The original findings above remain a historical installed-extension snapshot.
+All six audit queries were rerun in isolated subprocesses against the sealed
+fresh implementation extension, preserving assertion order and `set-logic`.
+Native source is `3f2411431`, SHA-256
+`99af1a4ceb22c36626b6d011dc0e6dc6cfe35b4737c15fc128a1b7b1325b09b7`;
+later Rust changes relocate a helper and correct documentation. Actual output,
+query hashes, saved proofs and checker outputs are retained in
+`/data0/axeyum/artifacts/python/final-original-reproducers-nj938gsc/receipt.json`.
+Corrected helper v2 exits zero with all six completed; v1 stopped after two
+because its test assumed generic OMT would return unknown instead of the
+implemented explicit unsupported-objective error. No failed v1 pass is credited.
+
+| Audit query | Current public outcome | Evidence boundary |
+|---|---|---|
+| `negative_literal` | SAT, `x=-1` | Original model replay succeeds. |
+| `abs_distinct` | UNSAT | Parser/verdict regression only; this probe makes no proof claim. |
+| `maximize` | Generic solve/get-value explicitly reject optimization objectives | Typed `smt.optimize(..., mode="lex")` returns10 with model `x=10`, successful replay and two discharged model/strict-better certificate obligations; gold eligible for this audited slice. |
+| `boolean_unsat` | UNSAT, deterministic closed Alethe without holes | In-tree checked export and external pinned, guard-patched Carcara verdict `valid`; no kernel claim. |
+| `boolean_lia` | UNSAT, deterministic closed proof with `lia_generic` | In-tree integer/Boolean checking; internal-only artifact, no external or kernel credit. |
+| `negative_real_product` | UNSAT, deterministic closed Alethe without holes | In-tree checked arithmetic export and external pinned, guard-patched Carcara verdict `valid`; no kernel claim. |
+
+The external checker SHA-256 is
+`32422f249b9bb18022f50b2cf15031e23ad50a0ab2c4435c5c818a5e5fa34505`;
+its patch provenance and rejection controls are in the
+[completion audit](user-feedback-completion-audit-2026-10-11.md). These six
+results close the exact diagnostic replay population, not the final aggregate
+gates or main integration.
