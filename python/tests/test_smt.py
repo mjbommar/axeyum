@@ -161,7 +161,7 @@ def _cli_verdict(path: Path) -> str:
     not SMTCOMP_CLI.exists() or shutil.which(str(SMTCOMP_CLI)) is None,
     reason=(
         f"{SMTCOMP_CLI} not built "
-        "(cargo build --release -p axeyum-solver --features full --example smtcomp_cli)"
+        "(cargo build --release -p axeyum-bench --features full --example smtcomp_cli)"
     ),
 )
 @pytest.mark.parametrize("relative", DIFFERENTIAL_FILES)

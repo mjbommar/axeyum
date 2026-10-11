@@ -55,7 +55,7 @@ Combined native build completed successfully. Sealed package:
 /var/tmp/axeyum-feedback-combined-gates-invfxf_7/package; native SHA-256
 831f35b5f744de86057caa8cdbeb3a23abe0b805f64227ad0641597a4b14238c.
 Python: 350 pass, 34 skipped, 384 collected (3.54 seconds). Skipped tests in
-SMT suites are external differential fixtures and fresh CLI cases; no pass is
+SMT suites are same-Rust-engine CLI route comparisons and fresh CLI cases; no pass is
 credited to them. Rust CAS integrations: four nonzero suites, 8/4/2/4 pass
 (18 total). Parser: 96 library plus five signed-literal tests pass (101 total),
 not the older source-lane aggregate count. All these scopes have zero failures.
@@ -73,5 +73,21 @@ Required-gate runner 88821 is now live at ce8e28222b0132398ad734c1a9e52051b051f4
 /var/tmp/axeyum-feedback-required-gates-bewczwlv. Sequence: five mandatory string
 front-door suites, full-feature solver library, workspace library, with every
 terminal row required nonzero. The initial corpus phase is active; no broad
-pass is claimed. Fresh CLI skips, external differential tests, lint, remaining
+pass is claimed. At that point CLI skips, independent oracle tests, lint, remaining
 features and eventual main landing still require work.
+
+CLI follow-up: prior build handle 50330 is missing, and no matching build process
+is live. Its executable exists and was exercised successfully; no recovered
+terminal build status is inferred. CLI SHA-256:
+dfbaddbe8f47070eba7f3da9c49c032ea8656d80f29064e5609502fce5b8ffd2.
+Using the existing AXEYUM_SMTCOMP_CLI override and the sealed native package,
+the same eleven Python suites pass all 384 collected tests, zero skips, in
+7.89 seconds (runner 60730, terminal exit 0). This closes 28 CLI route comparisons
+and six signed CLI cases; both routes use the same Rust solver, so these are
+not independent Z3 checks. Fixed the stale build hint: smtcomp_cli belongs to
+axeyum-bench, not axeyum-solver.
+
+Runner 88821 remains live, independently confirmed by PID 3700375 and active
+cargo child 3707885. Five required front-door suites completed with
+2/48/13/82/13 passes (158 total), each exit 0/nonzero. Full solver is active;
+workspace has not yet started. Broad completion remains unproven.
