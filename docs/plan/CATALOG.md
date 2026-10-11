@@ -11,7 +11,7 @@ rg -n 'QF_LRA' docs/plan/archive/lanes/      # every archived lane that mentions
 rg -n '<lane-or-topic>' docs/plan/CATALOG.md  # find the file, then open it
 ```
 
-Counts: 773 archived lanes (177 not DONE when archived), 55 older archive files, 347 dated plan notes, 88 lane notes, 508 strand and planning documents.
+Counts: 773 archived lanes (177 not DONE when archived), 55 older archive files, 348 dated plan notes, 88 lane notes, 508 strand and planning documents.
 
 ## Lanes that were not DONE when archived
 
@@ -866,6 +866,7 @@ Result notes, designs, handoffs and earlier queues. Evidence for claims; never t
 
 | Date | File | Title |
 |---|---|---|
+| 2026-10-11 | [`docs/plan/user-feedback-completion-audit-2026-10-11.md`](user-feedback-completion-audit-2026-10-11.md) | User feedback completion audit — 2026-10-11 |
 | 2026-10-11 | [`docs/plan/sat-python-route-census-2026-10-11.md`](sat-python-route-census-2026-10-11.md) | Python SAT certificate route census — 2026-10-11 |
 | 2026-10-11 | [`docs/plan/cas-pi-enclosure-transport-2026-10-11.md`](cas-pi-enclosure-transport-2026-10-11.md) | Portable exact pi enclosure evidence — 2026-10-11 |
 | 2026-10-11 | [`docs/plan/cas-expression-wire-2026-10-11.md`](cas-expression-wire-2026-10-11.md) | Exact CAS expression transport — 2026-10-11 |
