@@ -83,7 +83,7 @@ impl TraceLimits {
             && self.work <= other.work
             && self.bytes <= other.bytes
     }
-    fn policy(self) -> Result<Self, TraceError> {
+    pub(crate) fn policy(self) -> Result<Self, TraceError> {
         if !self.bounded_by(Self::default()) {
             return Err(resource("limits exceed the version-1 hard caps"));
         }

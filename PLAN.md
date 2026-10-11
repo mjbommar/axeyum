@@ -403,8 +403,15 @@ isomorphism test's stated single-thread budget failed under parallel tests at
 is live/uncredited. Parent full lint96940 passed all925 targets/27 crates with0
 diagnostics. Source stays fixed there while new work proceeds in this child.
 
-Next: implement bounded wide polynomial arithmetic, v2 codec/replay, closed
-constant powers and nonzero division; fresh Python and independent Fraction
+Implemented opt-in `wide_polynomial::normalize_with_limits` with promoting
+Rational operations, 16384-bit intermediate cap, width-weighted work and bounded
+syntax/degree/terms. Constant powers through512 and exact constant division are
+supported; zero and symbolic denominators decline explicitly. Initial compile
+mismatches corrected; focused v2 runner63138 passed3 tests, 0 failed/ignored,
+0.07s, `/var/tmp/axeyum-cas-wide-polynomial-tests-v2.log`. These are arithmetic
+backend results, not completed wide-trace evidence. V1 trace regression running.
+
+Next: v2 codec/step replay and recorded nonzero conditions; fresh Python and independent Fraction
 amortization; private guard controls and broad gates. No wide-trace completion
 or kernel-admission claim yet; the full user-feedback goal remains active.
 
