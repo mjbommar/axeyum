@@ -1165,6 +1165,11 @@ class DefiniteIntegral:
 
 @typing.final
 class Expr:
+    @staticmethod
+    def _parse_text(text: builtins.str) -> tuple[typing.Optional[Expr], builtins.str, builtins.int, builtins.int]:
+        r"""
+        Internal native parser transport; diagnostics carry UTF-8 byte offsets.
+        """
     def to_json(self) -> builtins.str:
         r"""
         Canonical version-1 JSON preserving Pi, variable names and exact rationals.
@@ -1174,7 +1179,7 @@ class Expr:
     def from_json(encoded: builtins.str) -> Expr:
         r"""
         Decode bounded tagged syntax without normalization or proof search.
-        Malformed data raises ValueError; hard caps raise BudgetExceeded.
+        Malformed data raises `ValueError`; hard caps raise `BudgetExceeded`.
         """
     @staticmethod
     def int(n: int) -> Expr:
