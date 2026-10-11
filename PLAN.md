@@ -436,8 +436,15 @@ disabled; syntax compilation passed. All4 trace suites7355 passed44/0 skipped,9.
 `/var/tmp/axeyum-cas-wide-guarded-python.log`; stub generator53068 running,
 `/var/tmp/axeyum-cas-wide-guarded-stubs.log`; stub result uncredited.
 Parent wide CAS2147 passed/0 failed/11 ignored,389.32s; this is parent evidence.
-Next: Python runtime run and stubs, private
-mutations and broad gates. Entire feedback goal remains active.
+Private version mutation79117 completed:baseline4 pass; removed guard3 pass
+and exactly `wide_identity_versions_are_bound_to_the_envelope` failed, exit101;
+snapshot restored bytewise. `/var/tmp/axeyum-cas-wide-guarded-controls.log`.
+Example passed:2912 bytes/3 steps/201-bit coefficient with exact replay,
+`/var/tmp/axeyum-cas-wide-guarded-example.log`.
+Own full lint12735 and serial CAS39650 running, uncredited; logs
+`/var/tmp/axeyum-cas-wide-guarded-{clippy,full-cas}.log`.
+Next: finish stubs/broad gates; nested conditional traces, kernel reconstruction
+and integration. Entire feedback goal remains active.
 
 ### SOL — Solver parity
 

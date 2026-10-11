@@ -50,10 +50,25 @@ def main() -> None:
         raise RuntimeError("cancellation without its nonzero context was accepted")
     print(f"({numerator}) / ({x}) -> {guarded.result} assuming x != 0; "
           f"{guarded.step_count} checked witness/cancellation steps")
+    wide_coefficient = Fraction(2**200, 3)
+    wide_numerator = x * wide_coefficient
+    wide = cas.cancel_trace(wide_numerator, x, nonzero=[x], wide=True)
+    if wide.status != "produced" or wide.trace is None:
+        raise RuntimeError(f"{wide.status}: {wide.detail}")
+    wide_json = wide.trace.to_json()
+    expected = cas.Expr.rat(wide_coefficient.numerator, wide_coefficient.denominator)
+    wide_checked = cas.replay_guarded_trace(
+        wide_json, wide_numerator, x, expected, nonzero=[x]
+    )
+    if wide_checked.status != "checked" or wide.trace.result.eval({}) != wide_coefficient:
+        raise RuntimeError("wide conditional result failed exact replay")
+    print(f"wide guarded cancellation: {len(wide_json.encode())} bytes, "
+          f"{wide.trace.step_count} checked steps, coefficient bits=201")
     if args.output:
         args.output.mkdir(parents=True, exist_ok=True)
         (args.output / "trace.json").write_text(exported)
         (args.output / "guarded-trace.json").write_text(guarded_json)
+        (args.output / "wide-guarded-trace.json").write_text(wide_json)
         (args.output / "statement.json").write_text(
             json.dumps({"input": payload["input"], "result": payload["result"]})
         )
