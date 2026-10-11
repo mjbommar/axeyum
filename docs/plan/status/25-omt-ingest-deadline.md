@@ -28,6 +28,14 @@ IR library92005 passed104/0 failed. Evaluator integration passed3/0 failed;
 portable model replay now uses eval_within for original assertions/objective;
 OMT integration passed4/0 failed. Controls prove expired intake vs false and
 preserve nested finite quantifier semantics, not mid-enumeration interruption.
-Next: producer replay budgets, fresh Python, private controls, broad gates, integration.
+Targeted Clippy75893 passed42.60s with warnings denied. Producer final replay
+now shares its deadline; exhaustion clears model/value/no-better evidence and
+returns ResourceLimit unknown. Generic checker preserves quantified certificates
+(atomic checks between polls); ordinary assertions use eval_within. OMT controls
+passed4. Private optimization group initially11 pass/1 stale zero-intake row
+expectation failed; corrected to empty rows plus reason/no gold. Rerun89587
+passed12/0 failed (2021 filtered). Clippy60534 passed23.39s with warnings denied;
+initial run caught public expect/panic docs, replaced with fail-closed fallback.
+Next: fresh Python, private guard mutations, broad gates, integration.
 Logs /var/tmp/axeyum-omt-{ingest-*,checker-budget-tests,deadline-ir-tests}.log.
 Entire feedback objective remains incomplete.

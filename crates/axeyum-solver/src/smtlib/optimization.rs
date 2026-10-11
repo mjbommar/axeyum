@@ -1,10 +1,9 @@
 //! Model-bearing text optimization; checked optimality remains a separate layer.
 use super::{optimize_one, smtlib_single_optimization_query, text_optimization_config};
 use crate::{
-    CheckResult, Model, OptOutcome, SolverConfig, SolverError, UnknownKind, UnknownReason,
-    check_model, solve,
+    CheckResult, Model, OptOutcome, SolverConfig, SolverError, UnknownKind, UnknownReason, solve,
 };
-use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
+use axeyum_ir::{Sort, TermArena, TermId, Value};
 use axeyum_smtlib::{SExpr, Script};
 use std::time::Instant;
 
@@ -70,18 +69,38 @@ impl OptimizationReport {
     /// # Errors
     /// Reports evaluator/model-check invariant failures.
     pub fn replay(&self, index: usize) -> Result<Option<bool>, SolverError> {
+        self.replay_within(index, None)
+    }
+
+    fn replay_within(
+        &self,
+        index: usize,
+        deadline: Option<Instant>,
+    ) -> Result<Option<bool>, SolverError> {
         let Some(row) = self.objectives.get(index) else {
             return Ok(None);
         };
         let Some(model) = &row.model else {
             return Ok(None);
         };
-        if !check_model(&self.script.arena, &row.assertions, model)? {
-            return Ok(Some(false));
+        match crate::quant_sat_cert::check_model_within(
+            &self.script.arena,
+            &row.assertions,
+            model,
+            deadline,
+        )? {
+            None => return Ok(None),
+            Some(false) => return Ok(Some(false)),
+            Some(true) => (),
         }
-        let actual = eval(&self.script.arena, row.objective, &model.to_assignment())
-            .map_err(|e| SolverError::Backend(e.to_string()))?;
-        Ok(Some(row.value.as_ref() == Some(&actual)))
+        let actual = axeyum_ir::eval_within(
+            &self.script.arena,
+            row.objective,
+            &model.to_assignment(),
+            deadline,
+        )
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+        Ok(actual.map(|value| row.value.as_ref() == Some(&value)))
     }
     /// Independently bind and replay the strict-better refutation. None means
     /// no certificate was retained; it never means checked optimality.
@@ -509,19 +528,77 @@ pub fn optimize_with_models(
             }
         }
     }
+    let deadline = config
+        .timeout
+        .and_then(|timeout| started.checked_add(timeout));
+    replay_models_within(&mut report, deadline)?;
+    Ok(report)
+}
+
+fn replay_models_within(
+    report: &mut OptimizationReport,
+    deadline: Option<Instant>,
+) -> Result<(), SolverError> {
     for index in 0..report.objectives.len() {
-        if report.replay(index)? == Some(false) {
-            return Err(SolverError::Backend(
-                "optimization model/value replay failed".into(),
-            ));
+        match report.replay_within(index, deadline)? {
+            Some(false) => {
+                return Err(SolverError::Backend(
+                    "optimization model/value replay failed".into(),
+                ));
+            }
+            None if report.objectives[index].model.is_some() => {
+                let row = &mut report.objectives[index];
+                row.outcome = OptOutcome::Unknown(UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: "optimization model replay deadline exhausted".into(),
+                });
+                row.value = None;
+                row.model = None;
+                row.no_better = None;
+                row.model_unavailable = Some("model replay deadline exhausted".into());
+            }
+            _ => (),
         }
     }
-    Ok(report)
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn bounded_model_replay_distinguishes_exhaustion_and_false() {
+        let mut report = optimize_with_models(
+            &format!("{BOUNDS}(maximize x)(check-sat)"),
+            OptimizationMode::Box,
+            &config(),
+        )
+        .unwrap();
+        assert_eq!(report.replay_within(0, Some(Instant::now())).unwrap(), None);
+        assert_eq!(report.replay_within(0, None).unwrap(), Some(true));
+        report.objectives[0].value = Some(Value::Int(9));
+        assert_eq!(report.replay_within(0, None).unwrap(), Some(false));
+    }
+
+    #[test]
+    fn exhausted_producer_replay_removes_unchecked_optimum_and_gold() {
+        let mut report = optimize_with_models(
+            &format!("{BOUNDS}(maximize x)(check-sat)"),
+            OptimizationMode::Box,
+            &config(),
+        )
+        .unwrap();
+        assert!(report.gold_eligible(0).unwrap());
+        replay_models_within(&mut report, Some(Instant::now())).unwrap();
+        let row = &report.objectives[0];
+        assert!(
+            matches!(&row.outcome, OptOutcome::Unknown(reason) if reason.kind == UnknownKind::ResourceLimit)
+        );
+        assert!(row.value.is_none() && row.model.is_none() && row.no_better.is_none());
+        assert_eq!(report.replay(0).unwrap(), None);
+        assert!(!report.gold_eligible(0).unwrap());
+    }
+
     const BOUNDS: &str = "(set-logic QF_LIA)(declare-const x Int)(declare-const y Int)(assert (and (>= x 0) (<= x 10) (>= y 0) (<= y 3)))";
     fn config() -> SolverConfig {
         SolverConfig::new().with_timeout(std::time::Duration::from_secs(10))
@@ -647,8 +724,13 @@ mod tests {
         let q = format!("{BOUNDS}(maximize x)(check-sat)");
         let c = SolverConfig::new().with_timeout(std::time::Duration::ZERO);
         let r = optimize_with_models(&q, OptimizationMode::Box, &c).unwrap();
-        assert!(matches!(r.objectives[0].outcome, OptOutcome::Unknown(_)));
+        assert!(r.objectives.is_empty());
+        assert_eq!(
+            r.intake_unknown.as_ref().unwrap().kind,
+            UnknownKind::ResourceLimit
+        );
         assert_eq!(r.replay(0).unwrap(), None);
+        assert!(!r.gold_eligible(0).unwrap());
         let r = run(
             &format!("{BOUNDS}(assert (< x 0))(maximize x)(check-sat)"),
             OptimizationMode::Box,

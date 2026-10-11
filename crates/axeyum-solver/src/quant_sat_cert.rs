@@ -7,9 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use axeyum_ir::{
-    Assignment, IrError, Op, Rational, SymbolId, TermArena, TermId, TermNode, Value, eval,
-};
+use axeyum_ir::{Assignment, IrError, Op, Rational, SymbolId, TermArena, TermId, TermNode, Value};
 
 use crate::{Model, SolverError};
 
@@ -427,16 +425,46 @@ pub fn check_model_with_assignment(
     model: &Model,
     assignment: &Assignment,
 ) -> Result<bool, SolverError> {
+    Ok(
+        check_model_with_assignment_within(arena, assertions, model, assignment, None)?
+            .unwrap_or(false),
+    )
+}
+
+/// Internal bounded model replay; None denotes deadline exhaustion.
+/// Quantified certificate checks are atomic between deadline polls.
+pub(crate) fn check_model_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    model: &Model,
+    deadline: Option<std::time::Instant>,
+) -> Result<Option<bool>, SolverError> {
+    check_model_with_assignment_within(arena, assertions, model, &model.to_assignment(), deadline)
+}
+
+fn check_model_with_assignment_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    model: &Model,
+    assignment: &Assignment,
+    deadline: Option<std::time::Instant>,
+) -> Result<Option<bool>, SolverError> {
+    if deadline.is_some_and(|limit| std::time::Instant::now() >= limit) {
+        return Ok(None);
+    }
     let assertion_set: BTreeSet<_> = assertions.iter().copied().collect();
     let Some(certificate_count) = source_bound_certificate_count(model, &assertion_set) else {
-        return Ok(false);
+        return Ok(Some(false));
     };
 
     let mut checked_certificates = BTreeSet::new();
     for &assertion in assertions {
+        if deadline.is_some_and(|limit| std::time::Instant::now() >= limit) {
+            return Ok(None);
+        }
         if let Some(cert) = model.quantified_sat_certificate(assertion) {
             if !check_quantified_skolem_sat(arena, assertion, cert) {
-                return Ok(false);
+                return Ok(Some(false));
             }
             checked_certificates.insert(assertion);
             continue;
@@ -448,14 +476,14 @@ pub fn check_model_with_assignment(
                 .any(|&(symbol, value)| assignment.get(symbol) != Some(Value::Bool(value)))
                 || !crate::check_quantified_bool_model_sat(arena, assertion, cert)
             {
-                return Ok(false);
+                return Ok(Some(false));
             }
             checked_certificates.insert(assertion);
             continue;
         }
         if let Some(cert) = model.quantified_guard_sat_certificate(assertion) {
             if !crate::check_quantified_guard_sat(arena, assertion, cert) {
-                return Ok(false);
+                return Ok(Some(false));
             }
             checked_certificates.insert(assertion);
             continue;
@@ -467,29 +495,30 @@ pub fn check_model_with_assignment(
                 .any(|(symbol, value)| assignment.get(*symbol) != Some(value.clone()))
                 || !crate::check_quantified_bv_model_sat(arena, assertion, cert)
             {
-                return Ok(false);
+                return Ok(Some(false));
             }
             checked_certificates.insert(assertion);
             continue;
         }
         if let Some(cert) = model.quantified_uf_model_sat_certificate(assertion) {
             if !crate::check_quantified_uf_model_sat(arena, assertion, model, cert) {
-                return Ok(false);
+                return Ok(Some(false));
             }
             checked_certificates.insert(assertion);
             continue;
         }
-        match eval(arena, assertion, assignment) {
-            Ok(Value::Bool(true)) => {}
-            Ok(Value::Bool(false)) => return Ok(false),
-            Ok(value) => {
+        match axeyum_ir::eval_within(arena, assertion, assignment, deadline) {
+            Ok(None) => return Ok(None),
+            Ok(Some(Value::Bool(true))) => {}
+            Ok(Some(Value::Bool(false))) => return Ok(Some(false)),
+            Ok(Some(value)) => {
                 return Err(SolverError::Backend(format!(
                     "sat model replay: assertion #{} is non-Boolean {value}",
                     assertion.index()
                 )));
             }
             Err(IrError::UnsupportedQuantifierDomain(_)) => {
-                return Ok(false);
+                return Ok(Some(false));
             }
             Err(error) => {
                 return Err(SolverError::Backend(format!(
@@ -499,7 +528,10 @@ pub fn check_model_with_assignment(
             }
         }
     }
-    Ok(checked_certificates.len() == certificate_count)
+    if deadline.is_some_and(|limit| std::time::Instant::now() >= limit) {
+        return Ok(None);
+    }
+    Ok(Some(checked_certificates.len() == certificate_count))
 }
 
 /// Counts certificates only when every one names an assertion in this query.
