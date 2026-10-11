@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -2018,13 +2019,53 @@ def validate_pack(pack_dir: Path) -> str:
     return metadata["id"]
 
 
+def validate_statute_templates(*, replay_certificates: bool = False) -> tuple[int, int]:
+    root = ROOT / "docs/rules-as-code/statute-templates"
+    manifests = sorted(root.glob("*/manifest.json"))
+    checked = 0
+    for path in manifests:
+        manifest = load_json(path)
+        require_keys(str(path), manifest, {"schema_version", "id", "jurisdiction", "sources", "effective_interval", "modeled_clauses", "excluded_clauses", "assumptions", "evidence_status"})
+        if type(manifest["schema_version"]) is not int or manifest["schema_version"] != 1:
+            fail("unsupported statute manifest version")
+        if not manifest["sources"] or not manifest["modeled_clauses"]:
+            fail("statute template needs sources and modeled clauses")
+        for source in manifest["sources"]:
+            require_keys("statute source", source, {"section", "uri", "edition", "retrieved_on", "normalized_section_sha256", "normalization"})
+            require_date("statute source retrieval", source["retrieved_on"])
+            if not re.fullmatch(r"[0-9a-f]{64}", source["normalized_section_sha256"]):
+                fail("statute source needs a SHA-256 identity")
+        for name in ("source.md", "model.md", "example.py", "README.md"):
+            if not (path.parent / name).is_file():
+                fail(f"statute template missing {name}")
+        fixtures = sorted((path.parent / "fixtures").glob("*.certificate.json"))
+        if not fixtures:
+            fail("statute template has no certificate fixtures")
+        if replay_certificates:
+            try:
+                from axeyum.rules import check_deadline_certificate
+            except ImportError:
+                fail("statute replay requires an installed Axeyum Python package")
+            for fixture in fixtures:
+                result = check_deadline_certificate(fixture.read_text())
+                if result.status != "checked":
+                    fail(f"statute fixture {fixture.name} failed replay: {result.status}: {result.detail}")
+                checked += 1
+    return len(manifests), checked
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--statute-certificates", action="store_true", help="also replay bounded statute fixtures using the installed native package")
+    args = parser.parse_args()
     load_json(SCHEMA)
     pack_dirs = sorted(path.parent for path in EXAMPLES_ROOT.glob("*/metadata.json"))
     if not pack_dirs:
         fail("no rules-as-code example packs found")
     pack_ids = [validate_pack(pack_dir) for pack_dir in pack_dirs]
     print(f"validated {len(pack_ids)} rules-as-code pack(s): {', '.join(pack_ids)}")
+    templates, checked = validate_statute_templates(replay_certificates=args.statute_certificates)
+    print(f"validated {templates} statute template manifest(s); replayed {checked} conditional certificate(s)")
     return 0
 
 

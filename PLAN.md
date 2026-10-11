@@ -630,15 +630,15 @@ paired tests in private405b55811 snapshot with revised otherwise-valid duplicate
 fixture; restored originals. /var/tmp/axeyum-rules-intake-control-*.log.
 Next: source/calendar authority and applicability evidence, general obligation
 proof routes, intake controls and full feedback closure.
-Parent targeted gamma tests passed19/0 failed/ignored,3.90s;
-/var/tmp/axeyum-feedback-cas-lint-tests.log. Complete lint15399 terminated101 after930/932 targets: four duplicate
-doc_markdown diagnostics at CAS expr.rs275 (ValueError/BudgetExceeded).
-Corrected both backticks; complete rerun13564 passed932/932 targets in27
-crates,0 diagnostics,14576 fresh inputs;
-/var/tmp/axeyum-rules-runtime-full-clippy.log (Rust source47c91033e).
-Parent full CAS3957 passed2147/0 failed/11 ignored,411.14s;
-/var/tmp/axeyum-cas-rust-parser-full-cas.log. Workspace81069 and complete
-workspace remains live; complete lint passed as above. Entire objective remains incomplete; no legal claim.
+Full CAS3957 passed2147/0 failed/11 ignored,411.14s; complete lint13564
+passed932/932 targets,27 crates,0 diagnostics,14576 fresh inputs. Workspace81069
+remains live. Logs /var/tmp/axeyum-cas-rust-parser-full-cas.log and
+/var/tmp/axeyum-rules-runtime-full-clippy.log. Full objective remains incomplete.
+
+Validator now includes statute manifests, required files and fixture populations.
+Opt-in --statute-certificates checked1 native-backed conditional fixture; default
+reports0 replayed explicitly. Suite12 passed. README updated. Next: private
+manifest controls, dashboard integration, authority/applicability and proof routes.
 
 ### SOL — Solver parity
 

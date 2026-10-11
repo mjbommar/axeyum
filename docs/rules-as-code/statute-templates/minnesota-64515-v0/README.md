@@ -10,8 +10,11 @@ independent reference, then native obligations and checked proof routes.
 
 This directory is separate from the seven illustrative packs. Its manifest
 records an unknown effective interval instead of inventing a date required by
-the older example-pack metadata schema. Validator/dashboard integration and
-native proof obligations remain open work.
+the older example-pack metadata schema. The Rules validator now checks template manifests and fixture presence.
+Run `python scripts/validate-rules-as-code.py --statute-certificates` with an
+installed Axeyum package to replay conditional certificate fixtures. Default
+validation reports zero replayed certificates explicitly. Dashboard integration
+and native proof obligations remain open work.
 
 [Certificate fixture](fixtures/weekend-holiday.certificate.json) binds a synthetic
 calendar, its complete candidate window and the claimed least endpoint. Replay

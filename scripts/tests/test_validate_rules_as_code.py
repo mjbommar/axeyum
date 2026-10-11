@@ -3,6 +3,9 @@ import copy
 import json
 import importlib.util
 from pathlib import Path
+import shutil
+import tempfile
+from unittest.mock import patch
 import sys
 import unittest
 
@@ -71,6 +74,22 @@ class MetadataControls(unittest.TestCase):
         self.metadata["effective_interval"] = {"to": None}
         with self.assertRaises(checker.ValidationError):
             checker.validate_metadata(self.pack, self.metadata)
+
+
+class StatuteControls(unittest.TestCase):
+    def test_committed_template_manifest(self):
+        self.assertEqual(checker.validate_statute_templates(), (1, 0))
+
+    def test_missing_certificate_population(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = SCRIPT.parent.parent / "docs/rules-as-code/statute-templates"
+            target = root / "docs/rules-as-code/statute-templates"
+            shutil.copytree(source, target)
+            for fixture in target.glob("*/fixtures/*.certificate.json"):
+                fixture.unlink()
+            with patch.object(checker, "ROOT", root), self.assertRaises(checker.ValidationError):
+                checker.validate_statute_templates()
 
 
 if __name__ == "__main__":
