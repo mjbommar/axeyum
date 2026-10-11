@@ -1,6 +1,6 @@
 # ADR-3000: signed integer powers lower to partial rational expressions
 
-Status: proposed; pending full validation and domain-aware trace integration
+Status: accepted; bounded surface adopted, final integration gates remain open
 Date: 2026-10-10
 
 ## Decision
@@ -36,3 +36,16 @@ missing-binding, undefined-base, exponent boundaries, modulo/type controls and
 independent 360-period Fraction agreement. Verify existing positive syntax and
 big rational transport regressions. Public source/API documentation and generated
 stubs must describe the signed range and partial domain.
+
+## Adoption and validation boundary
+
+This bounded surface is adopted on the feedback implementation branch. Current
+CAS library tests and the fresh native consumer suites cover exact values,
+transport, parser/domain controls and explicit unsupported/resource outcomes;
+see the [validation receipts](../../plan/notes/28-wide-real-smtlib-writer.md).
+Signed-power fuzzing includes guaranteed zero-base negative-exponent and
+undefined-base seed classes. Private Pi/source-binding controls remain recorded
+with exact intended failures. Production Python parsing uses ADR-6900; ADR-3100
+is historical and superseded. Promoted transport does not widen every arithmetic
+operation, and Pi bounds or parsed expressions do not grant kernel admission.
+The final workspace/all-target gates and main integration remain open.

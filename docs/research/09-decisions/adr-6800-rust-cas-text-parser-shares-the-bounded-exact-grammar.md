@@ -1,6 +1,6 @@
 # ADR-6800: Rust CAS text parser shares the bounded exact grammar
 
-Status: proposed
+Status: accepted; bounded surface adopted, final integration gates remain open
 Date: 2026-10-11
 
 Expose a Rust CasExpr parser for the existing ADR3100 Python grammar: exact
@@ -22,3 +22,16 @@ and exact rational transport. Validate constructor agreement, precedence,
 negative-power domains, promoted literals, unary heads, malformed text and every
 resource boundary. Python/native grammar differential fixtures prevent drift;
 shared native use is a follow-up migration, not an implicit API replacement.
+
+## Adoption and validation boundary
+
+This bounded surface is adopted on the feedback implementation branch. Current
+CAS library tests and the fresh native consumer suites cover exact values,
+transport, parser/domain controls and explicit unsupported/resource outcomes;
+see the [validation receipts](../../plan/notes/28-wide-real-smtlib-writer.md).
+Signed-power fuzzing includes guaranteed zero-base negative-exponent and
+undefined-base seed classes. Private Pi/source-binding controls remain recorded
+with exact intended failures. Production Python parsing uses ADR-6900; ADR-3100
+is historical and superseded. Promoted transport does not widen every arithmetic
+operation, and Pi bounds or parsed expressions do not grant kernel admission.
+The final workspace/all-target gates and main integration remain open.

@@ -1084,16 +1084,16 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [2600](adr-2600-source-bound-propositional-alethe-reuses-the-clausal-tail.md) | source-bound propositional Alethe reuses the clausal tail | proposed; pending complete validation |
 | [2700](adr-2700-real-proof-scalars-use-checked-closed-arithmetic-and-explicit-rewrite-bridges.md) | real proof scalars use checked closed arithmetic and explicit rewrite bridges | proposed; pending complete validation |
 | [2800](adr-2800-bounded-boolean-lia-composition-keeps-integer-lemmas-internal.md) | bounded Boolean/LIA composition keeps integer lemmas internal | proposed; pending validation and portable integer elaboration |
-| [2900](adr-2900-python-cas-rationals-reuse-the-promoted-carrier.md) | Python CAS rationals reuse the promoted carrier | proposed; pending full validation |
-| [3000](adr-3000-signed-integer-powers-lower-to-partial-rational-expressions.md) | signed integer powers lower to partial rational expressions | proposed; pending full validation and domain-aware trace integration |
+| [2900](adr-2900-python-cas-rationals-reuse-the-promoted-carrier.md) | Python CAS rationals reuse the promoted carrier | accepted; bounded surface adopted, final integration gates remain open |
+| [3000](adr-3000-signed-integer-powers-lower-to-partial-rational-expressions.md) | signed integer powers lower to partial rational expressions | accepted; bounded surface adopted, final integration gates remain open |
 | [3100](adr-3100-bounded-python-cas-text-parser.md) | Bounded Python CAS text parsing constructs the existing exact IR | superseded by ADR-6800 and ADR-6900 |
 | [3200](adr-3200-python-date-facade-preserves-sort-and-range.md) | Python Date facade preserves source sorts over ordinal Int terms | proposed |
 | [3300](adr-3300-python-rule-packs-reuse-native-obligations.md) | Python rule packs reuse metadata and native obligations | proposed |
 | [3400](adr-3400-statute-time-template-carries-calendar-and-applicability-inputs.md) | Statute time template carries calendar and applicability inputs | proposed |
 | [3500](adr-3500-finite-deadline-certificates-replay-native-ground-facts.md) | Finite deadline certificates replay native ground facts | proposed |
-| [6000](adr-6000-distinguished-cas-pi-has-constant-identity.md) | distinguished CAS pi has constant identity | proposed; implementation and full validation pending |
-| [6100](adr-6100-cas-expression-wire-preserves-source-identity.md) | CAS expression wire preserves source identity | proposed; implementation and validation in progress |
-| [6200](adr-6200-portable-pi-enclosure-replays-source-bound-machin-evidence.md) | portable pi enclosure replays source-bound Machin evidence | proposed; implementation and validation in progress |
+| [6000](adr-6000-distinguished-cas-pi-has-constant-identity.md) | distinguished CAS pi has constant identity | accepted; bounded surface adopted, final integration gates remain open |
+| [6100](adr-6100-cas-expression-wire-preserves-source-identity.md) | CAS expression wire preserves source identity | accepted; bounded surface adopted, final integration gates remain open |
+| [6200](adr-6200-portable-pi-enclosure-replays-source-bound-machin-evidence.md) | portable pi enclosure replays source-bound Machin evidence | accepted; bounded surface adopted, final integration gates remain open |
 | [6300](adr-6300-typed-omt-results-retain-original-model-replay.md) | typed OMT results retain original model replay | proposed; implementation and validation in progress |
 | [6301](adr-6301-farkas-source-binding-precedes-optimality-credit.md) | Farkas source binding precedes optimality credit | proposed |
 | [6302](adr-6302-portable-omt-certificates-carry-the-original-query.md) | Portable OMT certificates carry the original query | proposed |
@@ -1101,8 +1101,8 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [6500](adr-6500-wide-cas-traces-opt-in-to-bounded-promoted-arithmetic.md) | Wide CAS traces opt in to bounded promoted arithmetic | accepted; bounded contract adopted, final integration gates remain open |
 | [6600](adr-6600-wide-guarded-quotients-bind-context-and-arithmetic-version.md) | Wide guarded quotients bind context and arithmetic version | accepted; bounded contract adopted, final integration gates remain open |
 | [6700](adr-6700-cas-step-traces-reconstruct-through-existing-complex-ring-laws.md) | CAS step traces reconstruct through existing Complex ring laws | proposed |
-| [6800](adr-6800-rust-cas-text-parser-shares-the-bounded-exact-grammar.md) | Rust CAS text parser shares the bounded exact grammar | proposed |
-| [6900](adr-6900-python-cas-parsing-uses-the-native-bounded-grammar.md) | Python CAS parsing uses the native bounded grammar | proposed |
+| [6800](adr-6800-rust-cas-text-parser-shares-the-bounded-exact-grammar.md) | Rust CAS text parser shares the bounded exact grammar | accepted; bounded surface adopted, final integration gates remain open |
+| [6900](adr-6900-python-cas-parsing-uses-the-native-bounded-grammar.md) | Python CAS parsing uses the native bounded grammar | accepted; bounded surface adopted, final integration gates remain open |
 | [7000](adr-7000-omt-intake-shares-the-search-and-checking-deadline.md) | OMT intake shares the search and checking deadline | proposed |
 | [7100](adr-7100-ground-model-evaluation-shares-deadlines-through-finite-quantifiers.md) | Ground model evaluation shares deadlines through finite quantifiers | proposed |
 | [7200](adr-7200-statute-source-identities-replay-from-bounded-text-snapshots.md) | Statute source identities replay from bounded text snapshots | proposed |

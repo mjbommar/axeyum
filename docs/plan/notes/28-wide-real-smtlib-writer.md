@@ -363,3 +363,7 @@ Branch adds32ADRs, all initially proposed. ADR3100 is now superseded by6800/6900
 ## Bounded CAS trace contract adoption
 
 Reviewed ADR2500/6400/6500/6600 plus8400 against actual source, existing private context/identity/zero/version/bit/domain controls, current2154CAS passes and fresh native replay suites. Adopted those five bounded architecture contracts. Status explicitly does not claim main integration, broad kernel coverage or universal arithmetic support; final workspace/all-target gates remain open. ADR3100 remains superseded. Other26new ADRs still need individual contract review.
+
+## Exact expression/transport/parser contract adoption
+
+Reviewed ADR2900/3000/6000/6100/6200/6800/6900 against current implementations and consumer controls. In particular signed powers have a seeded256case Fraction fuzz with guaranteed0^-1/0^-10/0^0/undefined-base classes; Pi guard controls are recorded in cas-pi notes and Pi-certificate lane, and native parser uses byte/final-AST caps. Adopted these seven bounded contracts; all broad/kernel/transport restrictions remain explicit. Nineteen new ADRs still require contract review; final integration gates remain open.

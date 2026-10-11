@@ -1,6 +1,6 @@
 # ADR-6000: distinguished CAS pi has constant identity
 
-Status: proposed; implementation and full validation pending
+Status: accepted; bounded surface adopted, final integration gates remain open
 Date: 2026-10-11
 
 ## Problem
@@ -76,3 +76,16 @@ head agreement with a private guard-removal test that kills exactly one target.
 Audit all expression consumers and reconstruction routes for explicit support
 or decline; run fresh affected CAS/Python and full workspace gates with nonzero
 counts. This ADR is not a completion claim for any of those gates.
+
+## Adoption and validation boundary
+
+This bounded surface is adopted on the feedback implementation branch. Current
+CAS library tests and the fresh native consumer suites cover exact values,
+transport, parser/domain controls and explicit unsupported/resource outcomes;
+see the [validation receipts](../../plan/notes/28-wide-real-smtlib-writer.md).
+Signed-power fuzzing includes guaranteed zero-base negative-exponent and
+undefined-base seed classes. Private Pi/source-binding controls remain recorded
+with exact intended failures. Production Python parsing uses ADR-6900; ADR-3100
+is historical and superseded. Promoted transport does not widen every arithmetic
+operation, and Pi bounds or parsed expressions do not grant kernel admission.
+The final workspace/all-target gates and main integration remain open.

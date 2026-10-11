@@ -1,6 +1,6 @@
 # ADR-2900: Python CAS rationals reuse the promoted carrier
 
-Status: proposed; pending full validation
+Status: accepted; bounded surface adopted, final integration gates remain open
 Date: 2026-10-10
 
 ## Decision
@@ -32,3 +32,16 @@ Fraction calculation, zero/invalid/resource controls, and discrimination of
 Python decimal conversion settings. Recheck big CAS witnesses and tampering.
 Fresh extension identity and actual collected test counts are required; follow
 with generated stubs, affected Rust tests and workspace integration.
+
+## Adoption and validation boundary
+
+This bounded surface is adopted on the feedback implementation branch. Current
+CAS library tests and the fresh native consumer suites cover exact values,
+transport, parser/domain controls and explicit unsupported/resource outcomes;
+see the [validation receipts](../../plan/notes/28-wide-real-smtlib-writer.md).
+Signed-power fuzzing includes guaranteed zero-base negative-exponent and
+undefined-base seed classes. Private Pi/source-binding controls remain recorded
+with exact intended failures. Production Python parsing uses ADR-6900; ADR-3100
+is historical and superseded. Promoted transport does not widen every arithmetic
+operation, and Pi bounds or parsed expressions do not grant kernel admission.
+The final workspace/all-target gates and main integration remain open.
