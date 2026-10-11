@@ -239,3 +239,10 @@ composition logging. Raw result `/var/tmp/axeyum-nested-conditional-trust-regist
 Compiler workers remain live with filesystem/block-device wait; older datatype
 workspace continues advancing through kernel tests. Nested compile/runtime and
 private guard outputs remain pending; a running checker is not a pass.
+
+Investigated stalled parent builds: cargo/rustc roots2296727/2323567 were
+explicitly idle I/O class under sustained disk pressure. Changed only these
+owned process trees (7 processes/37 threads) to lowest best-effort I/O priority7,
+verified both roots with ionice. No restarts; CPU niceness, memory caps and host
+serialization retained. Forty-five-second follow-up confirms jobs still live;
+no terminal result or test pass inferred from this scheduling adjustment.
