@@ -636,3 +636,47 @@ def test_model_preference_rejects_a_misspelling() -> None:
         axeyum.solver.Config(model_preference="smallest")
     assert axeyum.solver.Config(model_preference="zero").model_preference == "zero"
     assert axeyum.solver.Config().model_preference == "any"
+
+
+@pytest.mark.parametrize(
+    "body, expected",
+    [
+        ("(declare-const x Int) (assert (= x -1))", "sat"),
+        ("(declare-const x Int) (assert (= x -1)) (assert (>= x 0))", "unsat"),
+        ("(assert (= (+ -1 2.0) 1.0))", "sat"),
+        ("(assert (distinct (abs -1) 1))", "unsat"),
+        ("(declare-const |-1| Bool) (assert |-1|) (assert (= -1 (- 1)))", "sat"),
+        ("(declare-const -1 Bool) (assert -1)", "sat"),
+    ],
+)
+def test_signed_integer_convenience_front_door(body: str, expected: str) -> None:
+    result = smt.solve(f"{body} (check-sat)", timeout_ms=TIMEOUT_MS)
+    assert result.status == expected
+    if expected == "sat":
+        assert result.replay() is True
+
+
+@pytest.mark.parametrize("atom", ["--1", "-", "+1", "-1x", "-1.0", "|-1|"])
+def test_signed_integer_malformed_front_door(atom: str) -> None:
+    with pytest.raises(axeyum.SmtLibParseError):
+        smt.solve(f"(assert (= {atom} 0)) (check-sat)", timeout_ms=TIMEOUT_MS)
+
+
+@pytest.mark.skipif(not SMTCOMP_CLI.exists(), reason="fresh smtcomp_cli build required")
+@pytest.mark.parametrize(
+    "body, expected",
+    [
+        ("(declare-const x Int) (assert (= x -1))", "sat"),
+        ("(declare-const x Int) (assert (= x -1)) (assert (>= x 0))", "unsat"),
+        ("(assert (= (+ -1 2.0) 1.0))", "sat"),
+        ("(assert (distinct (abs -1) 1))", "unsat"),
+        ("(declare-const |-1| Bool) (assert |-1|) (assert (= -1 (- 1)))", "sat"),
+        ("(declare-const -1 Bool) (assert -1)", "sat"),
+    ],
+)
+def test_signed_integer_cli_front_door(
+    body: str, expected: str, tmp_path: Path
+) -> None:
+    source = tmp_path / "signed_integer.smt2"
+    source.write_text(f"{body} (check-sat)")
+    assert _cli_verdict(source) == expected

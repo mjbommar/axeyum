@@ -118,6 +118,17 @@ reproduction of ignored objectives and unboundedness classification; confirmed
 incorrect optimization claims invoke P0. Installed-extension probes are diagnostic,
 not a fresh solver board or a new parity measurement.
 
+**Signed integer literals (`WIP`, signed-literals, 2026-10-10).** Implements
+optional ASCII minus with unbounded integer construction, declared-symbol
+precedence, and preserved quoted numeric identity. Writer stays canonical;
+signed decimals require unary subtraction. ADR-2400 records the decision.
+Public parser package passed 380 tests including 5 new regressions;
+Fresh isolated Python extension passed all 12 selected tests with SAT replay.
+Fresh solver front door passed 1/1 and fresh CLI passed 6/6.
+Required
+required front-door/workspace gates remain pending. `abs`/`distinct` parse and
+receive semantic controls. Exact `notes/80` location remains unknown.
+
 **CAS exact inputs (`WIP`, cas-exact, 2026-10-10).** Rust Rational already carries
 promoted coefficients, but the big zero-test fallback narrowed them with getters
 that panic. Fix uses exact big numerator/denominator conversion. Three fresh
@@ -167,8 +178,8 @@ validation. No integration/completion claim.
 **Feedback integration (`WIP`, feedback-integration, 2026-10-11).** Isolated
 branch starts from wide CAS/signed-power/parser head da0e38a0a. Integrating Date/
 rules c3c747eb9 with generated plan/ADR views rebuilt; source merged cleanly.
-Historical audit conflicts retain the main planning correction. Other lanes
-(traces, signed literals, OMT, Boolean/LIA proofs) remain to integrate and verify.
+Historical audit conflicts retain the main planning correction. Signed literal import 343a289c8 merges cleanly in source; generated views rebuilt.
+Other lanes (traces, OMT, Boolean/LIA proofs) remain to integrate and verify.
 Source lane branches/history are retained; integration imports are linear commits.
 No combined gate pass, main landing or overall completion claimed.
 

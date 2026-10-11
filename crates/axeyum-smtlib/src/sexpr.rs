@@ -111,14 +111,23 @@ impl<'a> Iterator for Descendants<'a> {
     }
 }
 
+/// Integer atom syntax, including the signed convenience form (ADR-2400).
+pub(crate) fn is_integer_atom(atom: &str) -> bool {
+    let digits = atom.strip_prefix('-').unwrap_or(atom);
+    !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit())
+}
+
 /// Whether a quoted symbol's inner text must keep its pipes to stay
 /// distinguishable from a non-symbol token.
 ///
 /// True exactly when the text could not be the body of a *simple* symbol:
 /// empty, or starting with a character no simple symbol may start with — an
 /// ASCII digit (numeral / decimal), `#` (`#x`/`#b`/`#f` literal), `"` (string),
-/// or `:` (keyword). See the call site for why the distinction is load-bearing.
+/// or `:` (keyword), or a signed integer convenience token. See the call site for why the distinction is load-bearing.
 fn needs_quoting(inner: &str) -> bool {
+    if is_integer_atom(inner) {
+        return true;
+    }
     match inner.as_bytes().first() {
         None => true,
         Some(&b) => b.is_ascii_digit() || matches!(b, b'#' | b'"' | b':'),

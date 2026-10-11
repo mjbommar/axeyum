@@ -5,6 +5,9 @@
 //! functions, datatypes, objectives, output requests, and ordered incremental
 //! `push`/`pop`/query commands. Parsing support is not the same as solver-route
 //! support; callers must preserve explicit unsupported/resource outcomes.
+//! Bare signed integer atoms such as `-1` are accepted as convenience syntax;
+//! the writer emits canonical `(- 1)`. Signed decimals still require unary
+//! subtraction. Quoted numeric symbols retain their identity.
 //!
 //! The writer emits complete scripts and turns shared nodes into 0-ary
 //! `define-fun`s so output is linear in the DAG, never the unfolded tree

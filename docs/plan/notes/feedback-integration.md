@@ -7,3 +7,11 @@ conflicts retain a7df59e83's main planning correction; generated PLAN and ADR
 index are rebuilt from combined sources. Integration uses linear imports via
 lane-commit because the helper refuses MERGE_HEAD; original branch objects and
 history are retained. Main checkout is unchanged. No combined gate pass yet.
+
+Signed-literal import from 343a289c8 merges without source conflicts. Generated
+PLAN/CATALOG/ADR views are rebuilt. Rules import landed in 38d55bb78 (26 files).
+Post-merge hygiene passed with shape-duplicate and kernel-projection checks
+explicitly unavailable; that is not full-gate evidence. Pinned recount initially
+received no paths and exited usage-error; no pass is inferred from that command.
+The merge touches no kernel pin inventory; affected parser files are checked
+separately. Combined native/runtime gates await the remaining imports.

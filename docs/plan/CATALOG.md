@@ -11,7 +11,7 @@ rg -n 'QF_LRA' docs/plan/archive/lanes/      # every archived lane that mentions
 rg -n '<lane-or-topic>' docs/plan/CATALOG.md  # find the file, then open it
 ```
 
-Counts: 771 archived lanes (177 not DONE when archived), 55 older archive files, 346 dated plan notes, 76 lane notes, 508 strand and planning documents.
+Counts: 771 archived lanes (177 not DONE when archived), 55 older archive files, 344 dated plan notes, 77 lane notes, 508 strand and planning documents.
 
 ## Lanes that were not DONE when archived
 
@@ -867,8 +867,6 @@ Result notes, designs, handoffs and earlier queues. Evidence for claims; never t
 | Date | File | Title |
 |---|---|---|
 | 2026-10-10 | [`docs/plan/user-feedback-audit-2026-10-10.md`](user-feedback-audit-2026-10-10.md) | User feedback audit and implementation map — 2026-10-10 |
-| 2026-10-10 | [`docs/plan/user-feedback-audit-2026-10-10.md`](user-feedback-audit-2026-10-10.md) | User feedback audit and implementation map — 2026-10-10 |
-| 2026-10-10 | [`docs/plan/user-feedback-audit-2026-10-10.md`](user-feedback-audit-2026-10-10.md) | User feedback audit and implementation map — 2026-10-10 |
 | 2026-10-10 | [`docs/plan/proof-api-consumer-plan-2026-10-10.md`](proof-api-consumer-plan-2026-10-10.md) | Proof export, SMT APIs and Rules-as-Code plan — 2026-10-10 |
 | 2026-10-10 | [`docs/plan/cas-certified-trace-plan-2026-10-10.md`](cas-certified-trace-plan-2026-10-10.md) | Certified CAS traces and exact expression surface — 2026-10-10 |
 | 2026-10-05 | [`docs/plan/gate-sweep-2026-10-05.md`](gate-sweep-2026-10-05.md) | Gate sweep, 2026-10-05: what is red on `a38d5f5da` |
@@ -1238,6 +1236,7 @@ Result notes, designs, handoffs and earlier queues. Evidence for claims; never t
 | 2026-08-18 | [`docs/plan/notes/101-expect-axioms.md`](notes/101-expect-axioms.md) | notes: expect-axioms — the ledger must see a trusted number move both ways |
 | 2026-08-17 | [`docs/plan/notes/99-capability-assurance.md`](notes/99-capability-assurance.md) | Notes: 99-capability-assurance |
 | 2026-08-15 | [`docs/plan/notes/100-ledger-freshness.md`](notes/100-ledger-freshness.md) | Notes: 100-ledger-freshness |
+|  | [`docs/plan/notes/signed-literals.md`](notes/signed-literals.md) | CON-6 signed integer literal implementation evidence |
 |  | [`docs/plan/notes/reals-design.md`](notes/reals-design.md) | Notes: reals-design |
 |  | [`docs/plan/notes/creal.md`](notes/creal.md) | Notes: creal |
 |  | [`docs/plan/notes/creal-lattice.md`](notes/creal-lattice.md) | Notes: creal-lattice |

@@ -19,7 +19,7 @@ use axeyum_ir::{
 use axeyum_strings::regex::Regex;
 
 use crate::SmtError;
-use crate::sexpr::{SExpr, read_all};
+use crate::sexpr::{SExpr, is_integer_atom, read_all};
 
 /// Maximum number of pairwise disequalities materialized for one SMT-LIB
 /// `distinct` application.
@@ -16509,8 +16509,9 @@ fn parse_atom(
     if let Some(&t) = named.get(a) {
         return Ok(t);
     }
-    // A bare numeral is a non-negative integer literal (negatives are `(- n)`).
-    if a.bytes().all(|b| b.is_ascii_digit()) && !a.is_empty() {
+    // Canonical negatives are `(- n)`; signed atoms are convenience syntax
+    // after symbol/alias lookup (ADR-2400). Both use unbounded Int semantics.
+    if is_integer_atom(a) {
         // SMT-LIB `Int` is unbounded. It used to be bounded HERE, by
         // `Value::Int(i128)`, and a wider numeral was declined as `Unsupported`
         // — honest, but it meant 26 of the 200 QF_UFLIA competition files (the
@@ -16530,7 +16531,7 @@ fn parse_atom(
             return Ok(arena.int_const(value));
         }
         let wide = WideInt::parse(a).ok_or_else(|| {
-            // An all-ASCII-digit atom that `BigInt` cannot parse is genuinely
+            // A signed or unsigned digit atom that `BigInt` cannot parse is genuinely
             // malformed, not merely out of range.
             SmtError::Syntax(format!("integer literal `{a}` is not a valid numeral"))
         })?;
