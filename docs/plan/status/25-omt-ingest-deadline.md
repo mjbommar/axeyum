@@ -11,5 +11,8 @@ intake exhaustion with explicit reason/no fabricated rows. Solver check45956
 passed42.47s (full-feature compile). Legacy box/lex parse now uses shared
 budget; Python exposes intake_unknown reason. Added3 solver integration controls
 (zero-budget typed/legacy and finite optimum/model/gold positive);48715 running,
-no test pass credited. Next: command reread wiring, fresh Python,
+passed3/0 failed/ignored, /var/tmp/axeyum-omt-ingest-optimization-tests.log.
+Python tests now require zero-budget intake reason/no fabricated rows, including
+long comment inputs in both modes. Fresh Python run pending. Next: command
+reread wiring, fresh Python,
 full solver/workspace/front-door gates and controls. Full goal remains incomplete.

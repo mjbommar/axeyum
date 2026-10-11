@@ -45,9 +45,9 @@ def test_scoped_reset_and_late_objectives_match_the_query_snapshot():
 
 def test_unknown_infeasible_and_unbounded_are_values():
     query = f"{BOUNDS}(maximize x)(check-sat)"
-    row = smt.optimize(query, timeout_ms=0)[0]
-    assert row.status == "unknown" and row.value is None and row.detail
-    assert row.model == {} and not row.model_available and row.replay() is None
+    report = smt.optimize(query, timeout_ms=0)
+    assert not report.complete and len(report) == 0
+    assert report.objectives == [] and "intake timeout" in report.intake_unknown
     row = smt.optimize(f"{BOUNDS}(assert (< x 0))(maximize x)(check-sat)")[0]
     assert row.status == "infeasible" and row.replay() is None
     row = smt.optimize("(declare-const x Int)(maximize x)(check-sat)")[0]
@@ -122,8 +122,9 @@ def test_optimality_replay_checks_a_separate_original_query():
     row = smt.optimize(integer_cut)[0]
     assert row.value == 0 and row.replay() is True
     assert row.replay_optimality() is None
-    unknown = smt.optimize(f"{BOUNDS}(maximize x)(check-sat)", timeout_ms=0)[0]
-    assert unknown.replay_optimality() is None
+    unknown = smt.optimize(f"{BOUNDS}(maximize x)(check-sat)", timeout_ms=0)
+    assert not unknown.complete and unknown.objectives == []
+    assert unknown.intake_unknown
     bv = smt.optimize("(declare-const b (_ BitVec 4))(maximize b)(check-sat)")[0]
     assert bv.value == 15 and bv.replay() is True
     assert bv.replay_optimality() is None
@@ -140,3 +141,14 @@ def test_gold_requires_all_prior_lexicographic_optimality_evidence():
         assert not result[0].gold_eligible
         assert result[1].replay_optimality() is True
         assert result[1].gold_eligible is (mode == "box")
+
+
+@pytest.mark.parametrize('mode', ['box', 'lex'])
+def test_intake_unknown_retains_no_fabricated_objective_rows(mode):
+    script = ';' + 'x' * 16384 + '\n' + BOUNDS + '(maximize x)(check-sat)'
+    result = smt.optimize(script, mode=mode, timeout_ms=0)
+    assert result.mode == mode and not result.complete
+    assert result.objectives == [] and len(result) == 0
+    assert 's-expression intake' in result.intake_unknown
+    with pytest.raises(IndexError):
+        result[0]
