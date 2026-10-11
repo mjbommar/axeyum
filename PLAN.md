@@ -354,9 +354,15 @@ Source search found no existing guarded cancellation trace. `just brief
 guarded_fraction_trace` returned UNRESOLVED with its 2971-fact positive control;
 stale shape inventory prevents treating that as mathematical absence.
 
-Next: implement producer, subject/context-bound checker and byte replay; test
-zero, missing/altered assumptions and altered result; then Python, private
-mutation controls and broader CAS gates. Nested cancellation, wide trace
+Implemented `guarded_trace`: original quotient/result/context transport, explicit
+denominator premise, polynomial-trace identity replay, syntactic cancellation
+producer and bounded JSON export/replay. Three Rust tests cover byte replay,
+missing/altered assumptions, an incorrect quotient and the zero corner. Cargo
+job16697 pending/running; `/var/tmp/axeyum-cas-guarded-tests.log`, Data0 target.
+No passing test count credited yet. Source frozen while that job runs.
+
+Next: inspect focused result, Python exposure, private mutation controls and
+broader CAS gates. Nested cancellation, wide trace
 coefficients and kernel admission remain required follow-up work.
 
 ### SOL — Solver parity
