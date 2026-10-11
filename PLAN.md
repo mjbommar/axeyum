@@ -580,9 +580,12 @@ Parent kernel release controls passed3/0 failed/ignored,72.62s.
 Differential suite48239 passed6/0 failed/ignored:37 independent Python grammar
 fixtures (24 accepted/13 rejected), canonical AST wire comparison. Fixture
 generator records sealed native SHA. `/var/tmp/axeyum-cas-rust-parser-differential.log`.
-Parser lint launched: `/var/tmp/axeyum-cas-rust-parser-clippy.log`, uncredited.
+Parser lint passed after one semicolon formatting fix: `/var/tmp/axeyum-cas-rust-parser-clippy.log`, v2 log passed7.90s.
 Combined Python run originally failed collection(missing pinned SymPy); installed
-SymPy1.14.0/mpmath1.3.0, rerun45817 live and uncredited.
+SymPy1.14.0/mpmath1.3.0, rerun45817 passed1100/0 skipped,68.95s against sealed combined binary
+SHA2560f638f71c1cd68b3e6cf35260f1f10e945938c3137a982ea2c2072fd9dd2cf76.
+AddedRust parse_text example exporting canonical wire; example run launched,
+`/var/tmp/axeyum-cas-rust-parser-example.log`, uncredited.
 
 ### SOL — Solver parity
 

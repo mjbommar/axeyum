@@ -282,7 +282,7 @@ pub fn parse(source: &str) -> Result<CasExpr, ParseError> {
         match expr {
             CasExpr::Add(xs) | CasExpr::Mul(xs) => work.extend(xs.iter().map(|x| (x, depth + 1))),
             CasExpr::Neg(x) | CasExpr::Pow(x, _) | CasExpr::Unary(_, x) => {
-                work.push((x, depth + 1))
+                work.push((x, depth + 1));
             }
             CasExpr::Div(a, b) => {
                 work.push((a, depth + 1));
