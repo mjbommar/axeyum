@@ -7,12 +7,6 @@ Current Rust cc65885a3 (last change is Python documentation); generated stub
 6c11a0008. [Detailed receipts](../../notes/28-wide-real-smtlib-writer.md).
 Paused at user request; not on main. Freed231.68GiB; active caches/evidence kept.
 
-Earlier exact Real intake/writer, wide NRA/FP safety, datatype source export
-and source-bound SAT/ref-miter replay are in ancestry. SMT396 and required
-parser frontdoors158 pass; MSRV/default Wasm pass; facts2971 validated on ancestor.
-Private decimal/FP/NRA guards each kill one intended test. Full-feature solver
-2033pass/0fail/0ignore826.10s on9fd9721d0 predates nested CAS additions.
-
 Reference-miter replay binds final CNF and independently reconstructed miter
 CNF to original Bool/BV terms. Private v2:7baseline; each of two guard removals
 6pass/one intended failure; both files independently match9fd9721d0 bytewise.
@@ -41,5 +35,6 @@ Old frontier failure (11pass/1timing failure) remains unresolved; no new gate cr
 Main stays untouched. Final native costs/statute/5examples/6original probes pass;
 fmt2294files passes. ADR6700 release3/current workspace3controls pass, but intake
 is test-only and CAS manifest absent. Public producer/discovery handoff required.
-Resume: public handoff plan, fresh aggregate/frontier/targets/Clippy/CLI gates,
-then audit and main integration. Branch feat/nested-conditional-cas-trace-20261011.
+Paused branch:feat/nested-conditional-cas-trace-20261011; not pushed.
+Push1670f8736 failed:solver1712pass/1failure602s; QF_UF600s returnedUnknown.
+CompleteClippy939/939 passes. Full failure/audit and handoff remain resume work.

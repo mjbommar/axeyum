@@ -542,3 +542,24 @@ is private test code and the CAS bridge manifest is absent. Resume with that wor
 fresh required gates, the completion audit, then main integration. Cleanup removed
 231.68 GiB of inactive main-checkout build caches; source, active caches, checker
 binaries and evidence were preserved. No further cleanup is pending in this checkpoint.
+
+
+### Checkpoint publication blocked by the solver gate
+
+Commit `1670f8736` passed all L0 checks, workspace/all-target compilation,
+formatting and complete Clippy (939/939 workspace targets, 27/27 crates, zero
+error diagnostics). Corpus regression passed 2 tests; the external SAT referee
+passed 4 tests and 524 comparisons. Publication then failed the solver unit sweep:
+1712 passed, 1 failed, zero ignored, 320 reconstruction tests filtered, 602.00s.
+`euf_egraph::tests::check_qf_uf_with_config_is_bounded_by_timeout` returned
+`Unknown(Other: boolean skeleton undecided)` rather than `Unsat` under its
+600-second generous budget (`euf_egraph.rs:4196`). This is a failed gate, not a
+completed push. No gate threshold or expected verdict was changed or bypassed.
+
+Retained evidence: `/var/tmp/axeyum-pause-checkpoint-push-final.log`, raw Clippy
+`/var/tmp/axeyum-pause-push-clippy.jsonl`, and hook execution trace
+`/tmp/axeyum-prepush-trace.1569135.1791737982` (contains the full test failure
+omitted from the hook's human output). No remote branch was created. Resume
+requires resolving/revalidating this failure and completing the normal push hook,
+in addition to the already open feature and aggregate/frontier work. The user
+requested a pause, so no solver performance changes were started.
