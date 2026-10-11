@@ -181,14 +181,6 @@ pub fn cancel_nested_with_trace(
     context: &[PolynomialExpr],
     limits: TraceLimits,
 ) -> Result<ConditionalTrace, TraceError> {
-    let limits = limits.policy()?;
-    if context.len() > limits.nodes {
-        return Err(resource("conditional assumption count"));
-    }
-    for assumption in context {
-        assumption.to_cas_wide(limits)?;
-    }
-    syntax(input, limits)?;
     fn locations(expr: &PolynomialExpr, path: &mut Vec<usize>, out: &mut Vec<Vec<usize>>) {
         for (index, child) in expr.children().into_iter().enumerate() {
             path.push(index);
@@ -199,6 +191,14 @@ pub fn cancel_nested_with_trace(
             out.push(path.clone());
         }
     }
+    let limits = limits.policy()?;
+    if context.len() > limits.nodes {
+        return Err(resource("conditional assumption count"));
+    }
+    for assumption in context {
+        assumption.to_cas_wide(limits)?;
+    }
+    syntax(input, limits)?;
     let mut paths = Vec::new();
     locations(input, &mut Vec::new(), &mut paths);
     if paths.len() > limits.steps {

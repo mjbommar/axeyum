@@ -213,7 +213,7 @@ impl PyEndToEndUnsatProof {
 #[pymethods]
 impl PyEndToEndUnsatProof {
     /// Restores two saved certificate components without accepting their claims.
-    /// Each component uses UnsatProof's 8 MiB/text and 16 MiB/component caps.
+    /// Each component uses `UnsatProof`'s 8 MiB/text and 16 MiB/component caps.
     #[new]
     fn new(
         faithfulness_dimacs: &str,
@@ -261,7 +261,7 @@ impl PyEndToEndUnsatProof {
     /// Rebuilds both source correspondences and checks the two refutations.
     /// No SAT search runs. The independent reference bit-blaster and Tseitin
     /// encoder are the explicit trusted boundary; no kernel theorem is admitted.
-    /// Unsupported/malformed data raise AxeyumError; mismatches return False.
+    /// Unsupported/malformed data raise `AxeyumError`; mismatches return False.
     /// Replay has no wall-clock deadline, like the underlying Rust checker.
     fn recheck_for_bool_terms(
         &self,
@@ -335,7 +335,7 @@ impl PyEndToEndUnsatProofOutcome {
 
 /// Certifies Boolean/BV UNSAT with the independently coded reference miter.
 /// Both proof searches share one deadline. Construction and replay remain
-/// deterministic/unlimited; timeout_ms is not a hard total-work deadline.
+/// deterministic/unlimited; `timeout_ms` is not a hard total-work deadline.
 /// Expired entry budgets and unsupported reference fragments are not-certified.
 #[cfg_attr(
     feature = "stub-gen",
