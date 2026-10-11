@@ -22,3 +22,19 @@ callers provide complete holiday facts and their authority within an explicit
 coverage window. Example tests use synthetic calendars, not a verified Minnesota
 holiday list. Neither successful computation nor solver replay establishes those
 calendar facts or legal applicability.
+
+## Source identity revalidation — 2026-10-11
+
+Fresh HTTPS downloads of all four edition-pinned official pages reproduced
+every normalized section SHA-256 in the manifest. The comparison starts at
+`<div class="section" id="stat.SECTION">`, ends before the history block,
+replaces HTML tags with spaces, unescapes HTML entities, collapses whitespace,
+and hashes UTF-8 bytes. Thus page navigation and history entries are excluded.
+This verifies the recorded source text identity; it does not establish an
+effective interval or decide applicability to a particular event.
+
+The official [holiday definition](https://www.revisor.mn.gov/statutes/2025/cite/645.44#stat.645.44.5)
+contains branch-specific treatment of Indigenous Peoples Day and the Friday
+after Thanksgiving. A calendar producer must retain that policy choice and
+the statutory exception for a contrary intention rather than presenting one
+unqualified Minnesota calendar.

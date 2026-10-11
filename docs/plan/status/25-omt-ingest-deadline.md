@@ -20,10 +20,9 @@ skipped,67.49s. Private mutation4465: baseline12 ->11 pass/1 intended
 original_constraint_model_tampering failure after removing false-assertion guard;
 restored bytewise in snapshot ca62f7bf2. Full solver59611 running, not credited.
 
-Portable check_within shares parsing/command/Farkas deadline and reports explicit
-resource_limited. Python checker has timeout_ms default2000. Compile44161 passed
-11.25s with2 unused wrappers; removed wrappers. Budget integration64565 passed4.
-Latest checker needs private controls and broad gates.
+Portable check_within shares parsing/command/model/Farkas deadline and reports
+resource_limited. Python checker timeout_ms defaults2000. Front-door14307 passed:
+corpus2, online48, word-first13, fixed-splice82, stoi13; all0 failed/ignored.
 
 ADR7100 adds eval_within: None is resource exhaustion, Some is actual Value.
 Same deadline propagates through iterative terms and finite quantified bindings;
@@ -40,6 +39,6 @@ passed4. Private optimization group initially11 pass/1 stale zero-intake row
 expectation failed; corrected to empty rows plus reason/no gold. Rerun89587
 passed12/0 failed (2021 filtered). Clippy60534 passed23.39s with warnings denied;
 initial run caught public expect/panic docs, replaced with fail-closed fallback.
-Next: fresh Python, private guard mutations, broad gates, integration.
+Next: remaining broad gates, mid-quantifier budget controls, integration.
 Logs /var/tmp/axeyum-omt-{ingest-*,checker-budget-tests,deadline-ir-tests}.log.
 Entire feedback objective remains incomplete.
