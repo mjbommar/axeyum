@@ -38,7 +38,8 @@ def test_external_empty_clause_controls(tmp_path: Path) -> None:
 def test_census_covers_public_exporters_and_replays_sat_models() -> None:
     from axeyum.solver import proofs
 
-    rows = example.route_census()["term_exporters"]
+    census = example.route_census()
+    rows = census["term_exporters"]
     authority = {name for name in dir(proofs)
                  if name.startswith("export_") and name.endswith("_unsat_proof")}
     assert set(rows) == authority
@@ -52,3 +53,14 @@ def test_census_covers_public_exporters_and_replays_sat_models() -> None:
         assert row["sat_model_check"] == "verified"
         assert row["external_cnf_check"] == "not-run"
     assert rows["export_qf_lia_unsat_proof"]["int_width"] == 8
+    certifiers = {name for name in dir(proofs)
+                  if name.startswith("certify_") and name.endswith("_unsat_end_to_end")}
+    assert set(census["end_to_end_certifiers"]) == certifiers
+    reference = census["end_to_end_certifiers"]["certify_qf_bv_unsat_end_to_end"]
+    assert set(reference) == {"boolean", "bit-vector"}
+    for row in reference.values():
+        assert row["status"] == "certified"
+        assert row["substituted_source"] == "rejected"
+        assert row["unrelated_valid_miter"] == "rejected"
+        assert row["miter_lrat"] == "absent"
+        assert row["kernel_admission"] == "not-performed"

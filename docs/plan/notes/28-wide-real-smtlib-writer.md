@@ -128,3 +128,12 @@ checking certificates. Incorrect source/miter substitutions reject even when
 both clausal refutations independently check. Corrected private guard controls
 and current full solver/older datatype workspace remain live as observed;
 no completion credit yet. Generated Python stubs are being refreshed.
+
+Reference-miter census now derives a separate public certifier population from
+the registered API, alongside the six clausal exporters. Boolean/BV fixtures
+restore source certificates, reject source substitution and unrelated valid
+miter refutations, and export both CNF/DRAT pairs plus optional final LRAT.
+Census assertions preserve absent miter LRAT and no kernel-admission claim.
+Focused census/end-to-end session98367, stub generation41978, Python Clippy82361
+are live; observed pytest and stub generator in kernel filesystem I/O wait.
+No pass credited or duplicate jobs launched. Corrected guard script also live.

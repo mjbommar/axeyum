@@ -193,7 +193,58 @@ def route_census(output: Path | None = None, checker: Path | None = None) -> dic
                       "sat_control": sat.status, "sat_model_check": checked.status,
                       "sat_model_verdict": witness.verdict, "external_cnf_check": external,
                       "source_sha256": sha256(source.encode())}
+    certifiers = {name for name in dir(proofs)
+                  if name.startswith("certify_") and name.endswith("_unsat_end_to_end")}
+    if certifiers != {"certify_qf_bv_unsat_end_to_end"}:
+        raise RuntimeError("public end-to-end certifier population changed; extend fixtures")
+    reference_rows = {}
+    for kind in ("boolean", "bit-vector"):
+        arena = ir.Arena()
+        if kind == "boolean":
+            p = arena.bool_var("p")
+            assertions = [p, arena.not_(p)]
+        else:
+            x = arena.bv_var("x", 4)
+            assertions = [arena.eq(x, arena.bv_const(4, 0)),
+                          arena.eq(x, arena.bv_const(4, 1))]
+        outcome = proofs.certify_qf_bv_unsat_end_to_end(arena, assertions, timeout_ms=20_000)
+        if outcome.status != "certified" or outcome.proof is None:
+            raise RuntimeError(f"{kind}: reference certification {outcome.status}")
+        proof = outcome.proof
+        restored = proofs.EndToEndUnsatProof(
+            proof.faithfulness.dimacs, proof.faithfulness.drat,
+            proofs.UnsatProof(proof.unsat.dimacs, proof.unsat.drat, proof.unsat.lrat),
+        )
+        if restored.recheck_for_bool_terms(arena, assertions) is not True:
+            raise RuntimeError(f"{kind}: reference source replay rejected")
+        if restored.recheck_for_bool_terms(arena, assertions[:1]) is not False:
+            raise RuntimeError(f"{kind}: substituted source accepted")
+        swapped = proofs.EndToEndUnsatProof(proof.unsat.dimacs, proof.unsat.drat, proof.unsat)
+        if swapped.recheck_refutations() is not True:
+            raise RuntimeError(f"{kind}: substitution control lacks valid refutations")
+        if swapped.recheck_for_bool_terms(arena, assertions) is not False:
+            raise RuntimeError(f"{kind}: unrelated miter accepted")
+        source = arena.write_script(assertions)
+        smt.parse(source)
+        if output is not None:
+            directory = output / "reference-miter" / kind
+            directory.mkdir(parents=True, exist_ok=False)
+            for name, data in {"source.smt2": source,
+                               "miter.cnf": proof.faithfulness.dimacs,
+                               "miter.drat": proof.faithfulness.drat,
+                               "formula.cnf": proof.unsat.dimacs,
+                               "proof.drat": proof.unsat.drat}.items():
+                (directory / name).write_text(data)
+            if proof.unsat.lrat is not None:
+                (directory / "proof.lrat").write_text(proof.unsat.lrat)
+        reference_rows[kind] = {"status": outcome.status,
+                                "source_binding": "replayed-with-reference-miter",
+                                "substituted_source": "rejected",
+                                "unrelated_valid_miter": "rejected",
+                                "miter_lrat": "absent" if proof.faithfulness.lrat is None else "present",
+                                "kernel_admission": "not-performed"}
     return {"scope": "representative-queries", "term_exporters": rows,
+            "end_to_end_certifiers": {"certify_qf_bv_unsat_end_to_end": reference_rows},
             "raw_cnf": {"api": "cnf.solve_with_drat_proof", "lrat": "absent"},
             "smt_text": {"api": "smt.get_proof", "format": "Alethe-or-None",
                          "clausal_export": "not-exposed"},
