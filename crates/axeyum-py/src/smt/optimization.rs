@@ -152,6 +152,14 @@ impl OptimizationResult {
     fn mode(&self) -> &'static str {
         self.report.mode.name()
     }
+    /// Resource exhaustion before objective identities were available.
+    #[getter]
+    fn intake_unknown(&self) -> Option<String> {
+        self.report
+            .intake_unknown
+            .as_ref()
+            .map(|reason| reason.detail.clone())
+    }
     /// Results in active objective declaration order.
     #[getter]
     fn objectives(&self) -> Vec<OptimizationObjective> {

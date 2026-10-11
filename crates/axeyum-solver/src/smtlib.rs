@@ -3083,7 +3083,10 @@ fn apply_bounded_completeness_unsat(input: &str, result: CheckResult) -> CheckRe
 /// fragment, or any [`SolverError`] from the optimizer.
 pub fn optimize_smtlib(input: &str, config: &SolverConfig) -> Result<Vec<OptOutcome>, SolverError> {
     let started = std::time::Instant::now();
-    let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    let mut script = match optimization::parse_with_budget(input, config, started)? {
+        Ok(script) => script,
+        Err(reason) => return Ok(vec![OptOutcome::Unknown(reason)]),
+    };
     let query = smtlib_single_optimization_query(&script)?;
     let objectives = optimization::active_objectives(input, &script)?;
     let mut outcomes = Vec::with_capacity(objectives.len());
@@ -3117,7 +3120,10 @@ pub fn optimize_smtlib_lexicographic(
     config: &SolverConfig,
 ) -> Result<Vec<OptOutcome>, SolverError> {
     let started = std::time::Instant::now();
-    let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    let mut script = match optimization::parse_with_budget(input, config, started)? {
+        Ok(script) => script,
+        Err(reason) => return Ok(vec![OptOutcome::Unknown(reason)]),
+    };
     let query = smtlib_single_optimization_query(&script)?;
     let objectives = optimization::active_objectives(input, &script)?;
     let mut assertions = query.assertions;

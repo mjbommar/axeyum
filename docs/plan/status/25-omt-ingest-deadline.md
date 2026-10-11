@@ -8,6 +8,8 @@ without fabricated objectives. Reader deadline polling implemented for main loop
 comments, strings, quoted symbols and atoms; typed parser now uses it. Parser library passed96/0 failed/ignored,3.04s; new lexical budget controls
 passed4/0 failed/ignored. Typed optimizer now uses budgeted parse and represents
 intake exhaustion with explicit reason/no fabricated rows. Solver check45956
-running; no solver compile pass yet. Next: legacy OMT/Python getter and command
-reread wiring, solver tests, fresh Python,
+passed42.47s (full-feature compile). Legacy box/lex parse now uses shared
+budget; Python exposes intake_unknown reason. Added3 solver integration controls
+(zero-budget typed/legacy and finite optimum/model/gold positive);48715 running,
+no test pass credited. Next: command reread wiring, fresh Python,
 full solver/workspace/front-door gates and controls. Full goal remains incomplete.
