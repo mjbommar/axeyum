@@ -25,6 +25,7 @@ __all__ = [
     "CasError",
     "Certainty",
     "CertifiedIntegral",
+    "ConditionalTraceOutcome",
     "DefiniteIntegral",
     "Expr",
     "ExtensionTraceHankelMinor",
@@ -69,6 +70,7 @@ __all__ = [
     "binary_extension_witt_shifted_trace",
     "binomial",
     "cancel",
+    "cancel_nested_trace",
     "cancel_trace",
     "carmichael_lambda",
     "catalan",
@@ -236,6 +238,7 @@ __all__ = [
     "real_part",
     "real_root_intervals",
     "real_roots",
+    "replay_conditional_trace",
     "replay_guarded_trace",
     "replay_trace",
     "residue",
@@ -1136,6 +1139,42 @@ class CertifiedIntegral:
         Whether the certificate decided the obligation as an exact equality.
         """
     def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class ConditionalTraceOutcome:
+    r"""
+    Production/replay result for a complete source-bound conditional trace.
+    """
+    @property
+    def status(self) -> builtins.str:
+        r"""
+        produced, checked, rejected, unsupported, or resource_limited.
+        """
+    @property
+    def json(self) -> typing.Optional[builtins.str]:
+        r"""
+        Complete serialized evidence, absent on refusal.
+        """
+    @property
+    def result(self) -> typing.Optional[Expr]:
+        r"""
+        Typed final expression, absent on refusal.
+        """
+    @property
+    def step_count(self) -> builtins.int:
+        r"""
+        Actual conditional steps; zero on refusal.
+        """
+    @property
+    def failing_step(self) -> typing.Optional[builtins.int]:
+        r"""
+        Failing step when the checker identifies one.
+        """
+    @property
+    def detail(self) -> builtins.str:
+        r"""
+        Concrete refusal reason.
+        """
 
 @typing.final
 class DefiniteIntegral:
@@ -2600,6 +2639,12 @@ def cancel(expr: Expr) -> typing.Optional[Expr]:
     Cancels common factors in a quotient.
     """
 
+def cancel_nested_trace(input: Expr, *, nonzero: typing.Sequence[Expr], max_steps: builtins.int = 128, max_work: builtins.int = 1000000) -> ConditionalTraceOutcome:
+    r"""
+    Cancel nested quotient factors under explicit nonzero assumptions.
+    Certificates preserve partial definedness; they do not admit kernel theorems.
+    """
+
 def cancel_trace(numerator: Expr, denominator: Expr, *, nonzero: typing.Sequence[Expr], max_steps: builtins.int = 128, max_work: builtins.int = 1000000, wide: builtins.bool = False) -> GuardedTraceOutcome:
     r"""
     Cancel a denominator factor under caller-supplied nonzero assumptions.
@@ -3834,6 +3879,11 @@ def real_roots(expr: Expr, var: builtins.str) -> typing.Optional[builtins.list[A
     
     Tier R: a pure function of its arguments. `None` when `expr` is not a
     univariate rational polynomial in `var`, or on overflow.
+    """
+
+def replay_conditional_trace(json: builtins.str, input: Expr, result: Expr, *, nonzero: typing.Sequence[Expr], max_steps: builtins.int = 128, max_work: builtins.int = 1000000) -> ConditionalTraceOutcome:
+    r"""
+    Check saved conditional bytes against original subject, endpoint and context.
     """
 
 def replay_guarded_trace(json: builtins.str, numerator: Expr, denominator: Expr, result: Expr, *, nonzero: typing.Sequence[Expr], max_steps: builtins.int = 128, max_work: builtins.int = 1000000) -> GuardedTraceOutcome:
