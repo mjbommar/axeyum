@@ -231,3 +231,11 @@ This qualifies existing consumer compatibility after reference-miter changes,
 not new nested conditional Rust/Python code absent from that binary. Nested
 compile/runtime/private mutations and parent stub/lint/full workspace remain
 pending. No duplicate jobs started on observation timeout.
+
+Nested-source CAS trust registry30467 terminal0:1310 public functions,
+153 certified (floor153 all held),116 checker,1041 uncertified;136 certificate
+vocabulary types. No ratchet changes or new certified-function credit for
+composition logging. Raw result `/var/tmp/axeyum-nested-conditional-trust-registry.log`.
+Compiler workers remain live with filesystem/block-device wait; older datatype
+workspace continues advancing through kernel tests. Nested compile/runtime and
+private guard outputs remain pending; a running checker is not a pass.

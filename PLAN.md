@@ -737,7 +737,8 @@ Overall goal remains active.
 Nested conditional child04f5337fd started in isolated worktree; ADR8400
 binds congruence, definedness, caller context and aggregate replay limits.
 Rust producer/replay has six controls, including partial outer domains;
-plan/ADR/link gates pass. Compile32748 remains live.
+plan/ADR/link and CAS registry gates pass (153 floor held).
+Compile32748 remains live.
 Python code committed6c4077ab9. Private congruence helper73515 queued;
 compile/runtime and mutation results pending; no completion claim.
 
