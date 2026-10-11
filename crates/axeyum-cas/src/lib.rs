@@ -62,6 +62,7 @@ use std::collections::{BTreeMap, BTreeSet};
 pub mod guarded_trace;
 /// Source-bound, bounded polynomial rewrite traces (ADR-2500).
 pub mod rewrite_trace;
+pub mod text_parser;
 pub mod wide_polynomial;
 
 use axeyum_ir::{Rational, poly};
