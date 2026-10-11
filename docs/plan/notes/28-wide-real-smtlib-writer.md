@@ -42,11 +42,18 @@ Implementation is isolated; this is not an integration or whole-goal receipt.
   warnings. This is build evidence, not a full-feature solver test result.
 - Generated plan/ADR/link gates pass. No broad workspace or integration pass yet.
 
+- Private original-writer snapshot3e4d96ad0: all six datatype regressions fail
+  (0 passed,6 failed,0 ignored; exit101). Final source passes all six.
+- Parser front doors on finalb8b237c65 source:2+48+13+82+13=158 passes,
+  0 failures/ignores across the five mandatory suites.
+- MSRV1.88.0 workspace check passes1m41s; this is compilation evidence.
+- Fact validation exits0; kernel footprint checks and fact populations remain
+  distinct from novel-theorem production credit.
+
 ## Running / remaining
 
-Private original-writer snapshot regression running; full solver parent74254,
-workspace87947, parser front-door runner65577, MSRV68873 and fact validator29660
-remain uncredited until terminal outputs are inspected. Prior parser-parent
+Full solver parent74254 and workspace87947 remain uncredited until terminal
+outputs are inspected. Prior parser-parent
 workspace81069 and guard-parent workspace58007 are terminal143/-15, not passes.
 
 Source-to-CNF mapping export/independent translation evidence remains absent.

@@ -18,9 +18,11 @@ SAT model controls pass. Original LRAT checker fails the tampered-CNF control;
 no unmodified-upstream credit. Source-to-CNF translation evidence remains absent.
 CAS ratchet records two genuine Pi evidence functions, not trace logging;
 153 floor holds. Wasm default build passes32.66s with37 warnings.
-Doc plan/ADR/link gates pass. Running: original datatype failure regression,
-full solver74254(parent), workspace87947, frontdoors65577, MSRV68873,
-facts29660. Earlier workspace jobs81069/58007 terminal143/-15; no pass credited.
+Original writer snapshot: six regressions fail0 passes/6 failures/0 ignores,
+exit101. Final parser frontdoors158 passes0 failures/ignores. MSRV1.88 workspace
+check passes1m41s; fact validation exits0. Full solver74254(parent) and
+workspace87947 still running, no passes credited. Regenerate tracked-note
+CATALOG then recheck plan/link gates. Earlier workspace jobs81069/58007 terminal143/-15; no pass credited.
 Next: collect authoritative gate outputs, resolve failures, finish integration
 and remaining proof/conditional trace gaps. No broad completion claim;
 overall goal stays active.
