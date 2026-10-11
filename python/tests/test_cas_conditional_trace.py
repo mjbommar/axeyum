@@ -99,3 +99,20 @@ def test_wide_surrounding_coefficient_survives_nested_replay():
     rejected = cas.replay_conditional_trace(produced.json, source, changed, nonzero=[x])
     assert rejected.status == "rejected"
     assert rejected.json is None and rejected.result is None
+
+
+@pytest.mark.parametrize("unsupported", ["pi", "sin", "later_quotient"])
+def test_unsupported_step_discards_partial_evidence(unsupported):
+    x, y = cas.Expr.var("x"), cas.Expr.var("y")
+    good = (x * x) / x
+    if unsupported == "pi":
+        source, context = good + cas.Expr.pi(), [x]
+    elif unsupported == "sin":
+        source, context = good + x.sin(), [x]
+    else:
+        # The first quotient is supported; the second has no denominator factor.
+        source, context = good + (x / y), [x, y]
+    refused = cas.cancel_nested_trace(source, nonzero=context)
+    assert refused.status == "unsupported" and refused.detail
+    assert refused.json is None and refused.result is None
+    assert refused.step_count == 0

@@ -315,3 +315,7 @@ Original cas_trace_cost.py ran exit0 against native7437a1356/SHA dab497034b3f4b7
 ## Current rules/source validation and preserved-native certificate replay
 
 Current child cb7338abd: unittest discover for test_validate_rules_as_code.py exits0 with20tests/0failures in0.110s. Default validator exits0:7existing packs,1statute template,4normalized source snapshots;0certificate replay is explicitly the default, not replay credit. Optional --statute-certificates exits0 against preserved7437a1356 native/SHA dab497034b3f4b733d3fc70c49d89ba702f14946e9b6882deeb76b6595451356:1conditional certificate replayed, same7packs/4snapshots validated. Logs /var/tmp/axeyum-final-feedback-{rules-validator,rules-validator-tests,statute-certificates}.log. New nested binary is still compiling; this is current Python validator/source evidence and ancestor-native certificate evidence, not current nested-native qualification.
+
+## Conditional unsupported/partial-evidence controls
+
+Added three Python controls requiring unsupported pi/sin surrounding expressions and a later uncancellable quotient to return unsupported with a reason, zero completed steps and no JSON/typed result. The latter exercises all-or-nothing production after an earlier honest cancellation. Syntax compilation passes; native runtime is pending. Total conditional Python population13, not10. No Rust edit while native links.
