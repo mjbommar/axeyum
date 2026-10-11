@@ -736,7 +736,7 @@ merge preview has no conflicts; keep main untouched until green. Older parent
 workspace handles need independent collection and cannot qualify this child.
 ADR3200/3300/3400/3500/7200 accepted as bounded contracts; validator20pass.
 Final native cost examples/statute replay pass; complete fmt2294files passes.
-ADR6700 review awaits kernel receipt. Next: collect workspace/all-targets and
+ADR6700 accepted:release controls3pass, source bytes identical. Next: collect workspace/all-targets and
 queued completeClippy12036, archive lanes, integrate and audit.
 
 ### SOL — Solver parity

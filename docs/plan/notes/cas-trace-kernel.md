@@ -55,3 +55,14 @@ pi/nonrational expressions and unsupported kernel bridges explicitly decline.
 Work policy bounds aggregate declared polynomial witness-work allowances;
 syntax/serialization have separate caps, not a claimed wall-clock deadline.
 A produced or checked outcome carries no kernel admission receipt.
+
+## Completed release controls and design adoption
+
+Release13258 is terminal:3 passed,0 failed/ignored,2655 filtered,72.62s,
+compilation3m54s (`/var/tmp/axeyum-cas-trace-kernel-controls.log`). All three
+controls ran: generated multistep admission with empty measured footprint and
+wrong-endpoint rejection; hostile added assumptions rejected at source-bound
+intake; fractional/wide/domain/foreign-variable translation declines.
+Current `complex/cas_bridge_tests.rs` matches revision97e700533 byte-for-byte.
+ADR6700 adopts that bounded design. Final whole-workspace verification remains
+pending, and the unsupported reconstruction families above remain explicit.

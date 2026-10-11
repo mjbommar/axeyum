@@ -1100,7 +1100,7 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [6400](adr-6400-conditional-cas-traces-bind-external-nonzero-assumptions.md) | Conditional CAS traces bind external nonzero assumptions | accepted; bounded contract adopted, final integration gates remain open |
 | [6500](adr-6500-wide-cas-traces-opt-in-to-bounded-promoted-arithmetic.md) | Wide CAS traces opt in to bounded promoted arithmetic | accepted; bounded contract adopted, final integration gates remain open |
 | [6600](adr-6600-wide-guarded-quotients-bind-context-and-arithmetic-version.md) | Wide guarded quotients bind context and arithmetic version | accepted; bounded contract adopted, final integration gates remain open |
-| [6700](adr-6700-cas-step-traces-reconstruct-through-existing-complex-ring-laws.md) | CAS step traces reconstruct through existing Complex ring laws | proposed |
+| [6700](adr-6700-cas-step-traces-reconstruct-through-existing-complex-ring-laws.md) | CAS step traces reconstruct through existing Complex ring laws | accepted (bounded reconstruction; final integration gates remain open) |
 | [6800](adr-6800-rust-cas-text-parser-shares-the-bounded-exact-grammar.md) | Rust CAS text parser shares the bounded exact grammar | accepted; bounded surface adopted, final integration gates remain open |
 | [6900](adr-6900-python-cas-parsing-uses-the-native-bounded-grammar.md) | Python CAS parsing uses the native bounded grammar | accepted; bounded surface adopted, final integration gates remain open |
 | [7000](adr-7000-omt-intake-shares-the-search-and-checking-deadline.md) | OMT intake shares the search and checking deadline | accepted; audited OMT contract adopted, final integration gates remain open |

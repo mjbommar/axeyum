@@ -404,3 +404,12 @@ runs read-only. Workspace3092650 independently confirmed live again.
 
 Complete-format88573 exits0:2294 Rust files checked. Final native wide example
 records closed-rational2steps/1354bytes and amortization6steps/34998bytes.
+
+### Kernel reconstruction contract adoption
+
+Recovered terminal release13258 receipt:3pass/0fail/0ignore72.62s. Independently
+compared current cas_bridge_tests.rs with97e700533:exact bytes. AcceptedADR6700
+bounded design; final workspace still uncredited. Generated admission and kernel
+empty-footprint evidence are distinct from ordinary checked-trace production.
+All32 new contracts now reviewed:31 bounded accepted,3100 superseded by native
+grammar6800/6900. Architecture acceptance does not mark full feedback complete.
