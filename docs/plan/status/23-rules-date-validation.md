@@ -34,5 +34,7 @@ remains live. Logs /var/tmp/axeyum-cas-rust-parser-full-cas.log and
 
 Validator now includes statute manifests, required files and fixture populations.
 Opt-in --statute-certificates checked1 native-backed conditional fixture; default
-reports0 replayed explicitly. Suite12 passed. README updated. Next: private
-manifest controls, dashboard integration, authority/applicability and proof routes.
+reports0 replayed explicitly. Expanded suite17 passed. Private85932e31a snapshot
+with new tests:6 manifest guards each kill exactly1 of7 tests; native real replay
+rejects changed claim. Originals restored. /var/tmp/axeyum-statute-guard-*.log.
+Next: dashboard integration, authority/applicability and general proof routes.

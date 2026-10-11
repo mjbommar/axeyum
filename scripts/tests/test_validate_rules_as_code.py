@@ -5,6 +5,7 @@ import importlib.util
 from pathlib import Path
 import shutil
 import tempfile
+from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 import sys
 import unittest
@@ -77,6 +78,47 @@ class MetadataControls(unittest.TestCase):
 
 
 class StatuteControls(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        source = SCRIPT.parent.parent / "docs/rules-as-code/statute-templates"
+        self.target = self.root / "docs/rules-as-code/statute-templates"
+        shutil.copytree(source, self.target)
+        self.patch = patch.object(checker, "ROOT", self.root)
+        self.patch.start()
+        self.addCleanup(self.patch.stop)
+        self.manifest_path = next(self.target.glob("*/manifest.json"))
+        self.manifest = json.loads(self.manifest_path.read_text())
+
+    def changed_manifest(self):
+        self.manifest_path.write_text(json.dumps(self.manifest))
+        with self.assertRaises(checker.ValidationError):
+            checker.validate_statute_templates()
+
+    def test_boolean_manifest_version(self):
+        self.manifest['schema_version'] = True
+        self.changed_manifest()
+
+    def test_missing_source_population(self):
+        self.manifest['sources'] = []
+        self.changed_manifest()
+
+    def test_invalid_source_identity(self):
+        self.manifest['sources'][0]['normalized_section_sha256'] = '0' * 63
+        self.changed_manifest()
+
+    def test_missing_template_document(self):
+        (self.manifest_path.parent / 'model.md').unlink()
+        with self.assertRaises(checker.ValidationError):
+            checker.validate_statute_templates()
+
+    def test_rejected_replay_fails_validation(self):
+        module = ModuleType('axeyum.rules')
+        module.check_deadline_certificate = lambda text: SimpleNamespace(status='rejected', detail='changed claim')
+        with patch.dict(sys.modules, {'axeyum.rules': module}), self.assertRaises(checker.ValidationError):
+            checker.validate_statute_templates(replay_certificates=True)
+
     def test_committed_template_manifest(self):
         self.assertEqual(checker.validate_statute_templates(), (1, 0))
 
