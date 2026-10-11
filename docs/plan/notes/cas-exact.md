@@ -103,3 +103,9 @@ Remaining wide coverage includes auditing older CAS operation/numeral extraction
 boundaries, full expression/certificate serialization and kernel bridges. The
 new exact evaluation route is computed evidence, not a newly admitted theorem.
 Negative powers, distinguished pi and text parsing remain required work.
+
+Full-gate runner 59537 is live against e7b58fc86, with logs at
+`/var/tmp/axeyum-wide-cas-full-gates-uixaunea/`. It runs CAS library then
+workspace library with one test thread, retaining terminal exit status and
+nonzero counts. Do not restart merely because observation yields no output.
+No terminal result is credited yet.
