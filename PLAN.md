@@ -698,33 +698,28 @@ Next: remaining broad gates, mid-quantifier budget controls, integration.
 Logs /var/tmp/axeyum-omt-{ingest-*,checker-budget-tests,deadline-ir-tests}.log.
 Entire feedback objective remains incomplete.
 
-**LIB-6 X0 / P0 (`WIP`, wide-real-smtlib-writer, 2026-10-11).**
-Child 3d5ff4029. Source audit found write_script uses narrowing Rational
-numerator()/denominator() on public Real constants, which panic for promoted
-values. Writer now uses exact big accessors, preserving canonical signs and
-Real decimals/quotients. Four promoted cases pass in one regression. Initial
-fixtures mistakenly used bounded arithmetic; corrected to wide_mul/wide_neg.
-Private original-source snapshot reproduces the numerator panic (one failed
-test, exit101); fixed source passes. All SMT-LIB tests385 passed, no failures/
-ignores; warning-denied Clippy passed11.09s.
-ADR7300: exact bounded (4096-digit) wide decimal intake; promoted unary negation,
-quotient/floor/is_int folds; FP rounder explicitly declines promoted values.
-Round-trip controls6 passed, including zero divisor preservation; SMT/FP broad
-run passed486 tests (before added zero control),0 failed/ignored. Clippy SMT/FP
-passed; solver Clippy passed38.49s. New front-door2 passed after finding/fixing
-NRA sign-narrowing panic; existing NRA controls12 passed (2021 filtered).
-Doc plan/ADR/link gates passed. Private snapshot69c3e0d7d controls completed:
-syntax baseline6 and NRA baseline12 passed; removing decimal cap, FP
-representation and NRA sign guards each caused exactly one intended failure.
-All sources restored bytewise. Full solver serial gate74254 running on final
-source; no pass credited yet. Datatype export child starts at3e4d96ad0: missing declarations, sort/name
-placeholders and parenthesized nullary constructors repaired; dependencies
-collected through recursive fields, arrays and UF signatures. Six reparsing
-controls passed; all SMT tests396 passed before helper-only refactor. Clippy
-length findings repaired by extracting metadata/name helpers; v3 passed2.00s.
-SAT census now requires all source queries to reparse. Post-refactor broad
-SMT run79995 active. Next: fresh native census and remaining full gates.
-No solver-wide completion or integration claim. Overall goal stays active.
+**LIB-6 X0 / EVD-5 / P0 (`WIP`, wide-real-smtlib-writer, 2026-10-11).**
+Isolated childb8b237c65; details in
+[notes](docs/plan/notes/28-wide-real-smtlib-writer.md). Promoted Real writer/intake
+repair, exact4096-digit decimals, safe FP decline and wide NRA sign comparisons
+are committed. Private decimal/FP/NRA guard removals each kill exactly one
+intended test; sources restored bytewise.
+Datatype source export now includes recursive field dependency declarations,
+real sort/operator names and bare nullary constructors. Six new controls pass;
+post-refactor SMT396 tests pass0 failures/ignores; Clippy-D passes2.00s.
+Fresh native SHA c7f03e70144ae150b9859a9a73c644e996a27ca0038dbc82d21c602edddf7145:
+SAT/proof/OMT28 passes and combined consumer1133 passes0 skips86.90s. All six
+exporter sources reparse; Z3 reports UNSAT; guarded external LRAT checks and
+SAT model controls pass. Original LRAT checker fails the tampered-CNF control;
+no unmodified-upstream credit. Source-to-CNF translation evidence remains absent.
+CAS ratchet records two genuine Pi evidence functions, not trace logging;
+153 floor holds. Wasm default build passes32.66s with37 warnings.
+Doc plan/ADR/link gates pass. Running: original datatype failure regression,
+full solver74254(parent), workspace87947, frontdoors65577, MSRV68873,
+facts29660. Earlier workspace jobs81069/58007 terminal143/-15; no pass credited.
+Next: collect authoritative gate outputs, resolve failures, finish integration
+and remaining proof/conditional trace gaps. No broad completion claim;
+overall goal stays active.
 
 ### SOL — Solver parity
 

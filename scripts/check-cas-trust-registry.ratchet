@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	151
+COUNT	153
 FN	chartable::character_table_of_abelian_group	Result<CharacterTableCertificate, CharacterTableError>
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
@@ -134,6 +134,8 @@ FN	permgroup_sylow::PermutationGroup::quotient_order	Result<QuotientOrderCertifi
 FN	permgroup_sylow::PermutationGroup::sylow_count	Result<SylowCountCertificate, PermgroupError>
 FN	permgroup_sylow::PermutationGroup::sylow_subgroup	Result<(PermutationGroup, SylowCertificate), PermgroupError>
 FN	permgroup_sylow::distinguish	Result<DistinguishCertificate, PermgroupError>
+FN	pi_certificate::PiEnclosureCertificate::check	PiEnclosureReport
+FN	pi_certificate::enclose_pi	Result<PiEnclosureCertificate, WireError>
 FN	probability::Continuous::mean	Certificate
 FN	probability::Continuous::mgf	Certificate
 FN	probability::Continuous::total_mass	Certificate
@@ -271,6 +273,8 @@ VOCAB	PRecursiveCertificate	struct
 VOCAB	PartialFractionCertificate	struct
 VOCAB	PersistenceCertificate	struct
 VOCAB	PersistenceReport	struct
+VOCAB	PiEnclosureCertificate	struct
+VOCAB	PiEnclosureReport	struct
 VOCAB	PrattCertificate	struct
 VOCAB	PresentationCertificate	struct
 VOCAB	PrimeSplittingCertificate	struct
