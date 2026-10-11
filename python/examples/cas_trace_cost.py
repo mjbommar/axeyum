@@ -48,8 +48,15 @@ def workload(name, expression, expected, wide):
         result = cas.replay_trace(encoded, expression, expected_expression)
         assert result.status == "checked", result.detail
 
+    ordinary = None
+    if not wide:
+        def normalize_without_trace():
+            result = cas.normalize(expression)
+            assert result is not None
+            assert result.to_expr().eval({}) == expected
+        ordinary = measure(normalize_without_trace)
     wire = json.loads(encoded)
-    return {"name": name, "wide": wide, "json_bytes": len(encoded.encode()),
+    return {"normalization_without_trace": ordinary,"name": name, "wide": wide, "json_bytes": len(encoded.encode()),
             "steps": len(wire["steps"]), "exact_evaluation": measure(evaluate),
             "trace_production": measure(produce), "byte_replay": measure(replay)}
 

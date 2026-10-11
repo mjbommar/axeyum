@@ -1,0 +1,54 @@
+{
+  "native_path": "/data0/axeyum/artifacts/python/cas-wide-trace-zyb2jcxy/package/axeyum/_native.abi3.so",
+  "native_sha256": "8d15fa2aa3664369c9031fbe191aeeb46032fe11720ea15072d74e45dde83f55",
+  "workloads": [
+    {
+      "byte_replay": {
+        "max_ns": 191862,
+        "median_ns": 167071,
+        "min_ns": 165421,
+        "samples": 7
+      },
+      "exact_evaluation": {
+        "max_ns": 126204,
+        "median_ns": 84049,
+        "min_ns": 79692,
+        "samples": 7
+      },
+      "json_bytes": 1354,
+      "name": "closed-rational",
+      "steps": 2,
+      "trace_production": {
+        "max_ns": 444701,
+        "median_ns": 423525,
+        "min_ns": 405674,
+        "samples": 7
+      },
+      "wide": false
+    },
+    {
+      "byte_replay": {
+        "max_ns": 375719519,
+        "median_ns": 367583297,
+        "min_ns": 366138924,
+        "samples": 7
+      },
+      "exact_evaluation": {
+        "max_ns": 18702458,
+        "median_ns": 18135111,
+        "min_ns": 17971766,
+        "samples": 7
+      },
+      "json_bytes": 34998,
+      "name": "amortization-360",
+      "steps": 6,
+      "trace_production": {
+        "max_ns": 1653857884,
+        "median_ns": 1515593680,
+        "min_ns": 1098996678,
+        "samples": 7
+      },
+      "wide": true
+    }
+  ]
+}

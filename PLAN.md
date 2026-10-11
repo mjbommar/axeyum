@@ -423,8 +423,9 @@ Full lint58742 live: `/var/tmp/axeyum-cas-wide-clippy-v2.log`.
 Serial full CAS29000 live: `/var/tmp/axeyum-cas-wide-full-cas.log`.
 Neither aggregate is credited. Parent solver2028 passed; workspace pending.
 
-Cost example `python/examples/cas_trace_cost.py` launched37796; output
-`/var/tmp/axeyum-cas-wide-trace-cost.json`, not yet credited.
+Cost example completed:payment6 steps/34998 bytes, median production1.516s,
+replay0.368s; [diagnostics](docs/plan/notes/cas-wide-traces/cost.md). Revised baseline
+run2013 live, `/var/tmp/axeyum-cas-wide-trace-cost-v2.json`.
 
 Next: finish broad gates, wide guarded quotients, cost measurements, kernel
 reconstruction and branch integration. Entire feedback goal remains active.
