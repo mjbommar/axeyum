@@ -39,5 +39,6 @@ check22417 waits for confirmed workspace Cargo3092650 to finish. Read-only main
 merge preview has no conflicts; keep main untouched until green. Older parent
 workspace handles need independent collection and cannot qualify this child.
 ADR3200/3300/3400/3500/7200 accepted as bounded contracts; validator20pass.
-ADR6700 review awaits current kernel-test receipt. Next: collect workspace/all-target
-results, complete aggregate lint, archive reconciled lanes, integrate and audit.
+Final native cost examples/statute replay pass; complete fmt2294files passes.
+ADR6700 review awaits kernel receipt. Next: collect workspace/all-targets and
+queued completeClippy12036, archive lanes, integrate and audit.

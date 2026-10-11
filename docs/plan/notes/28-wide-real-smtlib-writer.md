@@ -401,3 +401,6 @@ Queued aggregateClippy12036 after live watcher3180124; it requires all-targets
 exit0. Its temporary PATHshim restores originalPATH before serialized heavy
 Clippy, avoiding recursion and retaining per-job resource caps. Fullformat88573
 runs read-only. Workspace3092650 independently confirmed live again.
+
+Complete-format88573 exits0:2294 Rust files checked. Final native wide example
+records closed-rational2steps/1354bytes and amortization6steps/34998bytes.

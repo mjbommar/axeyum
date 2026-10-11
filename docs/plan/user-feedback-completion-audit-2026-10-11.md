@@ -65,5 +65,5 @@ is queued after it; complete Clippy12036 is queued after the verified all-target
 watcher3180124 and requires its recorded zero exit before launching. A temporary
 cargo shim wraps the script's heavy Clippy call with cargo-serialized while
 leaving read-only metadata direct; the wrapper's memory/admission limits remain.
-Read-only complete-format gate88573 is running. None of these pending gates
+Read-only complete-format gate88573 passes:2294 Rust files checked. None of the pending gates
 is counted as a pass.
