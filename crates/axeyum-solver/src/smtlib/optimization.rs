@@ -1,7 +1,5 @@
 //! Model-bearing text optimization; checked optimality remains a separate layer.
-use super::{
-    optimize_one, parse_script, smtlib_single_optimization_query, text_optimization_config,
-};
+use super::{optimize_one, smtlib_single_optimization_query, text_optimization_config};
 use crate::{
     CheckResult, Model, OptOutcome, SolverConfig, SolverError, UnknownKind, UnknownReason,
     check_model, solve,
@@ -60,6 +58,8 @@ pub struct OptimizationReport {
     pub mode: OptimizationMode,
     /// Decisions in active objective declaration order.
     pub objectives: Vec<ObjectiveResult>,
+    /// Resource exhaustion before objective identities were available.
+    pub intake_unknown: Option<UnknownReason>,
     script: Script,
     source: String,
 }
@@ -285,6 +285,28 @@ fn constant(
         _ => return Err(SolverError::Unsupported("optimization sort".into())),
     })
 }
+pub(super) fn parse_with_budget(
+    input: &str,
+    config: &SolverConfig,
+    started: Instant,
+) -> Result<Result<Script, UnknownReason>, SolverError> {
+    let deadline = config
+        .timeout
+        .and_then(|budget| started.checked_add(budget));
+    match axeyum_smtlib::parse_script_within(input, deadline) {
+        Ok(script) => Ok(Ok(script)),
+        Err(axeyum_smtlib::SmtError::DeadlineExceeded(phase)) => Ok(Err(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: format!("optimization intake timeout during {phase}"),
+        })),
+        Err(axeyum_smtlib::SmtError::ResourceLimit(detail)) => Ok(Err(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: format!("optimization intake resource limit: {detail}"),
+        })),
+        Err(error) => Err(SolverError::Parse(error.to_string())),
+    }
+}
+
 /// Optimize the active query and retain a replayable model per objective.
 /// One budget covers parsing, every optimization and witness recovery. The
 /// returned report makes no checked no-better or gold-answer claim.
@@ -298,7 +320,18 @@ pub fn optimize_with_models(
     config: &SolverConfig,
 ) -> Result<OptimizationReport, SolverError> {
     let started = Instant::now();
-    let mut script = parse_script(input).map_err(|e| SolverError::Parse(e.to_string()))?;
+    let mut script = match parse_with_budget(input, config, started)? {
+        Ok(script) => script,
+        Err(reason) => {
+            return Ok(OptimizationReport {
+                mode,
+                objectives: Vec::new(),
+                intake_unknown: Some(reason),
+                script: Script::default(),
+                source: String::new(),
+            });
+        }
+    };
     let objectives = active_objectives(input, &script)?;
     let query = smtlib_single_optimization_query(&script)?;
     for &(objective, _) in &objectives {
@@ -393,6 +426,7 @@ pub fn optimize_with_models(
     let mut report = OptimizationReport {
         mode,
         objectives: rows,
+        intake_unknown: None,
         script,
         source: input.to_owned(),
     };
