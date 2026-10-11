@@ -171,3 +171,12 @@ steps, deterministic bytes, exact rational evaluations, surrounding subtree
 corruption, source/path/order/witness/context changes, zero and resource corners.
 Cargo check32748 live; no build/test result credited. Python exposure and private
 surrounding-expression guard mutation remain required.
+
+Nested Rust implementation committed1a8eab81d, verified six-file stat. Python
+conditional_trace module adds one frozen structured outcome and explicit
+producer/replay functions; symbolic quotient transport preserves original syntax.
+Nine Python controls written, including producer-disabled child replay and
+path/order/deletion/premise/context/source/zero/work/step rejection. Python
+syntax passes; Rust/Python compile gates remain pending (Py42846).
+Added existing workspace serde_json dependency for complete evidence transport.
+No native/runtime/checker completion credit yet.

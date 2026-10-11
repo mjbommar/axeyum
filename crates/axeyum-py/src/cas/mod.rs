@@ -31,6 +31,7 @@ pub(crate) mod algebraic;
 pub(crate) mod boolean;
 pub(crate) mod certify;
 pub(crate) mod combinatorics;
+pub(crate) mod conditional_trace;
 mod exact_eval;
 pub(crate) mod expr;
 pub(crate) mod functions;
@@ -81,6 +82,7 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     module.add_class::<rational::Rational>()?;
     module.add_class::<expr::Expr>()?;
     trace::register(&module)?;
+    conditional_trace::register(&module)?;
     pi_certificate::register(&module)?;
     module.add_class::<expr::ZeroTest>()?;
     module.add_class::<expr::Certainty>()?;
