@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -2019,10 +2020,11 @@ def validate_pack(pack_dir: Path) -> str:
     return metadata["id"]
 
 
-def validate_statute_templates(*, replay_certificates: bool = False) -> tuple[int, int]:
+def validate_statute_templates(*, replay_certificates: bool = False) -> tuple[int, int, int]:
     root = ROOT / "docs/rules-as-code/statute-templates"
     manifests = sorted(root.glob("*/manifest.json"))
     checked = 0
+    source_snapshots = 0
     for path in manifests:
         manifest = load_json(path)
         require_keys(str(path), manifest, {"schema_version", "id", "jurisdiction", "sources", "effective_interval", "modeled_clauses", "excluded_clauses", "assumptions", "evidence_status"})
@@ -2030,11 +2032,29 @@ def validate_statute_templates(*, replay_certificates: bool = False) -> tuple[in
             fail("unsupported statute manifest version")
         if not manifest["sources"] or not manifest["modeled_clauses"]:
             fail("statute template needs sources and modeled clauses")
-        for source in manifest["sources"]:
+        for source_index, source in enumerate(manifest["sources"]):
             require_keys("statute source", source, {"section", "uri", "edition", "retrieved_on", "normalized_section_sha256", "normalization"})
             require_date("statute source retrieval", source["retrieved_on"])
             if not re.fullmatch(r"[0-9a-f]{64}", source["normalized_section_sha256"]):
                 fail("statute source needs a SHA-256 identity")
+            snapshot = path.parent / "sources" / f"{source_index}.txt"
+            if not snapshot.is_file():
+                fail(f"statute template missing normalized source {source_index}")
+            with snapshot.open("rb") as source_file:
+                source_bytes = source_file.read(65537)
+            if len(source_bytes) > 65536:
+                fail("statute source snapshot exceeds 64 KiB")
+            if not source_bytes:
+                fail("statute source snapshot is empty")
+            try:
+                source_text = source_bytes.decode("utf-8")
+            except UnicodeDecodeError:
+                fail("statute source snapshot is not UTF-8")
+            if " ".join(source_text.split()).encode("utf-8") != source_bytes:
+                fail("statute source snapshot is not canonical normalized text")
+            if hashlib.sha256(source_bytes).hexdigest() != source["normalized_section_sha256"]:
+                fail("statute source snapshot does not match manifest identity")
+            source_snapshots += 1
         for name in ("source.md", "model.md", "example.py", "README.md"):
             if not (path.parent / name).is_file():
                 fail(f"statute template missing {name}")
@@ -2051,7 +2071,7 @@ def validate_statute_templates(*, replay_certificates: bool = False) -> tuple[in
                 if result.status != "checked":
                     fail(f"statute fixture {fixture.name} failed replay: {result.status}: {result.detail}")
                 checked += 1
-    return len(manifests), checked
+    return len(manifests), checked, source_snapshots
 
 
 def main() -> int:
@@ -2064,8 +2084,8 @@ def main() -> int:
         fail("no rules-as-code example packs found")
     pack_ids = [validate_pack(pack_dir) for pack_dir in pack_dirs]
     print(f"validated {len(pack_ids)} rules-as-code pack(s): {', '.join(pack_ids)}")
-    templates, checked = validate_statute_templates(replay_certificates=args.statute_certificates)
-    print(f"validated {templates} statute template manifest(s); replayed {checked} conditional certificate(s)")
+    templates, checked, source_snapshots = validate_statute_templates(replay_certificates=args.statute_certificates)
+    print(f"validated {templates} statute template manifest(s); replayed {checked} conditional certificate(s); checked {source_snapshots} source snapshot(s)")
     return 0
 
 

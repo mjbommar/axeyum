@@ -22,3 +22,9 @@ with `axeyum.rules.check_deadline_certificate`; use `expected_subject` to bind a
 external query. `checked` establishes the bounded conditional endpoint, not
 calendar authenticity, legal applicability, kernel admission or a general SMT
 refutation. ADR-3500 records the format and checking boundary.
+
+The `sources/0.txt` through `sources/3.txt` files retain exact normalized UTF-8
+section text in manifest source order. Default validation replays all four
+SHA-256 identities offline and rejects missing, changed or noncanonical bytes.
+These are source snapshots, not proof certificates; identity checking does not
+establish legal applicability or authenticate a holiday calendar.

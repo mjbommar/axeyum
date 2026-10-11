@@ -108,6 +108,29 @@ class StatuteControls(unittest.TestCase):
         self.manifest['sources'][0]['normalized_section_sha256'] = '0' * 63
         self.changed_manifest()
 
+    def test_missing_normalized_source(self):
+        (self.manifest_path.parent / 'sources/0.txt').unlink()
+        with self.assertRaisesRegex(checker.ValidationError, 'missing normalized source'):
+            checker.validate_statute_templates()
+
+    def test_source_identity_checks_bytes_and_manifest(self):
+        snapshot = self.manifest_path.parent / 'sources/0.txt'
+        original = snapshot.read_bytes()
+        snapshot.write_bytes(b'Changed statutory rule.')
+        with self.assertRaisesRegex(checker.ValidationError, 'does not match manifest identity'):
+            checker.validate_statute_templates()
+        snapshot.write_bytes(original)
+        self.manifest['sources'][0]['normalized_section_sha256'] = '0' * 64
+        self.manifest_path.write_text(json.dumps(self.manifest))
+        with self.assertRaisesRegex(checker.ValidationError, 'does not match manifest identity'):
+            checker.validate_statute_templates()
+
+    def test_noncanonical_normalized_source(self):
+        snapshot = self.manifest_path.parent / 'sources/0.txt'
+        snapshot.write_bytes(snapshot.read_bytes() + b'\n')
+        with self.assertRaisesRegex(checker.ValidationError, 'not canonical'):
+            checker.validate_statute_templates()
+
     def test_missing_template_document(self):
         (self.manifest_path.parent / 'model.md').unlink()
         with self.assertRaises(checker.ValidationError):
@@ -120,7 +143,7 @@ class StatuteControls(unittest.TestCase):
             checker.validate_statute_templates(replay_certificates=True)
 
     def test_committed_template_manifest(self):
-        self.assertEqual(checker.validate_statute_templates(), (1, 0))
+        self.assertEqual(checker.validate_statute_templates(), (1, 0, 4))
 
     def test_missing_certificate_population(self):
         with tempfile.TemporaryDirectory() as directory:
