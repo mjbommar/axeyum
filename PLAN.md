@@ -271,7 +271,8 @@ Fresh extension at 933fbbe02: six selected Python suites report 93 passed,
 Full solver/workspace runner 55477 and stub runner 53264 are live, not passes;
 private mutation baseline 75540 passed all seven Rust tests; two guard
 mutations run under 45506 in the private snapshot. Added fresh Python lifting
-control: declared String decodes, actual BV stays BV; OMT suite 7 passed.
+control: declared String decodes, actual BV stays BV. Added independent
+24-case finite-domain optimum oracle; OMT suite now 8 passed.
 Gold eligibility stays false until source-bound no-better evidence is checked;
 generic self-contained evidence checks cannot provide that binding by themselves.
 Next: nonzero focused tests, fresh native/stubs, replay guard mutations, required

@@ -32,3 +32,11 @@ Separate probes also replayed Int and BV optima with String model `AB`.
 Added `python/examples/smt_optimization.py` and user-guide API documentation.
 The sealed extension executes all four lex/box model replays with expected
 values and explicit false gold eligibility; example terminal exit zero.
+
+Independent finite-domain optimum controls: new Python test enumerates original
+integer tuples for 24 cases (two x bounds, two y bounds, three coupled sum
+bounds, minimize/maximize first objective). It derives the lexicographic
+optimum without calling the solver, checks both exact reported values, replays
+every retained model, and checks each witness belongs to the enumerated feasible
+population. Fresh sealed-binary OMT suite: 8 collected, 8 passed, 0.13s. This
+finite regression oracle does not grant general optimality-certificate credit.

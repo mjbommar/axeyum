@@ -82,3 +82,30 @@ def test_declared_string_model_is_lifted_without_decoding_real_bitvectors():
     assert row.model["s"] == "AB"
     assert row.model["b"].width == 8 and row.model["b"].value == 65
     assert row.replay() is True
+
+
+def test_lexicographic_results_match_independent_finite_enumeration():
+    """Derive optima from Python integer tuples, independently of SMT solving."""
+    cases = 0
+    for x_limit in (1, 3):
+        for y_limit in (2, 4):
+            for total_limit in (0, 2, 5):
+                for first_direction in ("maximize", "minimize"):
+                    candidates = [(x, y) for x in range(x_limit + 1)
+                                  for y in range(y_limit + 1)
+                                  if x + y <= total_limit]
+                    first = (max if first_direction == "maximize" else min)(
+                        x for x, _ in candidates)
+                    second = max(y for x, y in candidates if x == first)
+                    query = f'''(declare-const x Int)(declare-const y Int)
+(assert (and (>= x 0) (<= x {x_limit}) (>= y 0) (<= y {y_limit})))
+(assert (<= (+ x y) {total_limit}))
+({first_direction} x)(maximize y)(check-sat)'''
+                    result = smt.optimize(query, mode="lex")
+                    assert result.complete
+                    assert [row.value for row in result.objectives] == [first, second]
+                    assert all(row.replay() is True for row in result.objectives)
+                    assert all((row.model["x"], row.model["y"]) in candidates
+                               for row in result.objectives)
+                    cases += 1
+    assert cases == 24
