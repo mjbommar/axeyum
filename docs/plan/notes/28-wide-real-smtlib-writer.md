@@ -264,3 +264,14 @@ Fresh private snapshot37464 requested ate0a90431b; v2 helper72923 requires6
 baseline passes and mutant5/one exact surrounding-subtree failure, restores
 bytewise. Original failed baseline and logs preserved. Lane rewritten compactly
 because the pre-write3000-byte guard rejected incremental status growth.
+
+Corrected nested Rust29625 terminal0:6 pass0 failures/ignores,2159 filtered,
+0.00s actual execution; compile/test log
+`/var/tmp/axeyum-nested-conditional-tests-v2.log`. Private fixed baseline6 passes;
+mutant still live, no exact-one result credited. Parent miter baseline7 passes.
+Parent stub generator41978 terminal0:27 modules/664 items/5 qualified integer
+annotations. Fresh sealed typed package
+`/data0/axeyum/artifacts/python/reference-miter-typed-ec2k4wco/package`;
+runtime drift27 modules/1883 symbols/5 aliases/319 synthetic dunders passes,
+type gate passes; combined runtime stub tests remain live. Python nested check
+12773 still compiling, no pass yet.

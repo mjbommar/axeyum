@@ -721,7 +721,9 @@ Doc plan/ADR/link gates and CAS registry pass:153 certified floor held,116 check
 Initial compile/test/private baseline failed before compilation on an invalid
 workspace serde_json inheritance. Fixed e0a90431b with direct dependency and
 full offline metadata; lock diff adds only that Py dependency.
-Six-test29625 and Py-check12773 reruns live. Fresh guard snapshot37464 and v2
+Six-test29625 passes6/0/0; private v2 baseline6 passes. Py-check12773 live.
+Parent stubs27/664 generated; drift27/1883 and type gate pass, runtime pending.
+Fresh guard snapshot37464 and v2
 helper72923 require6 baseline passes ->5 passes/one intended corruption failure.
 Original failed baseline source restored and failure logs preserved.
 
