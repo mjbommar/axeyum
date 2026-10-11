@@ -300,11 +300,27 @@ impl Expr {
         Expr::wrap(CasExpr::imaginary_unit())
     }
 
-    /// `self ** exp` for a non-negative integer `exp`.
+    /// Integer power with magnitude at most 4294967295.
     ///
-    /// The exponent is a `u32`: the fragment has no negative or symbolic powers.
-    fn pow(&self, exp: u32) -> Expr {
-        Expr::wrap(self.inner.clone().pow(exp))
+    /// A negative exponent constructs `1 / self^abs(exp)`. Its domain requires
+    /// a nonzero base; exact evaluation returns None at zero or missing bindings.
+    /// A defined zero to exponent zero is one. Symbolic construction is not a
+    /// certificate that the base is nonzero.
+    ///
+    /// Raises ValueError outside the magnitude range and OverflowError outside
+    /// i64. Exact evaluation has separate coefficient/work limits.
+    fn pow(&self, exp: &Bound<'_, PyInt>) -> PyResult<Expr> {
+        let exponent = exp.extract::<i64>()?;
+        guard_depth(&self.inner)?;
+        self.inner
+            .clone()
+            .pow_signed(exponent)
+            .map(Expr::wrap)
+            .ok_or_else(|| {
+                pyo3::exceptions::PyValueError::new_err(
+                    "integer exponent magnitude exceeds 4294967295",
+                )
+            })
     }
 
     /// The principal `q`-th root `self ** (1/q)`.
@@ -583,13 +599,17 @@ impl Expr {
     // method -- so the name is the only place the two can be reconciled. The
     // parameter is positional in every call `**` makes, so nothing observable
     // changes.
-    fn __pow__(&self, exponent: u32, modulo: Option<&Bound<'_, PyAny>>) -> PyResult<Expr> {
+    fn __pow__(
+        &self,
+        exponent: &Bound<'_, PyInt>,
+        modulo: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<Expr> {
         if modulo.is_some_and(|value| !value.is_none()) {
             return Err(pyo3::exceptions::PyTypeError::new_err(
                 "Expr.__pow__ takes no modulus",
             ));
         }
-        Ok(self.pow(exponent))
+        self.pow(exponent)
     }
 
     fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {

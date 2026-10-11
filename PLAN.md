@@ -130,6 +130,14 @@ passed 2,140 tests (11 ignored); new full CAS/workspace gates run against e7b58f
 boundaries, implement exact expression/Python arithmetic and amortization,
 negative powers, pi and bounded text parsing. No LIB-6 completion is claimed.
 
+**Signed CAS powers (`WIP`, cas-negative-powers, 2026-10-10).** Based on
+97359c332's bounded wide Python surface. ADR-3000 proposes signed Rust/Python
+powers lowering to existing partial Div/Pow nodes, with explicit magnitude,
+zero and missing-binding behavior. Implementation and mandatory domain/boundary
+controls are in progress. Domain-aware trace certificates and kernel admission
+remain required; no completion/integration claim. Details:
+[notes](docs/plan/notes/cas-negative-powers.md).
+
 ### SOL — Solver parity
 
 Close the measured gap to the named reference division by division, never

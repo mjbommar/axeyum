@@ -503,6 +503,24 @@ impl CasExpr {
         CasExpr::Pow(Box::new(self), exp)
     }
 
+    /// Signed integer power, with exponent magnitude bounded by `u32::MAX`.
+    ///
+    /// Negative powers retain the partial domain of `1 / self^n`: exact
+    /// evaluation declines at zero or a missing binding. Constructing this
+    /// expression does not prove its base nonzero. A defined zero to exponent
+    /// zero remains one, following the existing unsigned-power convention.
+    /// Returns `None` if the magnitude is outside the supported range.
+    #[must_use]
+    pub fn pow_signed(self, exponent: i64) -> Option<Self> {
+        let magnitude = u32::try_from(exponent.unsigned_abs()).ok()?;
+        let power = self.pow(magnitude);
+        Some(if exponent < 0 {
+            CasExpr::Div(Box::new(Self::one()), Box::new(power))
+        } else {
+            power
+        })
+    }
+
     /// The natural logarithm of `self`.
     #[must_use]
     pub fn ln(self) -> Self {
