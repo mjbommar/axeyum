@@ -5,8 +5,11 @@ from axeyum._native import ir
 import builtins
 import typing
 __all__ = [
+    "EndToEndUnsatProof",
+    "EndToEndUnsatProofOutcome",
     "UnsatProof",
     "UnsatProofOutcome",
+    "certify_qf_bv_unsat_end_to_end",
     "export_datatype_unsat_proof",
     "export_qf_abv_unsat_proof",
     "export_qf_aufbv_unsat_proof",
@@ -14,6 +17,51 @@ __all__ = [
     "export_qf_lia_unsat_proof",
     "export_qf_uf_unsat_proof",
 ]
+
+@typing.final
+class EndToEndUnsatProof:
+    r"""
+    A saved reference-miter refutation plus the final clausal UNSAT proof.
+    Construction stores data; source-bound replay supplies the checked claim.
+    """
+    @property
+    def faithfulness(self) -> UnsatProof:
+        r"""
+        The reference-miter DIMACS/DRAT refutation; LRAT is absent on this route.
+        """
+    @property
+    def unsat(self) -> UnsatProof:
+        r"""
+        The final DIMACS/DRAT/optional LRAT refutation.
+        """
+    def __new__(cls, faithfulness_dimacs: builtins.str, faithfulness_drat: builtins.str, unsat: UnsatProof) -> EndToEndUnsatProof:
+        r"""
+        Restores two saved certificate components without accepting their claims.
+        Each component uses UnsatProof's 8 MiB/text and 16 MiB/component caps.
+        """
+    def recheck_refutations(self) -> builtins.bool:
+        r"""
+        Checks the two stored clausal refutations, without a source claim.
+        """
+    def recheck_for_bool_terms(self, arena: ir.Arena, assertions: typing.Sequence[ir.Term]) -> builtins.bool:
+        r"""
+        Rebuilds both source correspondences and checks the two refutations.
+        No SAT search runs. The independent reference bit-blaster and Tseitin
+        encoder are the explicit trusted boundary; no kernel theorem is admitted.
+        Unsupported/malformed data raise AxeyumError; mismatches return False.
+        Replay has no wall-clock deadline, like the underlying Rust checker.
+        """
+
+@typing.final
+class EndToEndUnsatProofOutcome:
+    r"""
+    Outcome of attempting reference-miter plus final UNSAT certification.
+    Not-certified supplies no verdict or successful certificate.
+    """
+    @property
+    def status(self) -> builtins.str: ...
+    @property
+    def proof(self) -> typing.Optional[EndToEndUnsatProof]: ...
 
 @typing.final
 class UnsatProof:
@@ -145,6 +193,14 @@ class UnsatProofOutcome:
         Whether the budget ran out. **Not a pass.**
         """
     def __repr__(self) -> builtins.str: ...
+
+def certify_qf_bv_unsat_end_to_end(arena: ir.Arena, assertions: typing.Sequence[ir.Term], timeout_ms: typing.Optional[builtins.int] = None) -> EndToEndUnsatProofOutcome:
+    r"""
+    Certifies Boolean/BV UNSAT with the independently coded reference miter.
+    Both proof searches share one deadline. Construction and replay remain
+    deterministic/unlimited; timeout_ms is not a hard total-work deadline.
+    Expired entry budgets and unsupported reference fragments are not-certified.
+    """
 
 def export_datatype_unsat_proof(arena: ir.Arena, assertions: typing.Sequence[ir.Term], timeout_ms: typing.Optional[builtins.int] = None) -> UnsatProofOutcome: ...
 

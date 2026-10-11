@@ -293,3 +293,7 @@ Authoritative parent HEAD is d826846b9, the generated reference-miter proof stub
 ## Wide nested Python transport regression
 
 Added a tenth conditional Python control: a surrounding rational with 201-bit numerator and 182-bit denominator must survive cancellation, typed endpoint reconstruction and serialized source-bound replay; a changed coefficient must reject without evidence. Python syntax compilation passes. Native runtime remains pending; no pass credited. No Rust source changed while native compilation runs.
+
+## Carry parent generated proof stubs into the active child
+
+Copied the exact generated proof stub bytes from verified parent d826846b9 into this child. This carries the two end-to-end classes and certifier signatures already checked against the preserved parent native binary. Nested conditional CAS stubs still require regeneration against the new binary; parent checks do not qualify those absent signatures. No Rust changes.
