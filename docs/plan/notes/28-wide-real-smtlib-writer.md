@@ -482,3 +482,11 @@ carcara-source-bound; patched checker32422f24 verified unchanged. Installed
 native, source, sealed runtime packages, logs, private sources and active
 /data0 targets untouched. Audit:/var/tmp/axeyum-target-cleanup-audit.json.
 Current workspace3092650 independently remains live after cleanup.
+
+### Final workspace compilation completed; tests live
+
+Workspace11433 compiled successfully in80m06s, unoptimized+debuginfo.
+Per-crate terminal populations:AIG12pass,arith87pass,BV34pass,each0fail/
+0ignore/0filtered. CAS starts2165 tests (includes11 normally ignored).
+Whole workspace remains live/uncredited; later kernel/solver populations
+have not run yet. Collect the actual final exit before giving broad credit.
