@@ -250,6 +250,14 @@ mod tests {
         );
     }
     #[test]
+    fn external_context_extension_requires_recertification() {
+        let (subject, assumptions, limits) = fixture();
+        let trace = cancel_factor_with_trace(&subject, &assumptions, limits).unwrap();
+        let mut extended = assumptions;
+        extended.push(PolynomialExpr::Var("y".into()));
+        assert!(check_guarded_trace(&trace, &subject, &trace.result, &extended, limits).is_err());
+    }
+    #[test]
     fn false_quotient_and_missing_premise_are_rejected() {
         let (subject, assumptions, limits) = fixture();
         let mut trace = cancel_factor_with_trace(&subject, &assumptions, limits).unwrap();

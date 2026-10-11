@@ -347,46 +347,36 @@ Integer-only/BV/Boolean optimality producers, preemptible replay and kernel
 reconstruction remain open; full feedback goal remains active.
 
 **LIB-5 guarded traces (`WIP`, cas-guarded-traces, 2026-10-11).** Child of
-71d640d68, separate from running portable-OMT Rust gates. ADR-6400 allocates
-conditional quotient evidence with caller-bound nonzero assumptions and existing
-polynomial trace witnesses. Original version-1 semantics remain unconditional.
-Source search found no existing guarded cancellation trace. `just brief
-guarded_fraction_trace` returned UNRESOLVED with its 2971-fact positive control;
-stale shape inventory prevents treating that as mathematical absence.
+71d640d68. ADR-6400 specifies caller-bound nonzero context and polynomial
+witnesses; original version-1 traces remain unconditional. Implemented original
+quotient/result/context transport, exact denominator premise, checked
+cross-multiplication, syntactic cancellation producer and bounded byte replay.
+Kernel admission is separate. Initial Rust and signature-rerun suites each
+passed 3 tests, 0 failed/ignored. New context-extension control added; focused
+job24408 running, `/var/tmp/axeyum-cas-guarded-tests-v3.log`.
 
-Implemented `guarded_trace`: original quotient/result/context transport, explicit
-denominator premise, polynomial-trace identity replay, syntactic cancellation
-producer and bounded JSON export/replay. Three Rust tests cover byte replay,
-missing/altered assumptions, an incorrect quotient and the zero corner. Cargo
-job16697 completed: 3 passed, 0 failed/ignored, 0.00s, 2151 filtered out,
-`/var/tmp/axeyum-cas-guarded-tests.log`, Data0 target. No broad-gate credit.
-
-Portable parent stub generation/signature/type gates passed (27 modules, 654
-items, 1860 runtime symbols). Its private source/priority mutations each yielded
-6 passed plus exactly 1 intended failure; snapshot restored byte-for-byte.
-Parent lint45243 is terminal101: missing panic documentation for midpoint expect,
-173-line portable checker and collapsible priority if. These require repair;
-no full-lint pass claimed.
-
-Python now exposes `cancel_trace`, `replay_guarded_trace`, guarded trace/result
-classes and explicit produced/checked/rejected/unsupported/resource-limited
-outcomes. JSON replay returns the checked object after one parse. Fresh native
-77101 passed; sealed package
+Python exposes `cancel_trace`, `replay_guarded_trace`, guarded trace/result
+classes and explicit production/checking/refusal outcomes. JSON replay returns
+the checked object after one parse. Fresh native77101 passed; sealed package
 `/var/tmp/axeyum-cas-guarded-python-04jfnbsk/package`, SHA256
 `4e100b9c0f070c4af1e0983f3ca063c5604b763977625dc6c7c7055ded153708`.
-Twenty-one Python guarded/unconditional trace tests passed, 0 skips, 0.47s;
-separate-process replay and assumption/subject/result/premise/witness/envelope
-controls included. Updated example checked guarded cancellation with x != 0 and
-rejected the missing context. Logs `/var/tmp/axeyum-cas-guarded-python-tests.log`.
-Rust return-signature rerun14760 passed: 3 tests, 0 failed/ignored. Stub
-generation24855 running, `/var/tmp/axeyum-cas-guarded-stubs.log`.
+Twenty-one guarded/unconditional Python tests passed, 0 skips, 0.47s, including
+separate-process and assumption/subject/result/premise/witness/envelope controls.
+Updated example checks x*x/x = x under x != 0, rejects a missing context.
+`/var/tmp/axeyum-cas-guarded-python-tests.log`.
 
-Parent post-lint focused tests passed 17; full lint-v3 passed: all 925 targets
-across 27 crates, 0 diagnostics. Source fixes committed as 61d220a4d/5dfed320c. This child still needs those source
-repairs imported after parent commit, plus generated SMT stubs from e48755b70.
+Stub generation24855 passed: 27 modules/658 items. Runtime signature gate:
+1867 symbols/5 aliases/319 synthesized dunders. Type gate: 1816 parameters,
+1731 typed, 131 allowlisted Any, 46 Any returns, 95.3%. Generated CAS/SMT stubs
+included. Imported parent source repairs from 61d220a4d/5dfed320c: fallible
+midpoint conversion, priority syntax, documented checker-length allowance and
+linted docs/test names. Parent full lint: 925 targets/27 crates/0 diagnostics;
+this is parent evidence, not this child's broad-gate credit.
 
-Next: complete Rust/stub gates, private mutation controls and broader CAS gates. Nested cancellation, wide trace
-coefficients and kernel admission remain required follow-up work.
+Next: private context/identity/zero guard mutations, own full CAS/workspace/lint
+gates, fresh integrated native replay. Nested cancellation, wide trace
+coefficients, runtime/size measurements and kernel admission remain required.
+Full feedback goal is active; no integrated-main or broad completion claim.
 
 ### SOL — Solver parity
 

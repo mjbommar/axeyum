@@ -316,6 +316,8 @@ impl OptimizationCertificate {
     ///
     /// # Errors
     /// Returns malformed/unsupported evidence or bounded source parsing errors.
+    // Keep the ordered model/refutation discharge loop together for auditing.
+    #[allow(clippy::too_many_lines)]
     pub fn check(&self, subject: &str) -> Result<CertificateCheckReport, SolverError> {
         use crate::lra::{FarkasAtom, FarkasCertificate};
         use crate::{Model, check_model};

@@ -335,20 +335,20 @@ fn affine_optimization_matches_an_independent_finite_population() {
     // or bound-search code. Explicit seed and small exact integer domain.
     let mut seed = 0x2300_2026_1010_u64;
     let mut coefficient = || {
-        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+        seed = seed.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
         i128::from((seed >> 32) as u32 % 7) - 3
     };
     for case in 0..128 {
-        let a = coefficient();
-        let b = coefficient();
+        let constraint_x = coefficient();
+        let constraint_y = coefficient();
         let cap = coefficient();
-        let c = coefficient();
-        let d = coefficient();
+        let objective_x = coefficient();
+        let objective_y = coefficient();
         let offset = coefficient();
         let expected = (-4_i128..=4)
             .flat_map(|x| (-4_i128..=4).map(move |y| (x, y)))
-            .filter(|&(x, y)| a * x + b * y <= cap)
-            .map(|(x, y)| c * x + d * y + offset)
+            .filter(|&(x, y)| constraint_x * x + constraint_y * y <= cap)
+            .map(|(x, y)| objective_x * x + objective_y * y + offset)
             .max();
         let mut arena = TermArena::new();
         let x = int_var(&mut arena, "finite_x");
@@ -361,15 +361,15 @@ fn affine_optimization_matches_an_independent_finite_population() {
             arena.int_ge(y, lower).unwrap(),
             arena.int_le(y, upper).unwrap(),
         ];
-        let ac = arena.int_const(a);
-        let bc = arena.int_const(b);
+        let ac = arena.int_const(constraint_x);
+        let bc = arena.int_const(constraint_y);
         let ax = arena.int_mul(ac, x).unwrap();
         let by = arena.int_mul(bc, y).unwrap();
         let lhs = arena.int_add(ax, by).unwrap();
         let cap_term = arena.int_const(cap);
         assertions.push(arena.int_le(lhs, cap_term).unwrap());
-        let cc = arena.int_const(c);
-        let dc = arena.int_const(d);
+        let cc = arena.int_const(objective_x);
+        let dc = arena.int_const(objective_y);
         let cx = arena.int_mul(cc, x).unwrap();
         let dy = arena.int_mul(dc, y).unwrap();
         let sum = arena.int_add(cx, dy).unwrap();
@@ -379,7 +379,7 @@ fn affine_optimization_matches_an_independent_finite_population() {
         assert_eq!(
             outcome,
             expected.map_or(OptOutcome::Infeasible, OptOutcome::Optimal),
-            "finite case {case}: constraint {a}x + {b}y <= {cap}, objective {c}x + {d}y + {offset}"
+            "finite case {case}: constraint {constraint_x}x + {constraint_y}y <= {cap}, objective {objective_x}x + {objective_y}y + {offset}"
         );
     }
 }

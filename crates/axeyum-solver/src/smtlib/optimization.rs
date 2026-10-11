@@ -311,13 +311,13 @@ pub fn optimize_with_models(
             }
         }
     }
-    if let Some(requested) = active_priority(input)? {
-        if requested != mode.name() {
-            return Err(SolverError::Unsupported(format!(
-                "script opt.priority {requested} conflicts with explicit {} mode",
-                mode.name()
-            )));
-        }
+    if let Some(requested) = active_priority(input)?
+        && requested != mode.name()
+    {
+        return Err(SolverError::Unsupported(format!(
+            "script opt.priority {requested} conflicts with explicit {} mode",
+            mode.name()
+        )));
     }
     if objectives.is_empty() {
         return Err(SolverError::Unsupported(

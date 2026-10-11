@@ -29,6 +29,8 @@ __all__ = [
     "Expr",
     "ExtensionTraceHankelMinor",
     "Gf2Error",
+    "GuardedRewriteTrace",
+    "GuardedTraceOutcome",
     "LimitPoint",
     "Matrix",
     "Monomial",
@@ -65,6 +67,7 @@ __all__ = [
     "binary_extension_witt_shifted_trace",
     "binomial",
     "cancel",
+    "cancel_trace",
     "carmichael_lambda",
     "catalan",
     "certify",
@@ -230,6 +233,7 @@ __all__ = [
     "real_part",
     "real_root_intervals",
     "real_roots",
+    "replay_guarded_trace",
     "replay_trace",
     "residue",
     "resultant",
@@ -1445,6 +1449,57 @@ class Gf2Error(CasError):
     ...
 
 @typing.final
+class GuardedRewriteTrace:
+    r"""
+    Conditional quotient equality and explicit nonzero assumptions.
+    """
+    @property
+    def result(self) -> Expr:
+        r"""
+        Claimed polynomial quotient; its validity depends on the carried context.
+        """
+    @property
+    def nonzero_assumptions(self) -> builtins.list[Expr]:
+        r"""
+        Each expression is assumed nonzero, never inferred nonzero by the producer.
+        """
+    @property
+    def step_count(self) -> builtins.int:
+        r"""
+        One cancellation step plus the actual local polynomial witness steps.
+        """
+    def to_json(self) -> builtins.str:
+        r"""
+        Deterministic evidence; byte replay must bind an external subject and context.
+        """
+
+@typing.final
+class GuardedTraceOutcome:
+    r"""
+    Conditional production/replay outcome; failures carry no completed trace.
+    """
+    @property
+    def status(self) -> builtins.str:
+        r"""
+        produced, checked, rejected, unsupported or `resource_limited`.
+        """
+    @property
+    def trace(self) -> typing.Optional[GuardedRewriteTrace]:
+        r"""
+        Evidence only after complete successful production or checking.
+        """
+    @property
+    def failing_step(self) -> typing.Optional[builtins.int]:
+        r"""
+        Local step identified on rejection, otherwise None.
+        """
+    @property
+    def detail(self) -> builtins.str:
+        r"""
+        Explicit failure/decline reason, empty on success.
+        """
+
+@typing.final
 class LimitPoint:
     r"""
     The point a limit is taken at.
@@ -2145,7 +2200,7 @@ class TraceOutcome:
     @property
     def status(self) -> builtins.str:
         r"""
-        produced, checked, rejected, unsupported, or resource_limited.
+        produced, checked, rejected, unsupported, or `resource_limited`.
         """
     @property
     def trace(self) -> typing.Optional[RewriteTrace]:
@@ -2459,6 +2514,12 @@ def binomial(n: builtins.int, k: builtins.int) -> typing.Optional[builtins.int]:
 def cancel(expr: Expr) -> typing.Optional[Expr]:
     r"""
     Cancels common factors in a quotient.
+    """
+
+def cancel_trace(numerator: Expr, denominator: Expr, *, nonzero: typing.Sequence[Expr], max_steps: builtins.int = 128, max_work: builtins.int = 1000000) -> GuardedTraceOutcome:
+    r"""
+    Cancel a denominator factor under caller-supplied nonzero assumptions.
+    Missing assumptions explicitly reject; this never produces an unconditional identity.
     """
 
 def carmichael_lambda(n: builtins.int) -> typing.Optional[builtins.int]:
@@ -3682,6 +3743,11 @@ def real_roots(expr: Expr, var: builtins.str) -> typing.Optional[builtins.list[A
     
     Tier R: a pure function of its arguments. `None` when `expr` is not a
     univariate rational polynomial in `var`, or on overflow.
+    """
+
+def replay_guarded_trace(json: builtins.str, numerator: Expr, denominator: Expr, result: Expr, *, nonzero: typing.Sequence[Expr], max_steps: builtins.int = 128, max_work: builtins.int = 1000000) -> GuardedTraceOutcome:
+    r"""
+    Replay guarded bytes against the exact original quotient, result and context.
     """
 
 def replay_trace(json: builtins.str, input: Expr, result: Expr, *, max_steps: builtins.int = 128, max_work: builtins.int = 1000000) -> TraceOutcome:

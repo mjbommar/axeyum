@@ -349,7 +349,8 @@ pub fn maximize_lia_with_config(
             // report it as undecided rather than a wrong optimum.
             return Ok(OptOutcome::Unknown(timed_out_reason()));
         }
-        let half = i128::try_from(hi.abs_diff(lo) / 2).expect("half of an i128 bracket fits i128");
+        let half = i128::try_from(hi.abs_diff(lo) / 2)
+            .map_err(|_| SolverError::Unsupported("integer midpoint exceeds carrier".into()))?;
         let mid = lo + half;
         match objective_ge(
             arena,

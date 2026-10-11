@@ -5,6 +5,7 @@ from axeyum._native import ir
 import builtins
 import typing
 __all__ = [
+    "OptimizationCertificateCheck",
     "OptimizationObjective",
     "OptimizationResult",
     "Outcome",
@@ -12,6 +13,7 @@ __all__ = [
     "Script",
     "ScriptTerm",
     "Witness",
+    "check_optimization_certificate",
     "get_assertions",
     "get_assignment",
     "get_info",
@@ -27,6 +29,32 @@ __all__ = [
     "unsat_core",
     "write_script",
 ]
+
+@typing.final
+class OptimizationCertificateCheck:
+    r"""
+    Counted original-query replay; parsing certificate data alone grants no acceptance.
+    """
+    @property
+    def accepted(self) -> builtins.bool:
+        r"""
+        True only after all required feasible-model and strict-better checks succeed.
+        """
+    @property
+    def examined(self) -> builtins.int:
+        r"""
+        Number of obligations actually examined.
+        """
+    @property
+    def discharged(self) -> builtins.int:
+        r"""
+        Number of obligations successfully discharged.
+        """
+    @property
+    def reason(self) -> typing.Optional[builtins.str]:
+        r"""
+        Rejection reason, or None after complete acceptance.
+        """
 
 @typing.final
 class OptimizationObjective:
@@ -93,6 +121,11 @@ class OptimizationObjective:
         r"""
         Rebuild and check the original strict-better query's refutation.
         None means missing evidence, including integer-only cut or BV routes.
+        """
+    def certificate_json(self) -> builtins.str:
+        r"""
+        Export bounded original-query evidence. Missing optimality evidence declines.
+        Lexicographic exports include every earlier objective's witnesses.
         """
 
 @typing.final
@@ -356,6 +389,12 @@ class Witness:
         The magnitude bound the witness satisfies, or `None` (unbounded).
         """
     def __repr__(self) -> builtins.str: ...
+
+def check_optimization_certificate(certificate_json: builtins.str, script: builtins.str) -> OptimizationCertificateCheck:
+    r"""
+    Replay exported optimization JSON against the caller's original query.
+    Never runs optimization search. Malformed/unsupported evidence raises an error.
+    """
 
 def get_assertions(script: builtins.str) -> typing.Optional[builtins.list[builtins.list[builtins.str]]]:
     r"""

@@ -55,7 +55,7 @@ impl OptimizationObjective {
             "minimize"
         }
     }
-    /// Int or BitVec; bit-vector optimization uses unsigned order.
+    /// Int or `BitVec`; bit-vector optimization uses unsigned order.
     #[getter]
     fn sort(&self) -> &'static str {
         match self.report.objectives[self.index].sort {
