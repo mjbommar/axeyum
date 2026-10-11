@@ -31,6 +31,8 @@ axeyum-query.workspace = true
 axeyum-rewrite = { path = "../axeyum-rewrite" }
 axeyum-smtlib = { path = "../axeyum-smtlib", optional = true }
 axeyum-strings = { workspace = true, optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+serde_json = { version = "1", optional = true }
 z3 = { workspace = true, optional = true }
 
 # Browser-compatible monotonic clock for timeouts/telemetry (ADR-0017); only on
@@ -48,6 +50,8 @@ default = ["qfbv"]
 qfbv = []
 # Full multi-theory/product surface.
 full = [
+    "dep:serde",
+    "dep:serde_json",
     "dep:axeyum-cas",
     "dep:axeyum-egraph",
     "dep:axeyum-fp",

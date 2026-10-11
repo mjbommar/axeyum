@@ -10,6 +10,9 @@ use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 use axeyum_smtlib::{SExpr, Script, read_all};
 use std::time::Instant;
 
+/// Source-bearing optimization certificate transport.
+pub mod portable;
+
 /// How multiple objectives share their constraints.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OptimizationMode {
@@ -47,6 +50,7 @@ pub struct ObjectiveResult {
     model: Option<Model>,
     context: Vec<TermId>,
     no_better: Option<crate::lra::FarkasCertificate>,
+    no_better_names: Vec<String>,
 }
 
 /// Owns the original terms and per-objective contexts required for model replay.
@@ -57,6 +61,7 @@ pub struct OptimizationReport {
     /// Decisions in active objective declaration order.
     pub objectives: Vec<ObjectiveResult>,
     script: Script,
+    source: String,
 }
 impl OptimizationReport {
     /// Replay the original constraints/prefix and objective value; None means
@@ -349,6 +354,7 @@ pub fn optimize_with_models(
             model: None,
             context: assertions.clone(),
             no_better: None,
+            no_better_names: Vec::new(),
         };
         if let OptOutcome::Optimal(value) = row.outcome {
             let (term, exact) = constant(&mut script.arena, sort, value)?;
@@ -388,6 +394,7 @@ pub fn optimize_with_models(
         mode,
         objectives: rows,
         script,
+        source: input.to_owned(),
     };
     // All original symbol declarations are now fixed. Generate certificates
     // against this final arena so later objective solves cannot shift the
@@ -422,6 +429,13 @@ pub fn optimize_with_models(
                     Err(SolverError::Unsupported(_)) => None,
                     Err(error) => return Err(error),
                 };
+            if let Some(certificate) = &row.no_better {
+                row.no_better_names = certificate
+                    .vars
+                    .iter()
+                    .map(|&symbol| relaxed.symbol(symbol).0.to_owned())
+                    .collect();
+            }
             if deadline.is_some_and(|d| Instant::now() >= d) {
                 row.no_better = None;
             }
