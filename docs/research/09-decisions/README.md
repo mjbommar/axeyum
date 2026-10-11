@@ -1087,10 +1087,10 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [2900](adr-2900-python-cas-rationals-reuse-the-promoted-carrier.md) | Python CAS rationals reuse the promoted carrier | accepted; bounded surface adopted, final integration gates remain open |
 | [3000](adr-3000-signed-integer-powers-lower-to-partial-rational-expressions.md) | signed integer powers lower to partial rational expressions | accepted; bounded surface adopted, final integration gates remain open |
 | [3100](adr-3100-bounded-python-cas-text-parser.md) | Bounded Python CAS text parsing constructs the existing exact IR | superseded by ADR-6800 and ADR-6900 |
-| [3200](adr-3200-python-date-facade-preserves-sort-and-range.md) | Python Date facade preserves source sorts over ordinal Int terms | proposed |
-| [3300](adr-3300-python-rule-packs-reuse-native-obligations.md) | Python rule packs reuse metadata and native obligations | proposed |
-| [3400](adr-3400-statute-time-template-carries-calendar-and-applicability-inputs.md) | Statute time template carries calendar and applicability inputs | proposed |
-| [3500](adr-3500-finite-deadline-certificates-replay-native-ground-facts.md) | Finite deadline certificates replay native ground facts | proposed |
+| [3200](adr-3200-python-date-facade-preserves-sort-and-range.md) | Python Date facade preserves source sorts over ordinal Int terms | accepted (bounded contract; final integration gates remain open) |
+| [3300](adr-3300-python-rule-packs-reuse-native-obligations.md) | Python rule packs reuse metadata and native obligations | accepted (bounded contract; final integration gates remain open) |
+| [3400](adr-3400-statute-time-template-carries-calendar-and-applicability-inputs.md) | Statute time template carries calendar and applicability inputs | accepted (bounded contract; final integration gates remain open) |
+| [3500](adr-3500-finite-deadline-certificates-replay-native-ground-facts.md) | Finite deadline certificates replay native ground facts | accepted (bounded contract; final integration gates remain open) |
 | [6000](adr-6000-distinguished-cas-pi-has-constant-identity.md) | distinguished CAS pi has constant identity | accepted; bounded surface adopted, final integration gates remain open |
 | [6100](adr-6100-cas-expression-wire-preserves-source-identity.md) | CAS expression wire preserves source identity | accepted; bounded surface adopted, final integration gates remain open |
 | [6200](adr-6200-portable-pi-enclosure-replays-source-bound-machin-evidence.md) | portable pi enclosure replays source-bound Machin evidence | accepted; bounded surface adopted, final integration gates remain open |
@@ -1105,7 +1105,7 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [6900](adr-6900-python-cas-parsing-uses-the-native-bounded-grammar.md) | Python CAS parsing uses the native bounded grammar | accepted; bounded surface adopted, final integration gates remain open |
 | [7000](adr-7000-omt-intake-shares-the-search-and-checking-deadline.md) | OMT intake shares the search and checking deadline | accepted; audited OMT contract adopted, final integration gates remain open |
 | [7100](adr-7100-ground-model-evaluation-shares-deadlines-through-finite-quantifiers.md) | Ground model evaluation shares deadlines through finite quantifiers | accepted; audited OMT contract adopted, final integration gates remain open |
-| [7200](adr-7200-statute-source-identities-replay-from-bounded-text-snapshots.md) | Statute source identities replay from bounded text snapshots | proposed |
+| [7200](adr-7200-statute-source-identities-replay-from-bounded-text-snapshots.md) | Statute source identities replay from bounded text snapshots | accepted (bounded contract; final integration gates remain open) |
 | [7300](adr-7300-wide-decimal-intake-is-exact-bounded-and-resource-typed.md) | Wide decimal intake is exact, bounded, and resource typed | accepted; bounded source/evidence contract adopted, final integration gates remain open |
 | [8000](adr-8000-python-sat-replay-binds-restored-clausal-text-to-source-terms.md) | Python SAT replay binds restored clausal text to source terms | accepted; bounded source/evidence contract adopted, final integration gates remain open |
 | [8300](adr-8300-reference-miter-replay-reconstructs-both-source-correspondences.md) | Reference-miter replay reconstructs both source correspondences | accepted; bounded source/evidence contract adopted, final integration gates remain open |

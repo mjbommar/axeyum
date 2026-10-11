@@ -375,3 +375,15 @@ Reviewed ADR2300/6300/6301/6302/7000/7100 against optimize ray checking, typed r
 ## Parser and proof/source-correspondence contract adoption
 
 Reviewed ADR2400/2600/2700/2800/7300/8000/8300 against current signatures, source adapters, scalar rules, signed/wide literal policies, restored text caps, deterministic CNF/reference-miter reconstruction and terminal guard results. Adopted seven bounded contracts. Integer-only Alethe remains internal, unmodified Carcara/DRAT-trim checks receive no credit, and general theory/kernel coverage remains separate. Six new ADRs remain for review. Final workspace/all-target gates are still live/pending.
+
+### Date / rules / statute contract adoption — 2026-10-11
+
+Reviewed ADR3200/3300/3400/3500/7200 against current Python source, consumer
+coverage and validator receipts; accepted their bounded contracts. Reran
+`python3 -m unittest discover -s scripts/tests -p test_validate_rules_as_code.py -v`:20 tests passed,0 failures. Native population remains1166pass/1 unrelated
+SAT checker skip, separately covered by44pass/0skip configured runtime suite.
+The statute validator receipt records7packs/1template/4snapshots and1conditional
+certificate replay. No effective-date or legal-applicability inference is added.
+ADR6700 kernel reconstruction remains under review pending current workspace
+evidence. Final workspace Cargo3092650 was independently confirmed live;
+all-targets watcher remains dependent on its termination, not inferred success.

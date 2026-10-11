@@ -1,6 +1,6 @@
 # ADR-3400: Statute time template carries calendar and applicability inputs
 
-Status: proposed
+Status: accepted (bounded contract; final integration gates remain open)
 Date: 2026-10-11
 
 The first statute template models positive day periods under the 2025 edition
@@ -29,3 +29,20 @@ required before proof credit.
 The new statute-template manifest is outside the seven example-pack validator
 until its unknown effective-interval evidence can be represented explicitly.
 No fabricated from date is introduced merely to satisfy the current schema.
+
+## Adoption evidence — 2026-10-11
+
+The implementation and negative controls were reviewed against this contract.
+The fresh native consumer population includes the Date, pack metadata, pack
+evaluation and deadline tests: 1166 passed, with one unrelated external SAT
+checker test skipped. That external route passed separately with its configured
+guarded checker. The offline validator controls were rerun at adoption: 20
+tests passed; the recorded template validation checks four source snapshots
+and replays one conditional certificate. Detailed provenance and private guard
+controls remain in the [feedback completion audit](../../plan/user-feedback-completion-audit-2026-10-11.md)
+and [lane receipts](../../plan/notes/28-wide-real-smtlib-writer.md).
+
+Acceptance adopts the stated bounded design, not a claim of legal applicability,
+native Rust Date support, general theorem admission or completion of the full
+feedback goal. The implementation branch still awaits final workspace checks
+and integration into main.

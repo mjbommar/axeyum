@@ -38,5 +38,6 @@ Current facts60449 passes2971/0errors with0missing derived edges. Final workspac
 check22417 waits for confirmed workspace Cargo3092650 to finish. Read-only main
 merge preview has no conflicts; keep main untouched until green. Older parent
 workspace handles need independent collection and cannot qualify this child.
-Next: collect fact/type/external/workspace/all-target results, archive reconciled
-lanes, integrate, then audit every original milestone against final evidence.
+ADR3200/3300/3400/3500/7200 accepted as bounded contracts; validator20pass.
+ADR6700 review awaits current kernel-test receipt. Next: collect workspace/all-target
+results, complete aggregate lint, archive reconciled lanes, integrate and audit.
