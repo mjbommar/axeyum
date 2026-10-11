@@ -636,14 +636,19 @@ ADR6900 migrates Python parse to native grammar with character-span translation,
 explicit surrogate errors and native byte/final-AST caps. Binding and wrapper
 implemented; former Python implementation retained as private reference.
 Check4896 passed (1m33s), /var/tmp/axeyum-cas-python-native-check.log.
-Native build37851 remains live; stub generation launched, no runtime pass yet. Added native
+Native build37851 passed3m04s; stub generation72621 remains live.
+Sealed package /data0/axeyum/artifacts/python/cas-python-native-parser-fa_a312k/package,
+SHA2567989e34f4deaf1c9982823d3d6e14b74b6fd179317f379cabbc859c2ba689f71.
+Initial runtime run46 passed/2 failed: test regexes mismatched actual native
+source-byte/shape messages. Corrected assertions; rerun48 passed/0 skipped,
+/var/tmp/axeyum-cas-python-native-parser-tests-v2.log. Native/parser source unchanged. Added native
 vs37 reference fixtures, UTF8 byte/character/surrogate controls and final AST
 subtraction caps. Fixture generator now uses the independent private reference.
 User guide documents tightened native bounds. Next: fresh sealed package/test
 runs, stubs and required gates. Source binding frozen during compilation.
 Python source length guard now rejects before UTF8 allocation; discriminating
 control passed1 test against local wrapper/sealed prior native (no new binding
-called). Full native runtime suite still pending. Entire goal remains incomplete.
+called). Focused native runtime suite passed; broad combined Python suite/stubs pending. Entire goal remains incomplete.
 
 ### SOL — Solver parity
 
