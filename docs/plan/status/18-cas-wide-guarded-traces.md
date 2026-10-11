@@ -28,5 +28,7 @@ Example passed:2912 bytes/3 steps/201-bit coefficient with exact replay,
 `/var/tmp/axeyum-cas-wide-guarded-example.log`.
 Own full lint12735 and serial CAS39650 running, uncredited; logs
 `/var/tmp/axeyum-cas-wide-guarded-{clippy,full-cas}.log`.
-Next: finish stubs/broad gates; nested conditional traces, kernel reconstruction
+Full solver23701 launched, uncredited:
+`/var/tmp/axeyum-cas-wide-guarded-full-solver.log`.
+Next: finish broad gates; nested conditional traces, kernel reconstruction
 and integration. Entire feedback goal remains active.
