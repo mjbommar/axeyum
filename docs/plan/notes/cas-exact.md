@@ -38,3 +38,17 @@ Checker sensitivity run 31707 uses private snapshot
 the zero/nonzero correspondence guard in positive_rational_multiple by replacing
 the guarded return with True. Expected: the changed-endpoint rejection alone
 fails. Mutation run is live and not yet credited. No active-tree mutation.
+
+## Mutation terminal result
+
+Handle 31707 is terminal with expected rejection: snapshot baseline 2/2 passed;
+guard-deleted mutant 1 passed / 1 failed, exit 101. The sole failure was
+`promoted_coefficients_reach_exact_normalization_and_replay`, on its changed
+endpoint rejection assertion. The genuine nonzero certificate still passed.
+This satisfies the exactly-one negative-control requirement. Do not reapply
+the mutation to an active worktree.
+
+Full CAS library validation has now started on source `074dde371` with one
+test thread via handle 74901; retained log
+`/var/tmp/axeyum-cas-exact-gates-upyai0w9/cas_lib.log`. It is not
+credited until terminal output and nonzero counts are verified.
