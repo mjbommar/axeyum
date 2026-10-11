@@ -411,7 +411,11 @@ imported native path verified. 34 Python trace tests passed, 0 skipped, 9.07s,
 `/var/tmp/axeyum-cas-wide-python-tests.log`. Independent Fraction comparisons
 cover positive/negative/zero rates and zero principal; separate-process payment
 replay does not call the producer. Updated amortization example verifies bytes.
-Stub generation launched, `/var/tmp/axeyum-cas-wide-stubs.log`, not credited.
+Amortization example completed with exact 2859/2849-bit numerator/denominator
+and zero-rate2500/3. Stub generation79039 live, `/var/tmp/axeyum-cas-wide-stubs.log`.
+Own full lint27513 and private guard controls49550 launched, uncredited;
+`/var/tmp/axeyum-cas-wide-clippy.log`, `/var/tmp/axeyum-cas-wide-controls.log`.
+Controls snapshot: `snap-cas-wide-traces-controls-9ea2285ab`.
 
 Parent guarded full CAS serial gate: 2144 passed/0 failed/11 ignored/359.38s;
 full lint: 925 targets/27 crates/0 diagnostics. Its earlier parallel timing
