@@ -47,6 +47,15 @@ was observed; neither overrides root `PLAN.md`.
 | Paused CAS work | [CAS parity handoff](cas-parity-handoff-2026-07-22.md) |
 | Proposed strategy exploration | [Exploration track](exploration-track/README.md) |
 
+## User feedback research — 2026-10-10
+
+- [Audit and roadmap mapping](user-feedback-audit-2026-10-10.md)
+- [Certified CAS traces and exact expressions](cas-certified-trace-plan-2026-10-10.md)
+- [Proof export, SMT APIs and Rules-as-Code](proof-api-consumer-plan-2026-10-10.md)
+
+These dated specifications distinguish source findings, installed-extension
+probes and proposed acceptance criteria. Their queue entries live in PLAN.md.
+
 ## Structured plan sets
 
 - [North star](00-north-star.md) and [cross-track dependency DAG](01-dependency-dag.md)

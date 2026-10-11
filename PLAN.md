@@ -112,6 +112,12 @@ cannot fail (or is red) is reproduced, root-caused, regressed and repaired
 first. Otherwise work runs in five tracks; within a track, take the first
 unblocked item. Tracks may run in parallel, one lane per item.
 
+User feedback researched on 2026-10-10 is recorded in the
+[audit](docs/plan/user-feedback-audit-2026-10-10.md). CON-5 starts with fresh
+reproduction of ignored objectives and unboundedness classification; confirmed
+incorrect optimization claims invoke P0. Installed-extension probes are diagnostic,
+not a fresh solver board or a new parity measurement.
+
 
 
 ### SOL — Solver parity
@@ -181,6 +187,19 @@ what remains is below. Detail:
    feature measured +0 population survival (ADR-1667). *Exit:* a C4 feature with
    nonzero survival, or C4 closed by ADR; C5 stays conditional on adapter use.
 
+5. **LIB-5 Certified CAS step traces.** Reuse current whole-result certificates
+   to implement the [trace plan](docs/plan/cas-certified-trace-plan-2026-10-10.md)
+   T0–T3: source-bound deterministic steps, checked side conditions, Python
+   replay, then kernel reconstruction. *Exit:* a multi-step trace rechecks from
+   serialized bytes, targeted corruption fails, and one generated identity is
+   admitted with an empty kernel-measured axiom footprint.
+6. **LIB-6 Exact CAS expression surface.** Follow X0–X2 of the same plan:
+   arbitrary-precision public rational transport, negative integer powers with
+   domain obligations, symbolic π backed by existing enclosures, bounded text
+   parsing. *Exit:* exact 360-period amortization and wide-value round trips;
+   zero-denominator controls; canonical parse/print agreement; wider certificates
+   remain replayable or explicitly decline at unsupported bridges.
+
 ### EVD — Evidence and Lean
 
 Every unsat/valid carries a machine-checkable proof, and every claim names
@@ -206,6 +225,18 @@ which check it passed. Detail: [evidence family](docs/plan/families/evidence/REA
    piece after ADR-1722. *Exit:* RAT proofs elaborate to LRAT checked by
    `check_lrat`.
 
+5. **EVD-5 Python SAT certificate routes.** DIMACS/DRAT/optional LRAT already
+   export; inventory public routes and source-to-CNF binding using the
+   [proof/API plan](docs/plan/proof-api-consumer-plan-2026-10-10.md).
+   EVD-4 retains RAT elaboration ownership. *Exit:* a documented export example
+   passes a pinned independent checker; missing LRAT remains explicit; altered
+   source bindings and hints fail.
+6. **EVD-6 Boolean/arithmetic Alethe gaps.** Freshly regress pure Boolean,
+   Boolean+LIA and `(* (- 1.0) x)` examples, then implement the plan's A0–A3.
+   *Exit:* mandatory source-bound proofs and SAT controls pass; Boolean resolution
+   and supported arithmetic steps externally check without holes; integer-only
+   local evidence is labelled separately until portable.
+
 ### CON — Consumers
 
 Real users drive the product surface: the Python bindings, cindergraph (C
@@ -225,6 +256,25 @@ door serves everyone else. Foreign repositories are pushed only by the user.
    errors; then `define-fun-rec`, full `(reset)`, parametric `declare-sort`.
    *Exit:* accepted ADR; textual fixtures compare ordered outputs; a malformed
    command cannot partially mutate session state.
+
+5. **CON-5 Trustworthy OMT front doors.** Implement O0–O2 of the
+   [proof/API plan](docs/plan/proof-api-consumer-plan-2026-10-10.md): fresh ignored-
+   objective regressions, explicit objective handling, shared budgets, honest
+   unboundedness, then Python results with objective-mode and evidence fields.
+   *Exit:* supported maximize/minimize produce the checked optimum or explicitly
+   decline; overflow/resource limits never prove unboundedness; gold answers carry
+   a replayed model and a checked no-better-solution refutation.
+6. **CON-6 Signed-literal convenience and capability corrections.** Specify
+   bare `-1` as compatibility syntax, preserve wide integers and canonical unary
+   subtraction output. `abs` and `distinct` already parse. *Exit:* fresh public
+   route/round-trip and negative controls pass; capability docs reflect tested
+   sort/coercion coverage; correct `notes/80` when its exact path is identified.
+7. **CON-7 Python Rules-as-Code with typed dates.** Implement R0–R1 of the same
+   plan and the [rules roadmap](docs/rules-as-code/ROADMAP.md): Date facade over
+   checked day ordinals, evidence-preserving Python pack API, then a bounded
+   statute-backed computation-of-time template. *Exit:* temporal model lifting,
+   invalid/leap-date controls and existing-pack reuse pass; the new pack pins
+   official source/applicability and checks source-linked bounded obligations.
 
 ### ENG — Engineering hygiene
 

@@ -104,6 +104,28 @@ The learner-facing trust-boundary page is
 how to read current packs from source rule to formal model, replayed witness,
 checked obligation, and explicit legal/theorem horizon.
 
+## Next implementation slices — 2026-10-10
+
+CON-7 in [PLAN.md](../../PLAN.md) owns the next consumer work. The
+[researched plan](../plan/proof-api-consumer-plan-2026-10-10.md#con-7-typed-dates-and-one-statute-backed-template)
+specifies two proposed slices:
+
+1. A Python pack API with a distinct symbolic Date facade, checked Gregorian
+   day-ordinal lowering, retained model-lift metadata, and explicit incomplete
+   facts/evidence outcomes. First exercise an existing temporal pack; a native
+   IR Date sort requires a separate ADR decision.
+2. A bounded statute-backed template, provisionally Minnesota §645.15 time
+   computation, with pinned official text, cross-reference/applicability review,
+   sourced holiday facts, a clause-to-model crosswalk and independently replayed
+   boundary examples. The proposal is not an implemented or legally complete pack.
+
+Reuse the schema, query dashboard, validator and Bool/LIA proof fixtures above.
+Acceptance requires invalid/leap-date and interval-boundary controls, source-linked
+checked obligations, an independent bounded reference comparison, and explicit
+unsupported/calendar-limit outcomes. OMT-dependent gold answers additionally wait
+for CON-5's audited optimization evidence; this Date slice can use existing
+satisfiability and proof routes directly.
+
 ## Audience
 
 | Audience | Need |

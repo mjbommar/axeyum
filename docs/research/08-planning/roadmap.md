@@ -4,7 +4,20 @@
 
 Status: **foundation phases (0–7) landed**; active execution is ordered in the
 single root project tracker.
-Last updated: 2026-08-30
+Last updated: 2026-10-10 (feedback links; historical phase record retained)
+
+## Consumer feedback implementation detail — 2026-10-10
+
+The [feedback audit](../../plan/user-feedback-audit-2026-10-10.md) maps verified
+source findings and installed-extension diagnostics to LIB-5/LIB-6, EVD-5/EVD-6
+and CON-5–CON-7 in the live queue. Detailed proposed slices are the
+[certified CAS trace plan](../../plan/cas-certified-trace-plan-2026-10-10.md) and
+[proof/API/consumer plan](../../plan/proof-api-consumer-plan-2026-10-10.md).
+They cover source-bound rewrite certificates, exact CAS inputs/syntax, SAT proof
+export, Boolean/arithmetic proof composition, explicit OMT semantics, parser
+convenience, typed dates and a sourced statute template. Existing functionality
+and unmeasured gaps are kept separate; none is credited as newly implemented.
+Scheduling and P0 handling remain in generated PLAN.md.
 
 > **Where the live plan is now.** This file is the *research/foundation* roadmap
 > (Phases 0–7 — the decidable finite-domain + arithmetic foundation, now built).
