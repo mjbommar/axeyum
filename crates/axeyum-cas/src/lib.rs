@@ -33028,8 +33028,7 @@ mod tests {
     }
 
     #[test]
-    fn gamma_and_polygamma_head() {
-        let x = || v("x");
+    fn gamma_functional_values() {
         let certified = |a: &CasExpr, b: &CasExpr| {
             matches!(equal(a, b), ZeroTest::Certified { equal: true, .. })
         };
@@ -33055,6 +33054,14 @@ mod tests {
         ));
         // Soundness: Γ(5) ≠ 25.
         assert!(!certified(&CasExpr::int(5).gamma(), &CasExpr::int(25)));
+    }
+
+    #[test]
+    fn gamma_and_polygamma_head() {
+        let x = || v("x");
+        let certified = |a: &CasExpr, b: &CasExpr| {
+            matches!(equal(a, b), ZeroTest::Certified { equal: true, .. })
+        };
         // The derivative tower is closed and correct: Γ′=ψ·Γ, ψ′=ψ₁ (trigamma),
         // and the second derivative Γ″ = Γ·(ψ² + ψ₁) via chain/product rule.
         assert_eq!(
