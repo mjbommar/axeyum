@@ -32,6 +32,14 @@ pub enum PolynomialExpr {
     Mul(Vec<Self>),
     /// Additive inverse.
     Neg(Box<Self>),
+    /// Version-2 quotient, admitted only with an exactly nonzero constant divisor.
+    /// Version-1 codecs and replay explicitly reject this head.
+    Div {
+        /// Original numerator.
+        numerator: Box<Self>,
+        /// Original divisor, whose nonzero condition is carried by its step.
+        denominator: Box<Self>,
+    },
     /// Nonnegative integer power; exponent zero denotes one.
     Pow {
         /// Base expression.
@@ -190,7 +198,7 @@ pub struct RewriteStep {
     pub premises: Vec<usize>,
     /// Version 1 permits only the explicit empty assumption context.
     pub context: String,
-    /// Version 1 admits unconditional polynomial equalities only.
+    /// V1 requires empty conditions; v2 division records its nonzero divisor.
     pub side_conditions: Vec<PolynomialExpr>,
     /// Canonical normal form of the local before/after expression.
     pub witness: PolynomialExpr,
@@ -332,6 +340,32 @@ impl Work {
                 let (value, terms, degree) = self.convert(child, depth + 1, nodes)?;
                 (CasExpr::Neg(Box::new(value)), terms, degree)
             }
+            PolynomialExpr::Div {
+                numerator,
+                denominator,
+            } => {
+                if !self.wide {
+                    return Err(TraceError::Unsupported("division outside trace v1".into()));
+                }
+                let (numerator, terms, degree) = self.convert(numerator, depth + 1, nodes)?;
+                let (denominator, _, divisor_degree) =
+                    self.convert(denominator, depth + 1, nodes)?;
+                if divisor_degree != 0 {
+                    return Err(TraceError::Unsupported(
+                        "symbolic divisor requires external nonzero context".into(),
+                    ));
+                }
+                // Validate the original subject's domain even for an empty trace.
+                let divisor = self.normal_form(&denominator)?;
+                if !matches!(divisor, CasExpr::Const(value) if !value.is_zero()) {
+                    return Err(reject(None, "division requires a nonzero constant divisor"));
+                }
+                (
+                    CasExpr::Div(Box::new(numerator), Box::new(denominator)),
+                    terms,
+                    degree,
+                )
+            }
             PolynomialExpr::Pow { base, exponent } => {
                 // Charge even powers of constants; a huge exponent cannot bypass
                 // the work/degree contract just because its formal degree is zero.
@@ -432,6 +466,10 @@ impl PolynomialExpr {
                     base: Box::new(child(x)?),
                     exponent: *exponent,
                 },
+                CasExpr::Div(numerator, denominator) if wide => PolynomialExpr::Div {
+                    numerator: Box::new(child(numerator)?),
+                    denominator: Box::new(child(denominator)?),
+                },
                 CasExpr::Div(..) | CasExpr::Unary(..) => {
                     return Err(TraceError::Unsupported(
                         "domain-dependent/nonpolynomial rewrite".to_owned(),
@@ -476,6 +514,10 @@ impl PolynomialExpr {
     fn children(&self) -> Vec<&Self> {
         match self {
             Self::Add(xs) | Self::Mul(xs) => xs.iter().collect(),
+            Self::Div {
+                numerator,
+                denominator,
+            } => vec![numerator, denominator],
             Self::Neg(x) | Self::Pow { base: x, .. } => vec![x],
             Self::Const { .. } | Self::Var(_) => Vec::new(),
         }
@@ -494,14 +536,23 @@ impl PolynomialExpr {
         let mut copy = self.clone();
         let child = match &mut copy {
             Self::Add(xs) | Self::Mul(xs) => xs.get_mut(*index)?,
+            Self::Div { numerator, .. } if *index == 0 => numerator,
+            Self::Div { denominator, .. } if *index == 1 => denominator,
             Self::Neg(x) | Self::Pow { base: x, .. } if *index == 0 => x,
             _ => return None,
         };
         *child = child.replace(rest, value)?;
         Some(copy)
     }
+    fn side_conditions(&self) -> Vec<Self> {
+        match self {
+            Self::Div { denominator, .. } => vec![(**denominator).clone()],
+            _ => Vec::new(),
+        }
+    }
     fn rule(&self) -> Option<(&'static str, Option<u32>)> {
         match self {
+            Self::Div { .. } => Some(("rational.div.constant.v2", None)),
             Self::Add(_) => Some(("polynomial.add.v1", None)),
             Self::Mul(_) => Some(("polynomial.mul.v1", None)),
             Self::Neg(_) => Some(("polynomial.neg.v1", None)),
@@ -574,6 +625,7 @@ fn normalize_trace_mode(
             .result
             .local(&path)
             .ok_or_else(|| reject(None, "producer location disappeared"))?;
+        let side_conditions = local.side_conditions();
         let (rule, exponent) = local
             .rule()
             .ok_or_else(|| reject(None, "producer operation disappeared"))?;
@@ -602,7 +654,7 @@ fn normalize_trace_mode(
             exponent,
             premises: id.checked_sub(1).into_iter().collect(),
             context: if wide { "empty-v2" } else { "empty-v1" }.to_owned(),
-            side_conditions: Vec::new(),
+            side_conditions,
             witness,
         });
         trace.result = after;
@@ -665,7 +717,7 @@ pub fn check_trace(
             return Err(fail("premise binding mismatch"));
         }
         if step.context != if wide { "empty-v2" } else { "empty-v1" }
-            || !step.side_conditions.is_empty()
+            || (!wide && !step.side_conditions.is_empty())
         {
             return Err(fail("step context mismatch"));
         }
@@ -678,6 +730,9 @@ pub fn check_trace(
             .before
             .local(&step.location)
             .ok_or_else(|| fail("invalid rewrite location"))?;
+        if wide && step.side_conditions != local.side_conditions() {
+            return Err(fail("nonzero side-condition binding mismatch"));
+        }
         if local.rule() != Some((step.rule.as_str(), step.exponent)) {
             return Err(fail("rule or arguments mismatch"));
         }

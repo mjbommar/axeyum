@@ -136,3 +136,100 @@ fn canonical_and_bit_work_degree_caps_are_checked() {
         Err(TraceError::ResourceLimit(_))
     ));
 }
+
+#[test]
+fn exact_amortization_replays_two_checked_divisions() {
+    let limits = TraceLimits::default();
+    let rate = CasExpr::rat(1, 240);
+    let growth = CasExpr::Pow(
+        Box::new(CasExpr::Add(vec![CasExpr::int(1), rate.clone()])),
+        360,
+    );
+    let reciprocal = CasExpr::Div(Box::new(CasExpr::int(1)), Box::new(growth));
+    let source = CasExpr::Div(
+        Box::new(CasExpr::Mul(vec![CasExpr::int(300_000), rate])),
+        Box::new(CasExpr::Add(vec![
+            CasExpr::int(1),
+            CasExpr::Neg(Box::new(reciprocal)),
+        ])),
+    );
+    let trace = normalize_with_trace_wide(&source, limits).unwrap();
+    let high = BigInt::from(241).pow(360);
+    let low = BigInt::from(240).pow(360);
+    let expected = Rational::from_big_rational(&BigRational::new(
+        BigInt::from(300_000) * &high,
+        BigInt::from(240) * (high - low),
+    ))
+    .unwrap();
+    assert_eq!(
+        trace.result.to_cas_wide(limits).unwrap(),
+        CasExpr::Const(expected)
+    );
+    let divisions: Vec<_> = trace
+        .steps
+        .iter()
+        .filter(|step| step.rule == "rational.div.constant.v2")
+        .collect();
+    assert_eq!(divisions.len(), 2);
+    assert!(divisions.iter().all(|step| step.side_conditions.len() == 1));
+    replay_json(
+        trace.to_json(limits).unwrap().as_bytes(),
+        &trace.input,
+        &trace.result,
+        limits,
+    )
+    .unwrap();
+}
+#[test]
+fn division_steps_bind_the_recorded_nonzero_condition() {
+    let limits = TraceLimits::default();
+    let source = CasExpr::Div(Box::new(CasExpr::int(1)), Box::new(CasExpr::int(2)));
+    assert!(normalize_with_trace(&source, limits).is_err());
+    let mut trace = normalize_with_trace_wide(&source, limits).unwrap();
+    assert_eq!(trace.steps[0].side_conditions.len(), 1);
+    trace.steps[0].side_conditions.clear();
+    assert!(
+        replay_json(
+            &serde_json::to_vec(&trace).unwrap(),
+            &trace.input,
+            &trace.result,
+            limits
+        )
+        .is_err()
+    );
+}
+#[test]
+fn an_empty_trace_cannot_certify_an_undefined_quotient() {
+    let limits = TraceLimits::default();
+    let mut trace = normalize_with_trace_wide(&CasExpr::int(1), limits).unwrap();
+    let zero = PolynomialExpr::Const {
+        numerator: "0".into(),
+        denominator: "1".into(),
+    };
+    let one = PolynomialExpr::Const {
+        numerator: "1".into(),
+        denominator: "1".into(),
+    };
+    let undefined = PolynomialExpr::Div {
+        numerator: Box::new(one),
+        denominator: Box::new(zero),
+    };
+    trace.input = undefined.clone();
+    trace.result = undefined;
+    assert!(matches!(
+        replay_json(
+            &serde_json::to_vec(&trace).unwrap(),
+            &trace.input,
+            &trace.result,
+            limits
+        ),
+        Err(TraceError::Rejected { .. })
+    ));
+    assert!(
+        normalize_with_trace_wide(
+            &CasExpr::Div(Box::new(CasExpr::int(1)), Box::new(CasExpr::var("x"))),
+            limits
+        )
+        .is_err()
+    );
+}

@@ -2,7 +2,7 @@
 use super::expr::Expr;
 use axeyum_cas::rewrite_trace::{
     PolynomialExpr, RewriteTrace as CasTrace, TraceError, TraceLimits, check_trace,
-    normalize_with_trace, replay_json,
+    normalize_with_trace, normalize_with_trace_wide, replay_json,
 };
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyModule};
 
@@ -33,7 +33,7 @@ impl RewriteTrace {
     fn input(&self) -> PyResult<Expr> {
         self.inner
             .input
-            .to_cas(TraceLimits::default())
+            .to_cas_wide(TraceLimits::default())
             .map(Expr::wrap)
             .map_err(|e| PyValueError::new_err(format!("{e:?}")))
     }
@@ -42,7 +42,7 @@ impl RewriteTrace {
     fn result(&self) -> PyResult<Expr> {
         self.inner
             .result
-            .to_cas(TraceLimits::default())
+            .to_cas_wide(TraceLimits::default())
             .map(Expr::wrap)
             .map_err(|e| PyValueError::new_err(format!("{e:?}")))
     }
@@ -62,8 +62,8 @@ impl RewriteTrace {
     fn replay(&self, input: Expr, result: Expr, max_steps: usize, max_work: u64) -> TraceOutcome {
         let policy = limits(max_steps, max_work);
         let checked = (|| {
-            let input = PolynomialExpr::from_cas(input.inner(), policy)?;
-            let result = PolynomialExpr::from_cas(result.inner(), policy)?;
+            let input = PolynomialExpr::from_cas_wide(input.inner(), policy)?;
+            let result = PolynomialExpr::from_cas_wide(result.inner(), policy)?;
             check_trace(&self.inner, &input, &result, policy)
         })();
         match checked {
@@ -118,25 +118,31 @@ impl TraceOutcome {
     }
 }
 
-/// Produce an opt-in polynomial step trace with explicit refusal status.
+/// Produce an opt-in step trace with explicit refusal status.
+/// wide=True selects v2 promoted arithmetic and checked constant division.
 #[cfg_attr(
     feature = "stub-gen",
     pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
 )]
 #[pyfunction]
-#[pyo3(signature = (expr, *, max_steps = 128, max_work = 1_000_000))]
+#[pyo3(signature = (expr, *, max_steps = 128, max_work = 1_000_000, wide = false))]
 pub(crate) fn normalize_trace(
     py: Python<'_>,
     expr: Expr,
     max_steps: usize,
     max_work: u64,
+    wide: bool,
 ) -> TraceOutcome {
-    py.detach(
-        move || match normalize_with_trace(expr.inner(), limits(max_steps, max_work)) {
+    py.detach(move || {
+        match if wide {
+            normalize_with_trace_wide(expr.inner(), limits(max_steps, max_work))
+        } else {
+            normalize_with_trace(expr.inner(), limits(max_steps, max_work))
+        } {
             Ok(trace) => TraceOutcome::success("produced", trace),
             Err(error) => TraceOutcome::failure(error),
-        },
-    )
+        }
+    })
 }
 
 /// Replay exported JSON against an explicit expected equality statement.
@@ -157,8 +163,8 @@ pub(crate) fn replay_trace(
     py.detach(move || {
         let policy = limits(max_steps, max_work);
         let checked = (|| {
-            let input = PolynomialExpr::from_cas(input.inner(), policy)?;
-            let result = PolynomialExpr::from_cas(result.inner(), policy)?;
+            let input = PolynomialExpr::from_cas_wide(input.inner(), policy)?;
+            let result = PolynomialExpr::from_cas_wide(result.inner(), policy)?;
             replay_json(json.as_bytes(), &input, &result, policy)
         })();
         match checked {
