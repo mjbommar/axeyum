@@ -490,3 +490,7 @@ Per-crate terminal populations:AIG12pass,arith87pass,BV34pass,each0fail/
 0ignore/0filtered. CAS starts2165 tests (includes11 normally ignored).
 Whole workspace remains live/uncredited; later kernel/solver populations
 have not run yet. Collect the actual final exit before giving broad credit.
+
+### Current workspace CAS result
+
+Final workspace session11433 completed the CAS suite:2154 passed,0 failed,11 ignored,0 filtered in462.73s. Alongside AIG12/arith87/BV34, this is2287 passing tests across four completed crates. Remaining crates are running; the whole workspace gate remains uncredited. Log:`/var/tmp/axeyum-nested-final-workspace.log`. Rust source remains frozen atcc65885a3.
