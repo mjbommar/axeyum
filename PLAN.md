@@ -423,10 +423,13 @@ ADR6600 specifies guarded-quotient v2 with exact external nonzero-context bindin
 and matching polynomial-v2 identity witnesses. Existing v1 remains narrow.
 Rust producer/checker now select v1/v2 transport and arithmetic consistently;
 both identity witnesses must match envelope version. Zero-polynomial denominator
-checks and exact external-context binding remain mandatory. Existing Rust suite
-26983 running, uncredited: `/var/tmp/axeyum-cas-wide-guarded-rust.log`.
-Next: wide Rust
-negative controls, Python explicit wide API, separate-process replay, private
+checks and exact external-context binding remain mandatory. Existing Rust suite passed4/0 failed/ignored; new wide suite passed4/0 failed/ignored:
+`/var/tmp/axeyum-cas-wide-guarded-{rust,tests-v2}.log`. First wide compile
+failed a nonexistent context field; corrected, not credited as a test run.
+Wide suite has missing crate-doc warning to fix after current build.
+Python `cancel_trace(..., wide=True)` added; replay/getters carry wide values.
+Fresh native32955 running, uncredited: `/var/tmp/axeyum-cas-wide-guarded-native.log`.
+Next: Python runtime tests and stubs, separate-process replay, private
 mutations and broad gates. Entire feedback goal remains active.
 
 ### SOL — Solver parity

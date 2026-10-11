@@ -197,7 +197,7 @@ impl GuardedRewriteTrace {
     fn result(&self) -> PyResult<Expr> {
         self.inner
             .result
-            .to_cas(TraceLimits::default())
+            .to_cas_wide(TraceLimits::default())
             .map(Expr::wrap)
             .map_err(|e| PyValueError::new_err(format!("{e:?}")))
     }
@@ -208,7 +208,7 @@ impl GuardedRewriteTrace {
             .nonzero_assumptions
             .iter()
             .map(|expr| {
-                expr.to_cas(TraceLimits::default())
+                expr.to_cas_wide(TraceLimits::default())
                     .map(Expr::wrap)
                     .map_err(|e| PyValueError::new_err(format!("{e:?}")))
             })
@@ -276,6 +276,7 @@ fn guarded_subject(
     denominator: &Expr,
     nonzero: &[Expr],
     policy: TraceLimits,
+    wide: bool,
 ) -> Result<
     (
         axeyum_cas::guarded_trace::QuotientSubject,
@@ -286,25 +287,30 @@ fn guarded_subject(
     if nonzero.len() > policy.nodes {
         return Err(TraceError::ResourceLimit("assumption count".into()));
     }
+    let encode = |expr: &Expr| {
+        if wide {
+            PolynomialExpr::from_cas_wide(expr.inner(), policy)
+        } else {
+            PolynomialExpr::from_cas(expr.inner(), policy)
+        }
+    };
     Ok((
         axeyum_cas::guarded_trace::QuotientSubject {
-            numerator: PolynomialExpr::from_cas(numerator.inner(), policy)?,
-            denominator: PolynomialExpr::from_cas(denominator.inner(), policy)?,
+            numerator: encode(numerator)?,
+            denominator: encode(denominator)?,
         },
-        nonzero
-            .iter()
-            .map(|expr| PolynomialExpr::from_cas(expr.inner(), policy))
-            .collect::<Result<_, _>>()?,
+        nonzero.iter().map(encode).collect::<Result<_, _>>()?,
     ))
 }
 /// Cancel a denominator factor under caller-supplied nonzero assumptions.
 /// Missing assumptions explicitly reject; this never produces an unconditional identity.
+/// `wide=True` selects version-two promoted coefficient arithmetic.
 #[cfg_attr(
     feature = "stub-gen",
     pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.cas")
 )]
 #[pyfunction]
-#[pyo3(signature = (numerator, denominator, *, nonzero, max_steps = 128, max_work = 1_000_000))]
+#[pyo3(signature = (numerator, denominator, *, nonzero, max_steps = 128, max_work = 1_000_000, wide = false))]
 pub(crate) fn cancel_trace(
     py: Python<'_>,
     numerator: Expr,
@@ -312,12 +318,18 @@ pub(crate) fn cancel_trace(
     nonzero: Vec<Expr>,
     max_steps: usize,
     max_work: u64,
+    wide: bool,
 ) -> GuardedTraceOutcome {
     py.detach(move || {
         let policy = limits(max_steps, max_work);
         let produced = (|| {
-            let (subject, context) = guarded_subject(&numerator, &denominator, &nonzero, policy)?;
-            axeyum_cas::guarded_trace::cancel_factor_with_trace(&subject, &context, policy)
+            let (subject, context) =
+                guarded_subject(&numerator, &denominator, &nonzero, policy, wide)?;
+            if wide {
+                axeyum_cas::guarded_trace::cancel_factor_with_trace_wide(&subject, &context, policy)
+            } else {
+                axeyum_cas::guarded_trace::cancel_factor_with_trace(&subject, &context, policy)
+            }
         })();
         match produced {
             Ok(trace) => GuardedTraceOutcome::success("produced", trace),
@@ -346,8 +358,9 @@ pub(crate) fn replay_guarded_trace(
     py.detach(move || {
         let policy = limits(max_steps, max_work);
         let checked = (|| {
-            let (subject, context) = guarded_subject(&numerator, &denominator, &nonzero, policy)?;
-            let result = PolynomialExpr::from_cas(result.inner(), policy)?;
+            let (subject, context) =
+                guarded_subject(&numerator, &denominator, &nonzero, policy, true)?;
+            let result = PolynomialExpr::from_cas_wide(result.inner(), policy)?;
             axeyum_cas::guarded_trace::replay_guarded_json(
                 json.as_bytes(),
                 &subject,
