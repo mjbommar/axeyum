@@ -1,19 +1,17 @@
-//! `axeyum.cas.Rational` — the exact `i128` rational the whole CAS speaks.
-//!
-//! `axeyum-cas` does not re-export [`axeyum_ir::Rational`], so this binding
-//! wraps it from `axeyum-ir` directly (inventory §0.4). Every coefficient in the
-//! CAS is a checked `i128` pair: an overflow surfaces as `None`, never as a
-//! wrong answer, and that is why nothing here silently widens to `BigInt`.
+//! Exact Python rationals backed by the existing small/promoted Rust carrier.
 
+use axeyum_arith::big::{BigInt, BigRational, Zero};
 use axeyum_ir::Rational as IrRational;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyModule};
+use pyo3::types::{PyAny, PyBytes, PyDict, PyInt, PyModule};
 
-use crate::stub_types::PyFraction;
+use crate::stub_types::{PyBigInt, PyFraction};
 
-/// An exact rational number, normalized, with an `i128` numerator and
-/// denominator.
+const MAX_INTEGER_BITS: u64 = 16_384;
+
+/// An exact rational number with a positive denominator. Integer transport
+/// supports up to 16,384 bits per input or result component.
 ///
 /// Constructing one with a zero denominator raises `ValueError`:
 /// `axeyum_ir::Rational::new` panics there, so the binding goes through
@@ -40,26 +38,21 @@ impl Rational {
 impl Rational {
     /// `Rational(num, den=1)`.
     #[new]
-    #[pyo3(signature = (num, den = 1))]
-    fn new(num: i128, den: i128) -> PyResult<Self> {
-        checked(num, den).map(Self::wrap).ok_or_else(|| {
-            PyValueError::new_err(format!(
-                "Rational({num}, {den}): denominator must be nonzero and the normalized \
-                 pair must fit in i128"
-            ))
-        })
+    #[pyo3(signature = (num, den = None))]
+    fn new(num: &Bound<'_, PyInt>, den: Option<&Bound<'_, PyInt>>) -> PyResult<Self> {
+        from_pair(num.as_any(), den.map(Bound::as_any)).map(Self::wrap)
     }
 
     /// The normalized numerator (carries the sign).
     #[getter]
-    fn numerator(&self) -> i128 {
-        self.inner.numerator()
+    fn numerator<'py>(&self, py: Python<'py>) -> PyResult<PyBigInt<'py>> {
+        to_integer(py, &self.inner.numerator_big()).map(PyBigInt::new)
     }
 
     /// The normalized denominator (always positive).
     #[getter]
-    fn denominator(&self) -> i128 {
-        self.inner.denominator()
+    fn denominator<'py>(&self, py: Python<'py>) -> PyResult<PyBigInt<'py>> {
+        to_integer(py, &self.inner.denominator_big()).map(PyBigInt::new)
     }
 
     /// Whether the denominator is `1`.
@@ -86,7 +79,7 @@ impl Rational {
     ///
     /// # Errors
     ///
-    /// Raises `ValueError` when the pair does not fit in `i128` or the
+    /// Raises `ValueError` when integer transport exceeds its bit limit or the
     /// denominator is zero, and `TypeError` for an object with no such fields.
     #[staticmethod]
     fn coerce(value: RationalLike<'_>) -> PyResult<Self> {
@@ -96,31 +89,21 @@ impl Rational {
     fn __repr__(&self) -> String {
         format!(
             "Rational({}, {})",
-            self.inner.numerator(),
-            self.inner.denominator()
+            self.inner.numerator_big(),
+            self.inner.denominator_big()
         )
     }
 
     fn __str__(&self) -> String {
-        if self.inner.is_integer() {
-            format!("{}", self.inner.numerator())
-        } else {
-            format!("{}/{}", self.inner.numerator(), self.inner.denominator())
-        }
+        self.inner.to_string()
     }
 
     fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
         from_py(other).is_ok_and(|other| other == self.inner)
     }
 
-    fn __hash__(&self) -> isize {
-        // Agrees with `__eq__` for the values a Python `int`/`Fraction` can hold
-        // by hashing the normalized pair, which is what `__eq__` compares.
-        let (num, den) = (self.inner.numerator(), self.inner.denominator());
-        #[allow(clippy::cast_possible_truncation)]
-        {
-            (num as isize).wrapping_mul(31).wrapping_add(den as isize)
-        }
+    fn __hash__(&self, py: Python<'_>) -> PyResult<isize> {
+        fraction(py, self.inner)?.into_bound().hash()
     }
 }
 
@@ -147,7 +130,10 @@ pub(crate) fn checked(num: i128, den: i128) -> Option<IrRational> {
 pub(crate) fn fraction(py: Python<'_>, value: IrRational) -> PyResult<PyFraction<'_>> {
     PyModule::import(py, "fractions")?
         .getattr("Fraction")?
-        .call1((value.numerator(), value.denominator()))
+        .call1((
+            to_integer(py, &value.numerator_big())?,
+            to_integer(py, &value.denominator_big())?,
+        ))
         .map(PyFraction::new)
 }
 
@@ -168,32 +154,19 @@ pub(crate) fn optional_fraction(
 ///
 /// # Errors
 ///
-/// Raises `ValueError` when the pair does not fit in `i128` or normalizes with a
+/// Raises `ValueError` when integer transport exceeds its bit limit or has a
 /// zero denominator; propagates the attribute error otherwise.
 pub(crate) fn from_py(value: &Bound<'_, PyAny>) -> PyResult<IrRational> {
     if let Ok(wrapped) = value.extract::<Rational>() {
         return Ok(wrapped.inner);
     }
-    let numerator: i128 = value
-        .getattr("numerator")
-        .map_err(|_| {
-            PyValueError::new_err(format!(
-                "expected an int, a fractions.Fraction, or a cas.Rational; got {}",
-                value
-                    .get_type()
-                    .name()
-                    .map_or_else(|_| "<unknown>".to_owned(), |name| name.to_string())
-            ))
-        })?
-        .extract()
-        .map_err(|_| PyValueError::new_err("numerator does not fit in i128"))?;
-    let denominator: i128 = value
-        .getattr("denominator")?
-        .extract()
-        .map_err(|_| PyValueError::new_err("denominator does not fit in i128"))?;
-    checked(numerator, denominator).ok_or_else(|| {
-        PyValueError::new_err("rational has a zero denominator or does not normalize inside i128")
-    })
+    if value.is_instance_of::<PyInt>() {
+        return from_pair(value, None);
+    }
+    from_pair(
+        &value.getattr("numerator")?,
+        Some(&value.getattr("denominator")?),
+    )
 }
 
 /// Reads a list of rationals.
@@ -242,4 +215,64 @@ impl pyo3_stub_gen::PyStubType for RationalLike<'_> {
     fn type_output() -> pyo3_stub_gen::TypeInfo {
         Self::type_input()
     }
+}
+
+/// Exact bounded integer pair transport. Omitted denominator means one.
+pub(crate) fn from_pair(
+    num: &Bound<'_, PyAny>,
+    den: Option<&Bound<'_, PyAny>>,
+) -> PyResult<IrRational> {
+    let numerator = from_integer(num)?;
+    let denominator = den
+        .map(from_integer)
+        .transpose()?
+        .unwrap_or_else(|| BigInt::from(1));
+    if denominator.is_zero() {
+        return Err(PyValueError::new_err(
+            "rational denominator must be nonzero",
+        ));
+    }
+    IrRational::from_big_rational(&BigRational::new(numerator, denominator))
+        .ok_or_else(|| PyValueError::new_err("rational interning resource limit exceeded"))
+}
+
+fn from_integer(value: &Bound<'_, PyAny>) -> PyResult<BigInt> {
+    let integer = value.cast::<PyInt>()?;
+    let integer_type = PyModule::import(value.py(), "builtins")?.getattr("int")?;
+    let bits: u64 = integer_type
+        .getattr("bit_length")?
+        .call1((integer,))?
+        .extract()?;
+    if bits > MAX_INTEGER_BITS {
+        return Err(PyValueError::new_err(
+            "rational integer transport exceeds 16384 bits",
+        ));
+    }
+    let bytes = usize::try_from(bits.div_ceil(8) + 1)
+        .map_err(|_| PyValueError::new_err("rational byte count exceeds platform limits"))?;
+    let keywords = PyDict::new(value.py());
+    keywords.set_item("signed", true)?;
+    let encoded = integer_type
+        .getattr("to_bytes")?
+        .call((integer, bytes, "little"), Some(&keywords))?;
+    Ok(BigInt::from_signed_bytes_le(
+        encoded.cast::<PyBytes>()?.as_bytes(),
+    ))
+}
+
+fn to_integer<'py>(py: Python<'py>, value: &BigInt) -> PyResult<Bound<'py, PyAny>> {
+    if value.bits() > MAX_INTEGER_BITS {
+        return Err(PyValueError::new_err(
+            "rational integer transport exceeds 16384 bits",
+        ));
+    }
+    let keywords = PyDict::new(py);
+    keywords.set_item("signed", true)?;
+    PyModule::import(py, "builtins")?
+        .getattr("int")?
+        .call_method(
+            "from_bytes",
+            (PyBytes::new(py, &value.to_signed_bytes_le()), "little"),
+            Some(&keywords),
+        )
 }

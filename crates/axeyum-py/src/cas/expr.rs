@@ -14,9 +14,8 @@ use axeyum_cas::{
     DefiniteIntegral as CasDefiniteIntegral, LimitPoint as CasLimitPoint, ZeroTest as CasZeroTest,
 };
 use axeyum_ir::Rational as IrRational;
-use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyDict};
+use pyo3::types::{PyAny, PyDict, PyInt};
 
 use crate::cas::poly::MultiPoly;
 use crate::cas::rational;
@@ -164,7 +163,7 @@ fn guard_depth(expr: &CasExpr) -> PyResult<()> {
     Ok(())
 }
 
-struct Operand(CasExpr);
+struct Operand(PyResult<CasExpr>);
 
 impl FromPyObject<'_, '_> for Operand {
     type Error = PyErr;
@@ -172,26 +171,17 @@ impl FromPyObject<'_, '_> for Operand {
     fn extract(obj: pyo3::Borrowed<'_, '_, PyAny>) -> PyResult<Self> {
         if let Ok(expr) = obj.cast::<Expr>() {
             let inner = &expr.get().inner;
-            guard_depth(inner)?;
-            return Ok(Operand(inner.clone()));
+            return Ok(Operand(guard_depth(inner).map(|()| inner.clone())));
         }
         if obj.is_instance_of::<pyo3::types::PyFloat>() {
             return Err(pyo3::exceptions::PyTypeError::new_err(
                 "Expr arithmetic takes Expr, int or fractions.Fraction, not float (the CAS is exact over Q; write Fraction(1, 2))",
             ));
         }
-        if let Ok(n) = obj.extract::<i128>() {
-            return Ok(Operand(CasExpr::int(n)));
-        }
-        let (num, den) = (
-            obj.getattr("numerator").and_then(|v| v.extract::<i128>()),
-            obj.getattr("denominator").and_then(|v| v.extract::<i128>()),
-        );
-        if let (Ok(num), Ok(den)) = (num, den) {
-            let value = rational::checked(num, den).ok_or_else(|| {
-                PyValueError::new_err(format!("{num}/{den} does not fit the i128 rational"))
-            })?;
-            return Ok(Operand(CasExpr::Const(value)));
+        if obj.is_instance_of::<PyInt>()
+            || (obj.hasattr("numerator")? && obj.hasattr("denominator")?)
+        {
+            return Ok(Operand(rational::from_py(&obj).map(CasExpr::Const)));
         }
         Err(pyo3::exceptions::PyTypeError::new_err(format!(
             "Expr arithmetic takes Expr, int or fractions.Fraction, not {}",
@@ -269,8 +259,8 @@ impl Expr {
 impl Expr {
     /// An exact integer constant.
     #[staticmethod]
-    fn int(n: i128) -> Expr {
-        Expr::wrap(CasExpr::int(n))
+    fn int(n: &Bound<'_, PyInt>) -> PyResult<Expr> {
+        rational::from_pair(n.as_any(), None).map(|value| Expr::wrap(CasExpr::Const(value)))
     }
 
     /// An exact rational constant `num / den`.
@@ -280,15 +270,10 @@ impl Expr {
     /// Raises `ValueError` when `den` is zero. The Rust `CasExpr::rat` *panics*
     /// there; this goes through `Rational::checked_new` instead.
     #[staticmethod]
-    #[pyo3(signature = (num, den = 1))]
-    fn rat(num: i128, den: i128) -> PyResult<Expr> {
-        let value = rational::checked(num, den).ok_or_else(|| {
-            PyValueError::new_err(format!(
-                "Expr.rat({num}, {den}): denominator must be nonzero and the normalized \
-                 pair must fit in i128"
-            ))
-        })?;
-        Ok(Expr::wrap(CasExpr::Const(value)))
+    #[pyo3(signature = (num, den = None))]
+    fn rat(num: &Bound<'_, PyInt>, den: Option<&Bound<'_, PyInt>>) -> PyResult<Expr> {
+        rational::from_pair(num.as_any(), den.map(Bound::as_any))
+            .map(|value| Expr::wrap(CasExpr::Const(value)))
     }
 
     /// A named variable.
@@ -532,7 +517,7 @@ impl Expr {
         env: &Bound<'py, PyDict>,
     ) -> PyResult<Option<PyFraction<'py>>> {
         let bindings = rational_env(env)?;
-        rational::optional_fraction(py, self.inner.eval(&bindings))
+        rational::optional_fraction(py, super::exact_eval::eval(&self.inner, &bindings)?)
     }
 
     /// The set of variables this expression mentions, sorted.
@@ -544,42 +529,42 @@ impl Expr {
 
     fn __add__(&self, other: Operand) -> PyResult<Expr> {
         guard_depth(&self.inner)?;
-        Ok(Expr::wrap(self.inner.clone() + other.0))
+        Ok(Expr::wrap(self.inner.clone() + other.0?))
     }
 
     fn __radd__(&self, other: Operand) -> PyResult<Expr> {
         guard_depth(&self.inner)?;
-        Ok(Expr::wrap(other.0 + self.inner.clone()))
+        Ok(Expr::wrap(other.0? + self.inner.clone()))
     }
 
     fn __sub__(&self, other: Operand) -> PyResult<Expr> {
         guard_depth(&self.inner)?;
-        Ok(Expr::wrap(self.inner.clone() - other.0))
+        Ok(Expr::wrap(self.inner.clone() - other.0?))
     }
 
     fn __rsub__(&self, other: Operand) -> PyResult<Expr> {
         guard_depth(&self.inner)?;
-        Ok(Expr::wrap(other.0 - self.inner.clone()))
+        Ok(Expr::wrap(other.0? - self.inner.clone()))
     }
 
     fn __mul__(&self, other: Operand) -> PyResult<Expr> {
         guard_depth(&self.inner)?;
-        Ok(Expr::wrap(self.inner.clone() * other.0))
+        Ok(Expr::wrap(self.inner.clone() * other.0?))
     }
 
     fn __rmul__(&self, other: Operand) -> PyResult<Expr> {
         guard_depth(&self.inner)?;
-        Ok(Expr::wrap(other.0 * self.inner.clone()))
+        Ok(Expr::wrap(other.0? * self.inner.clone()))
     }
 
     fn __truediv__(&self, other: Operand) -> PyResult<Expr> {
         guard_depth(&self.inner)?;
-        Ok(Expr::wrap(self.inner.clone() / other.0))
+        Ok(Expr::wrap(self.inner.clone() / other.0?))
     }
 
     fn __rtruediv__(&self, other: Operand) -> PyResult<Expr> {
         guard_depth(&self.inner)?;
-        Ok(Expr::wrap(other.0 / self.inner.clone()))
+        Ok(Expr::wrap(other.0? / self.inner.clone()))
     }
 
     fn __neg__(&self) -> PyResult<Expr> {
@@ -954,8 +939,8 @@ impl LimitPoint {
         match self.inner {
             CasLimitPoint::Finite(value) => format!(
                 "LimitPoint.finite({}/{})",
-                value.numerator(),
-                value.denominator()
+                value.numerator_big(),
+                value.denominator_big()
             ),
             CasLimitPoint::PosInfinity => "LimitPoint.pos_infinity()".to_owned(),
             CasLimitPoint::NegInfinity => "LimitPoint.neg_infinity()".to_owned(),

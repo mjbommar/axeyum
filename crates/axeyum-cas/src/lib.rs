@@ -653,10 +653,10 @@ impl CasExpr {
     pub fn abs(self) -> Self {
         if let CasExpr::Const(value) = self {
             // Denominators are normalized positive, so the sign is the numerator's.
-            if value.numerator() >= 0 {
+            if value >= Rational::zero() {
                 return CasExpr::Const(value);
             }
-            if let Some(magnitude) = value.checked_neg() {
+            if let Some(magnitude) = value.wide_neg() {
                 return CasExpr::Const(magnitude);
             }
         }
@@ -668,8 +668,9 @@ impl CasExpr {
     #[must_use]
     pub fn sign(self) -> Self {
         if let CasExpr::Const(value) = self {
-            let n = value.numerator();
-            return CasExpr::int(i128::from(n > 0) - i128::from(n < 0));
+            return CasExpr::int(
+                i128::from(value > Rational::zero()) - i128::from(value < Rational::zero()),
+            );
         }
         CasExpr::Unary(UnaryFunc::Sign, Box::new(self))
     }
@@ -679,7 +680,13 @@ impl CasExpr {
     #[must_use]
     pub fn floor(self) -> Self {
         if let CasExpr::Const(value) = self {
-            return CasExpr::int(value.numerator().div_euclid(value.denominator()));
+            let integer = axeyum_arith::big::Integer::div_floor(
+                &value.numerator_big(),
+                &value.denominator_big(),
+            );
+            if let Some(folded) = Rational::from_big_rational(&BigRational::from_integer(integer)) {
+                return CasExpr::Const(folded);
+            }
         }
         CasExpr::Unary(UnaryFunc::Floor, Box::new(self))
     }
@@ -689,8 +696,13 @@ impl CasExpr {
     #[must_use]
     pub fn ceiling(self) -> Self {
         if let CasExpr::Const(value) = self {
-            let (num, den) = (value.numerator(), value.denominator());
-            return CasExpr::int(-((-num).div_euclid(den)));
+            let integer = axeyum_arith::big::Integer::div_ceil(
+                &value.numerator_big(),
+                &value.denominator_big(),
+            );
+            if let Some(folded) = Rational::from_big_rational(&BigRational::from_integer(integer)) {
+                return CasExpr::Const(folded);
+            }
         }
         CasExpr::Unary(UnaryFunc::Ceiling, Box::new(self))
     }
@@ -911,12 +923,8 @@ impl CasExpr {
     fn render(&self, min_prec: u8) -> String {
         let (prec, s): (u8, String) = match self {
             CasExpr::Const(r) => {
-                let text = if r.denominator() == 1 {
-                    format!("{}", r.numerator())
-                } else {
-                    format!("{}/{}", r.numerator(), r.denominator())
-                };
-                let prec = if r.numerator() < 0 || r.denominator() != 1 {
+                let text = r.to_string();
+                let prec = if *r < Rational::zero() || !r.is_integer() {
                     2
                 } else {
                     4
@@ -930,10 +938,15 @@ impl CasExpr {
                 // Pull a leading negative constant sign out front for readability
                 // (`-2*I` rather than `(-2)*I`, `-x*y` rather than `(-1)*x*y`).
                 let (sign, rendered): (&str, Vec<String>) = match factors.first() {
-                    Some(CasExpr::Const(k)) if k.numerator() < 0 => {
+                    Some(CasExpr::Const(k)) if *k < Rational::zero() => {
                         let mut parts: Vec<String> = Vec::with_capacity(factors.len());
                         if *k != Rational::integer(-1) {
-                            parts.push(CasExpr::Const(k.checked_neg().unwrap_or(*k)).render(3));
+                            let magnitude = (-k.to_big_rational()).to_string();
+                            parts.push(if k.is_integer() {
+                                magnitude
+                            } else {
+                                format!("({magnitude})")
+                            });
                         }
                         for factor in &factors[1..] {
                             parts.push(factor.render(3));

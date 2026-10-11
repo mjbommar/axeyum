@@ -60,3 +60,46 @@ with one test thread. Log `/var/tmp/axeyum-cas-exact-gates-upyai0w9/cas_lib.log`
 This validates the exact-input patch's library population; three new integration
 tests passed separately. It is not a workspace gate and does not validate the
 new trace module, which is on a child branch in a separate worktree.
+
+## Wide Python transport and evaluation in progress
+
+ADR-2900 proposes reusing the existing promoted Rational carrier for Python.
+Constructor/getter/Fraction/operand transport uses bounded signed integer bytes
+(16,384 bits per component), including builtin integer descriptors so subclass
+overrides cannot change the transported value. Numeric hashes use exact Python
+Fraction hashing. A private rational evaluator supports bounded big intermediates
+(4,096 visits, depth 128, 16,384 component bits) and repeated-squaring powers.
+Missing variables and undefined division remain None; resource limits are explicit.
+No float intermediates or Python decimal conversion are involved.
+
+Initial fresh Python run: 208 pass/one fail (209 collected). The failure exposed
+PyO3 masking arithmetic extraction errors as NotImplemented. Operand now carries
+recognized input errors into the operator body. Fresh post-fix package
+`/var/tmp/axeyum-wide-python-final-0jafsvsm`, native SHA-256
+`15ef062fd1312c6c8250f41f0fcae6d652db89d630e25fc14de6c559602b8584`,
+passed 210 tests (210 collected), including independent 360-period Fraction
+calculation, signed wide round trips, hash equality, decimal settings, subclass
+controls, resource limits and missing/undefined distinctions. Focused clippy passed
+before the later constant-fold changes. Four Rust wide-input controls passed.
+
+Generated stubs contain 645 items in 27 modules; constructor/rat defaults now
+show optional integer denominator None (means one), and getters return Python int.
+Subsequent audit found remaining narrow constant abs/sign/floor/ceiling and
+negative-product rendering; repaired and rebuilding with new controls, including
+i128::MIN ceiling. Rust narrow eval and unsupported operation boundaries remain
+separate; no all-operations wide guarantee, LIB-6 completion or integration claim.
+Full CAS/workspace gates must be rerun for the new core changes.
+
+Final constant-fold validation: fresh build 97916 exited 0; isolated package
+`/var/tmp/axeyum-wide-fold-python-wiklqz87` loaded native SHA-256
+`662f862b46c2c1020203a0ed76fe6cba996efde03239c3e6f2ebdde79549569c`.
+213 Python tests passed (213 collected), including wide constant unary folds and
+i128::MIN ceiling. Focused clippy and four Rust wide-input tests passed in 49080.
+The arithmetic-boundary gate caught the earlier test's direct num_* imports;
+changed them to axeyum_arith::big, and the gate now passes (zero unallowed/stale).
+Rustfmt check on the modified CAS core and diff whitespace checks pass.
+
+Remaining wide coverage includes auditing older CAS operation/numeral extraction
+boundaries, full expression/certificate serialization and kernel bridges. The
+new exact evaluation route is computed evidence, not a newly admitted theorem.
+Negative powers, distinguished pi and text parsing remain required work.

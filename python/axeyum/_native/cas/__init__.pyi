@@ -1155,12 +1155,12 @@ class DefiniteIntegral:
 @typing.final
 class Expr:
     @staticmethod
-    def int(n: builtins.int) -> Expr:
+    def int(n: int) -> Expr:
         r"""
         An exact integer constant.
         """
     @staticmethod
-    def rat(num: builtins.int, den: builtins.int = 1) -> Expr:
+    def rat(num: int, den: typing.Optional[int] = None) -> Expr:
         r"""
         An exact rational constant `num / den`.
         
@@ -1839,8 +1839,8 @@ class Permutation:
 @typing.final
 class Rational:
     r"""
-    An exact rational number, normalized, with an `i128` numerator and
-    denominator.
+    An exact rational number with a positive denominator. Integer transport
+    supports up to 16,384 bits per input or result component.
     
     Constructing one with a zero denominator raises `ValueError`:
     `axeyum_ir::Rational::new` panics there, so the binding goes through
@@ -1856,7 +1856,7 @@ class Rational:
         r"""
         The normalized denominator (always positive).
         """
-    def __new__(cls, num: builtins.int, den: builtins.int = 1) -> Rational:
+    def __new__(cls, num: int, den: typing.Optional[int] = None) -> Rational:
         r"""
         `Rational(num, den=1)`.
         """
@@ -1884,7 +1884,7 @@ class Rational:
         
         # Errors
         
-        Raises `ValueError` when the pair does not fit in `i128` or the
+        Raises `ValueError` when integer transport exceeds its bit limit or the
         denominator is zero, and `TypeError` for an object with no such fields.
         """
     def __repr__(self) -> builtins.str: ...

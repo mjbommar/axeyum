@@ -338,7 +338,7 @@ impl RealInterval {
         let render = |value: Option<IrRational>, fallback: &str| {
             value.map_or_else(
                 || fallback.to_owned(),
-                |value| format!("{}/{}", value.numerator(), value.denominator()),
+                |value| format!("{}/{}", value.numerator_big(), value.denominator_big()),
             )
         };
         format!(

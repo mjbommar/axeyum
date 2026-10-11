@@ -31,6 +31,7 @@ pub(crate) mod algebraic;
 pub(crate) mod boolean;
 pub(crate) mod certify;
 pub(crate) mod combinatorics;
+mod exact_eval;
 pub(crate) mod expr;
 pub(crate) mod functions;
 pub(crate) mod gf;

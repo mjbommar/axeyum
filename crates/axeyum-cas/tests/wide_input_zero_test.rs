@@ -1,8 +1,7 @@
 //! The existing big fallback must accept already-promoted IR coefficients.
+use axeyum_arith::big::{BigInt, BigRational};
 use axeyum_cas::{CasExpr, ZeroTest, equal, recheck_zero_test};
 use axeyum_ir::Rational;
-use num_bigint::BigInt;
-use num_rational::BigRational;
 
 fn wide() -> Rational {
     Rational::from_big_rational(&BigRational::new(BigInt::from(1) << 192, BigInt::from(3))).unwrap()
@@ -78,4 +77,17 @@ fn thirty_year_payment_matches_an_independent_fraction_fixture() {
         ZeroTest::Certified { equal: true, .. } | ZeroTest::CertifiedBig { equal: true, .. }
     ));
     assert!(recheck_zero_test(&actual, &expected, &certificate));
+}
+
+#[test]
+fn promoted_constants_render_with_sign_and_power_precedence() {
+    let coefficient = wide();
+    let positive = CasExpr::Const(coefficient);
+    assert_eq!(positive.to_string(), coefficient.to_string());
+    let negative = CasExpr::Const(coefficient.wide_neg().unwrap());
+    assert_eq!(negative.to_string(), format!("-{}", coefficient));
+    assert_eq!(
+        CasExpr::Pow(Box::new(negative), 2).to_string(),
+        format!("(-{})^2", coefficient)
+    );
 }
