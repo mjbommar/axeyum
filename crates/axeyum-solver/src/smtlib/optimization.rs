@@ -50,7 +50,7 @@ pub struct ObjectiveResult {
     model: Option<Model>,
     context: Vec<TermId>,
     no_better: Option<crate::lra::FarkasCertificate>,
-    no_better_names: Vec<String>,
+    no_better_names: Vec<(String, bool)>,
 }
 
 /// Owns the original terms and per-objective contexts required for model replay.
@@ -433,7 +433,13 @@ pub fn optimize_with_models(
                 row.no_better_names = certificate
                     .vars
                     .iter()
-                    .map(|&symbol| relaxed.symbol(symbol).0.to_owned())
+                    .map(|&symbol| {
+                        let name = relaxed.symbol(symbol).0;
+                        (
+                            name.to_owned(),
+                            relaxed.find_internal_symbol(name) == Some(symbol),
+                        )
+                    })
                     .collect();
             }
             if deadline.is_some_and(|d| Instant::now() >= d) {

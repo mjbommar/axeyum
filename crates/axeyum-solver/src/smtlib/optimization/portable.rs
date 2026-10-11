@@ -24,7 +24,7 @@ struct Row {
     maximize: bool,
     value: String,
     model: Vec<Binding>,
-    columns: Vec<String>,
+    columns: Vec<(String, bool)>,
     atoms: Vec<Atom>,
     origins: Vec<usize>,
     multipliers: Vec<Exact>,
@@ -272,6 +272,7 @@ fn source_limits(source: &str) -> Result<(), SolverError> {
         if !matches!(
             name,
             "set-logic"
+                | "set-option"
                 | "declare-const"
                 | "declare-fun"
                 | "assert"
@@ -436,10 +437,13 @@ impl OptimizationCertificate {
             let columns = row
                 .columns
                 .iter()
-                .map(|name| {
-                    relaxed
-                        .find_symbol(name)
-                        .ok_or_else(|| unsupported("unknown certificate column"))
+                .map(|(name, internal)| {
+                    let symbol = if *internal {
+                        relaxed.find_internal_symbol(name)
+                    } else {
+                        relaxed.find_symbol(name)
+                    };
+                    symbol.ok_or_else(|| unsupported("unknown certificate column"))
                 })
                 .collect::<Result<Vec<_>, SolverError>>()?;
             let atoms = row
@@ -553,6 +557,33 @@ mod tests {
             multiplier.denominator = "1".into();
         }
         assert!(!cert.check(SOURCE).unwrap().accepted);
+    }
+    #[test]
+    fn column_namespace_is_part_of_source_binding() {
+        let mut cert = certificate(OptimizationMode::Box, 0);
+        assert!(cert.rows[0].columns.iter().any(|(_, internal)| *internal));
+        for (_, internal) in &mut cert.rows[0].columns {
+            *internal = false;
+        }
+        assert!(cert.check(SOURCE).is_err());
+    }
+    #[test]
+    fn explicit_priority_replays_and_cannot_be_retargeted() {
+        let source = format!("(set-option :opt.priority lex){SOURCE}");
+        let mut cert = super::super::optimize_with_models(
+            &source,
+            OptimizationMode::Lexicographic,
+            &crate::SolverConfig::new(),
+        )
+        .unwrap()
+        .certificate(1)
+        .unwrap();
+        let report = cert.check(&source).unwrap();
+        assert!(report.accepted);
+        assert_eq!(report.discharged, 4);
+        let changed = source.replace(":opt.priority lex", ":opt.priority box");
+        cert.source = changed.clone();
+        assert!(!cert.check(&changed).unwrap().accepted);
     }
     #[test]
     fn strict_envelope_rejects_unknown_duplicate_and_oversized_data() {

@@ -8,7 +8,9 @@ Date: 2026-10-11
 Version 1 carries the exact source script, mode, selected objective index and
 all required earlier lexicographic rows. Each row binds its objective direction
 and exact integer value, named model assignments, and Farkas atoms, origins,
-multipliers and named variable columns. Box certificates carry only the selected
+multipliers and named variable columns with explicit user/internal namespace tags.
+The checker resolves each column in its declared namespace; helper names never
+fall back to user symbols. Box certificates carry only the selected
 row. Export requires the existing model-plus-refutation checks; missing evidence
 is an explicit decline. Parsing data never establishes acceptance.
 

@@ -85,9 +85,9 @@ fn promoted_constants_render_with_sign_and_power_precedence() {
     let positive = CasExpr::Const(coefficient);
     assert_eq!(positive.to_string(), coefficient.to_string());
     let negative = CasExpr::Const(coefficient.wide_neg().unwrap());
-    assert_eq!(negative.to_string(), format!("-{}", coefficient));
+    assert_eq!(negative.to_string(), format!("-{coefficient}"));
     assert_eq!(
         CasExpr::Pow(Box::new(negative), 2).to_string(),
-        format!("(-{})^2", coefficient)
+        format!("(-{coefficient})^2")
     );
 }
