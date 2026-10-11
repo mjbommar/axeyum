@@ -145,3 +145,44 @@ Saved text is limited to 8 MiB per component and 16 MiB total; exceeding a cap
 raises a resource-limit `ValueError`. Replay uses the existing unlimited Rust
 checker contract. An absent LRAT remains `None` and permits DRAT checking;
 a present invalid LRAT cannot silently fall back to a successful DRAT check.
+
+## Python reference-miter certificates
+
+For supported Boolean and BV terms, request a certificate containing both the
+reference-lowering miter refutation and the final query refutation:
+
+```python
+outcome = proofs.certify_qf_bv_unsat_end_to_end(
+    arena, assertions, timeout_ms=20_000,
+)
+assert outcome.status == "certified"
+certificate = outcome.proof
+assert certificate is not None
+
+# These strings can be saved and restored in a separate process.
+restored = proofs.EndToEndUnsatProof(
+    certificate.faithfulness.dimacs,
+    certificate.faithfulness.drat,
+    proofs.UnsatProof(
+        certificate.unsat.dimacs,
+        certificate.unsat.drat,
+        certificate.unsat.lrat,
+    ),
+)
+assert restored.recheck_for_bool_terms(arena, assertions) is True
+```
+
+Source replay reconstructs the expected final CNF and reference miter from the
+supplied original terms, requires exact correspondence for both, and checks
+both refutations without SAT search. `recheck_refutations()` checks only the
+two clausal proofs; use `recheck_for_bool_terms()` to establish correspondence
+to the supplied query. Independent reference lowering, miter construction and
+Tseitin encoding remain trusted; this API does not admit a kernel theorem.
+
+The other statuses are `satisfiable` and `not-certified`, each with no proof.
+An unsupported input or exhausted certification search can yield `not-certified`;
+that status carries no SAT/UNSAT verdict. The timeout limits the two SAT searches
+under one deadline; construction and checking use the unlimited Rust contract.
+Restored text is capped at 8 MiB per component and 16 MiB per clausal proof,
+with at most 32 MiB across the composite. Missing final LRAT remains `None`;
+the reference miter currently supplies DRAT without LRAT.

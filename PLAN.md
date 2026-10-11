@@ -721,8 +721,9 @@ without SAT search. Seven new controls and nine existing producer fixtures pass
 0 failures/ignores; solver Clippy-D passes37.72s. First private final-checker
 replacement also removed type validation:4 pass/3 fail, not an exact-one guard
 result. Sources restored; next mutation isolates nested final DIMACS guard.
-Python composite proof/outcomes/transport/source replay implemented; native55236
-building and twelve controls written, no native pass credited yet.
+Python composite API committed7437a1356; fresh native build passes4m16s.
+Sealed native dab497034b3f4b733d3fc70c49d89ba702f14946e9b6882deeb76b6595451356;
+focused end-to-end/source/SAT/proof/OMT49 pass0 skips7.03s. Stub refresh live.
 
 Full solver74254 passed2033 tests0 failures/ignores909.38s on wide-decimal/NRA
 source; predates newer code. Current full solver77505 and older datatype

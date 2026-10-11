@@ -114,3 +114,17 @@ changed metadata assignment to clone_into and the warning-denied rerun passes.
 Current export/census exits0 with two source-bound Boolean/BV examples and six
 independent Z3 UNSAT source verdicts. Current fixture/certifier scope remains
 explicit in the route census; no independent translation or kernel credit.
+
+
+Reference-miter source replay committed9fd9721d0; Python composite API committed
+7437a1356. New core controls7 and existing miter producer fixtures9 pass with
+no failures/ignores; solver Clippy-D passes37.72s. Fresh Python native build
+completed4m16s, sealed package
+`/data0/axeyum/artifacts/python/reference-miter-replay-rqkla299/package`, native
+SHA256 `dab497034b3f4b733d3fc70c49d89ba702f14946e9b6882deeb76b6595451356`.
+Focused Python end-to-end/source/SAT/proof/OMT suites collect49 and pass49 with
+no skips7.03s. Two child processes disable producer APIs before restoring and
+checking certificates. Incorrect source/miter substitutions reject even when
+both clausal refutations independently check. Corrected private guard controls
+and current full solver/older datatype workspace remain live as observed;
+no completion credit yet. Generated Python stubs are being refreshed.
