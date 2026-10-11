@@ -123,3 +123,12 @@ its native minimality/uniqueness obligations. Its independently replayed finite
 conditional certificate is separate evidence. No applicability or calendar
 authenticity claim follows from this demonstration. Shared closing gates
 and actual integration remain open.
+
+## Superseded run cancellation
+
+Parent workspace18900 was deliberately cancelled after confirming its owned
+process2347214, source directory and resource scope. It exits143 and supplies
+no completion credit. The current workspace11433 covers the parent libraries
+and later CAS/Python additions, so removing this duplicate compilation reduces
+I/O contention without removing any required final test population. The
+current run and all queued final gates remain required.

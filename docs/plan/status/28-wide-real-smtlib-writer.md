@@ -37,7 +37,7 @@ shape duplicate/projection scopes explicitly skipped, not full population credit
 Current facts60449 passes2971/0errors with0missing derived edges. Final workspace11433 remains live, uncredited. All-targets
 check22417 waits for confirmed workspace Cargo3092650 to finish. Read-only main
 merge preview has no conflicts; keep main untouched until green. Older parent
-workspace handles need independent collection and cannot qualify this child.
+workspace18900 cancelled duplicate/143; datatype87947 terminal143, no credit.
 ADR3200/3300/3400/3500/7200 accepted as bounded contracts; validator20pass.
 Final native costs/statute replay and5shipped examples pass; fmt2294files passes.
 ADR6700 accepted:release controls3pass, source bytes identical. Next: collect workspace/all-targets and

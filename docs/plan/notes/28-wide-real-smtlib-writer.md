@@ -457,3 +457,16 @@ SATexport example retains guardedchecker19863c56 identity:2LRATexports verify
 with2rejectioncontrols each;6clausalroutes externally verify and SATmodelsreplay;
 2reference-miter cases reject substitutedsource/unrelatedvalidmiter. RawCNF
 LRATabsent; generaltheory source-mapping export remains explicitly absent.
+
+### Superseded workspace resource cleanup
+
+Parent workspace18900 remained live after2h22m. Independently verified its
+Cargo2347214 cwd, arguments and exact scope `run-p2347214-i6531304.scope`;
+current Cargo3092650 belongs to distinct `run-p3092650-i7266132.scope`. Source
+diff9fd9721d0..HEAD touches only CAS conditional additions and Python bindings;
+the final workspace covers every parent library plus these changes. With
+measured host I/O pressure and duplicate compilation, deliberately stopped
+only the owned older scope. Session18900 is terminal143 (cancelled), notpass.
+No result is credited or retried; the retained final full workspace must
+succeed. Datatype87947 was already terminal143 and remains uncredited.
+Current full-run source remains frozen; queued targets/Clippy/CLI unchanged.
