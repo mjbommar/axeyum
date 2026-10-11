@@ -1623,6 +1623,31 @@ pub struct FarkasCertificate {
 }
 
 impl FarkasCertificate {
+    /// Rebuild the source system before checking a carried refutation. This
+    /// checks columns, assertion origins and atoms without invoking search.
+    /// An expired deadline or declined collection returns false.
+    ///
+    /// # Errors
+    /// Returns source linearization errors for unsupported terms.
+    pub fn verify_against_within(
+        &self,
+        arena: &TermArena,
+        assertions: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Result<bool, SolverError> {
+        let Ok(collected) = collect_constraints(arena, assertions, deadline)? else {
+            return Ok(false);
+        };
+        if collected.overflow || collected.timed_out || collected.trivially_unsat {
+            return Ok(false);
+        }
+        let atoms: Vec<FarkasAtom> = collected.constraints.iter().map(FarkasAtom::from).collect();
+        let origins: Vec<usize> = collected.constraints.iter().map(|c| c.origin).collect();
+        Ok(self.vars == collected.vars
+            && self.origins == origins
+            && self.atoms == atoms
+            && self.verify())
+    }
     /// Verifies the refutation from scratch: every multiplier is nonnegative,
     /// at least one is positive, the combined variable coefficients all cancel,
     /// and the combined constant relation is unsatisfiable. Returns `true` iff
@@ -6524,6 +6549,68 @@ mod opaque_real_guard_tests {
         assert!(
             parse_opaque_real_apps_lever(Some("off")),
             "a typo is ON, not OFF"
+        );
+    }
+}
+
+#[cfg(test)]
+mod source_bound_farkas_tests {
+    use super::*;
+
+    #[test]
+    fn carried_atoms_cannot_replace_original_source() {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("source_x").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let one = arena.real_const(Rational::integer(1));
+        let below = arena.real_lt(x, zero).unwrap();
+        let above = arena.real_lt(zero, x).unwrap();
+        let source = vec![below, above];
+        let certificate = lra_farkas_certificate(&arena, &source).unwrap().unwrap();
+        assert!(
+            certificate
+                .verify_against_within(&arena, &source, None)
+                .unwrap()
+        );
+        let changed = vec![arena.real_lt(x, one).unwrap(), above];
+        assert!(certificate.verify());
+        assert!(
+            !certificate
+                .verify_against_within(&arena, &changed, None)
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn source_columns_origins_and_deadline_are_checked() {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let source = vec![
+            arena.real_lt(x, zero).unwrap(),
+            arena.real_lt(zero, x).unwrap(),
+        ];
+        let certificate = lra_farkas_certificate(&arena, &source).unwrap().unwrap();
+        let mut origins = certificate.clone();
+        origins.origins.reverse();
+        assert!(origins.verify());
+        assert!(
+            !origins
+                .verify_against_within(&arena, &source, None)
+                .unwrap()
+        );
+        let mut columns = certificate.clone();
+        columns.vars[0] = arena.declare("other", axeyum_ir::Sort::Real).unwrap();
+        assert!(columns.verify());
+        assert!(
+            !columns
+                .verify_against_within(&arena, &source, None)
+                .unwrap()
+        );
+        assert!(
+            !certificate
+                .verify_against_within(&arena, &source, Some(Instant::now()))
+                .unwrap()
         );
     }
 }

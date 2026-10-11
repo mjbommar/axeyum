@@ -1092,3 +1092,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [3400](adr-3400-statute-time-template-carries-calendar-and-applicability-inputs.md) | Statute time template carries calendar and applicability inputs | proposed |
 | [3500](adr-3500-finite-deadline-certificates-replay-native-ground-facts.md) | Finite deadline certificates replay native ground facts | proposed |
 | [6300](adr-6300-typed-omt-results-retain-original-model-replay.md) | typed OMT results retain original model replay | proposed; implementation and validation in progress |
+| [6301](adr-6301-farkas-source-binding-precedes-optimality-credit.md) | Farkas source binding precedes optimality credit | proposed |
