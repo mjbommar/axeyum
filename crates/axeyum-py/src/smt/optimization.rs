@@ -5,7 +5,10 @@ use crate::{convert::model_dict, stub_types::PyBigInt};
 use axeyum_ir::{Sort, Value};
 use axeyum_solver::{
     OptOutcome,
-    smtlib::optimization::{OptimizationMode, OptimizationReport, optimize_with_models},
+    smtlib::optimization::{
+        OptimizationMode, OptimizationReport, optimize_with_models,
+        portable::{CertificateCheckReport, OptimizationCertificate},
+    },
 };
 use pyo3::{
     exceptions::{PyIndexError, PyValueError},
@@ -117,6 +120,12 @@ impl OptimizationObjective {
         py.detach(|| self.report.replay_optimality(self.index))
             .map_err(map_solver_error)
     }
+    /// Export bounded original-query evidence. Missing optimality evidence declines.
+    /// Lexicographic exports include every earlier objective's witnesses.
+    fn certificate_json(&self, py: Python<'_>) -> PyResult<String> {
+        py.detach(|| self.report.certificate(self.index)?.to_json())
+            .map_err(map_solver_error)
+    }
     /// Replay both witnesses, including every earlier lexicographic objective.
     /// Missing or invalid evidence yields false; a model alone is insufficient.
     #[getter]
@@ -217,8 +226,66 @@ fn optimize(
         report: Arc::new(report),
     })
 }
+/// Counted original-query replay; parsing certificate data alone grants no acceptance.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.smt")
+)]
+#[pyclass(
+    frozen,
+    from_py_object,
+    module = "axeyum",
+    name = "OptimizationCertificateCheck"
+)]
+#[derive(Debug, Clone)]
+pub struct OptimizationCertificateCheck {
+    report: CertificateCheckReport,
+}
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
+#[pymethods]
+impl OptimizationCertificateCheck {
+    /// True only after all required feasible-model and strict-better checks succeed.
+    #[getter]
+    fn accepted(&self) -> bool {
+        self.report.accepted
+    }
+    /// Number of obligations actually examined.
+    #[getter]
+    fn examined(&self) -> usize {
+        self.report.examined
+    }
+    /// Number of obligations successfully discharged.
+    #[getter]
+    fn discharged(&self) -> usize {
+        self.report.discharged
+    }
+    /// Rejection reason, or None after complete acceptance.
+    #[getter]
+    fn reason(&self) -> Option<String> {
+        self.report.reason.clone()
+    }
+}
+/// Replay exported optimization JSON against the caller's original query.
+/// Never runs optimization search. Malformed/unsupported evidence raises an error.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
+)]
+#[pyfunction]
+fn check_optimization_certificate(
+    py: Python<'_>,
+    certificate_json: &str,
+    script: &str,
+) -> PyResult<OptimizationCertificateCheck> {
+    let report = py
+        .detach(|| OptimizationCertificate::from_json(certificate_json)?.check(script))
+        .map_err(map_solver_error)?;
+    Ok(OptimizationCertificateCheck { report })
+}
 pub(super) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<OptimizationResult>()?;
+    module.add_class::<OptimizationCertificateCheck>()?;
+    module.add_function(wrap_pyfunction!(check_optimization_certificate, module)?)?;
     module.add_class::<OptimizationObjective>()?;
     module.add_function(wrap_pyfunction!(optimize, module)?)?;
     Ok(())

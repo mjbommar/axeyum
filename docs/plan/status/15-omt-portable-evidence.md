@@ -21,7 +21,16 @@ Parent source-bound branch front-door gates completed: 2/48/13/82/13 tests,
 `/var/tmp/axeyum-omt-gold-required-_volk68z/`. Those are parent evidence, not
 portable-child broad-gate credit. Parent full solver/workspace not yet credited.
 
-Next: Python certificate export and counted JSON replay, fresh extension and
-separate-process controls, snapshot guard mutations, then broader gates.
+Python now exports objective certificate JSON and provides counted replay against
+caller-supplied source via `check_optimization_certificate`. Fresh native build
+75801 passed; sealed package
+`/var/tmp/axeyum-omt-portable-python-hy6yxe7f/package`, SHA256
+`79eaea84038abb9cbfc2cc71f42c556f46e8d23be3fa295eca82fb07aa2ddc1e`.
+Fifteen Python tests passed, 0 skipped, including separate-process replay without
+optimization and invalid subject/value/prefix/envelope controls. Updated example
+ran four model replays plus counted certificate checks. Logs:
+`/var/tmp/axeyum-omt-portable-python-tests.log`. Stub generation56496 running.
+
+Next: generated stub validation, snapshot checker mutations and broader gates.
 Integer-only/BV/Boolean optimality producers, preemptible replay and kernel
 reconstruction remain open; full feedback goal remains active.

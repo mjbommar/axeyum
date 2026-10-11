@@ -28,6 +28,12 @@ def main() -> None:
         for index, row in enumerate(result.objectives):
             if row.replay() is not True:
                 raise AssertionError(f"{mode} objective {index}: missing or invalid witness")
+            certificate = row.certificate_json()
+            evidence = smt.check_optimization_certificate(certificate, SCRIPT)
+            expected_obligations = 2 * (index + 1) if mode == "lex" else 2
+            if (not evidence.accepted or evidence.examined != expected_obligations
+                    or evidence.discharged != expected_obligations):
+                raise AssertionError(f"{mode} objective {index}: invalid optimum evidence")
             checked += 1
             print(f"{mode}[{index}]: {row.direction} {row.value}; "
                   f"model={row.model}; replay=True; gold={row.gold_eligible}")
