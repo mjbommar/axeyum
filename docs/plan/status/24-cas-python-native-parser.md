@@ -24,5 +24,6 @@ called). Focused native runtime suite passed; broad combined Python suite/stubs 
 Runtime stub drift passed27 modules/1874 symbols/5 aliases/319 dunders;
 type gate1823 params/1738 typed/131 Any all allowlisted/46 Any returns95.3%.
 Generated cas stub carries native parser transport. Targeted lint launched.
-Combined Python72341 remains live. OMT review confirms unbounded parsing remains
+Combined Python72341 passed1120/0 skipped,67.53s against sealed native;
+/var/tmp/axeyum-cas-python-native-combined.log. OMT review confirms unbounded parsing remains
 in optimize_smtlib/lex/typed paths, despite search deadline sharing; next lane.
