@@ -387,3 +387,17 @@ certificate replay. No effective-date or legal-applicability inference is added.
 ADR6700 kernel reconstruction remains under review pending current workspace
 evidence. Final workspace Cargo3092650 was independently confirmed live;
 all-targets watcher remains dependent on its termination, not inferred success.
+
+### Final-native example and statute receipts
+
+Sealed typed package nested-conditional-typed-pkiqdk79 preserves99af1a4c native.
+Both committed cost examples exit0: `/var/tmp/axeyum-nested-final-small-cas-trace-cost.json`
+and `/var/tmp/axeyum-nested-final-wide-cas-trace-cost.json`, each records full
+native SHA/path, deterministic checked output and independent correctness.
+`/var/tmp/axeyum-nested-final-statute-certificates.log`:7packs/1template/4snapshots/
+1conditional replay,exit0. This replaces parent-native-only receipts for these
+closing requirements without widening their assumptions or comparison scope.
+Queued aggregateClippy12036 after live watcher3180124; it requires all-targets
+exit0. Its temporary PATHshim restores originalPATH before serialized heavy
+Clippy, avoiding recursion and retaining per-job resource caps. Fullformat88573
+runs read-only. Workspace3092650 independently confirmed live again.

@@ -6,7 +6,7 @@ This is an evidence audit, not a scheduling authority. The original scope is
 [PLAN.md](../../PLAN.md) owns the queue. Completion remains unproven.
 
 Audited checkout: `feat/nested-conditional-cas-trace-20261011`, source ancestry
-through `629903932`. Main contains the research plans, not this implementation
+through `84a3e1960` (Rust cc65885a3; sealed native source3f2411431). Main contains the research plans, not this implementation
 chain. A passing ancestor test does not qualify subsequently changed source.
 Earlier lane files contain historical running handles and superseded failures;
 use actual terminal output before changing any item to complete.
@@ -15,9 +15,9 @@ use actual terminal output before changing any item to complete.
 |---|---|---|
 | T0 rule/route inventory | [Kernel route inventory](notes/cas-trace-kernel.md), rewrite and guarded trace modules | Nested route inventory reconciled through0b829e980; final public-surface review remains. |
 | T1 source-bound ordered certified steps | [Conditional trace](../../crates/axeyum-cas/src/conditional_trace.rs), six focused Rust tests pass | Private congruence guard completed:6baseline ->5pass/one intended failure, restored bytewise. Full CAS2154pass/11ignored; remaining lint/final broad gates. |
-| T2 Python serialized replay without production | [Conditional Python tests](../../python/tests/test_cas_conditional_trace.py), ordinary and guarded replay suites | Fresh native34trace tests and25file consumer1166pass/1checker skip; generated stubs committed, drift/type/runtime44 pass0skip; final-source rerun of recorded narrow/wide cost examples (parent native7437a1356 measurements now recorded in lane notes). |
+| T2 Python serialized replay without production | [Conditional Python tests](../../python/tests/test_cas_conditional_trace.py), ordinary and guarded replay suites | Fresh native34trace tests and25file consumer1166pass/1checker skip; generated stubs committed, drift/type/runtime44 pass0skip; both cost examples now rerun on sealed native99af1a4c with independent exact checks, source-bound replay and deterministic export; aggregate closing gates remain. |
 | T3 kernel admission and measured empty footprint | [Kernel lane](status/19-cas-trace-kernel.md), bounded ring step reconstruction | Revalidate final-source generated identity and hostile assumption/endpoint controls; keep conditional/wide declines explicit. |
-| X0 wide exact rational transport/amortization | [Wide rational tests](../../python/tests/test_cas_wide_rationals.py), wide trace/guarded suites | Fresh final native regression and independent Fraction result; std/checked Rational operations remain bounded—do not claim all arithmetic routes widened. |
+| X0 wide exact rational transport/amortization | [Wide rational tests](../../python/tests/test_cas_wide_rationals.py), wide trace/guarded suites | Final native wide-rational/trace/eval tests included in1166pass consumer population; amortization cost example independently checks Fraction equality on99af1a4c. Aggregate gates remain; std/checked Rational operations retain explicit bounds. |
 | X1 negative integer powers/domains | Existing signed-power implementation and zero/nonzero controls in ancestry | Final constructor/parser/serialized replay checks; preserve partial division domains and unsupported bridge declines. |
 | X2 distinguished pi/enclosures/native parser | [Pi certificate tests](../../python/tests/test_cas_pi_certificate.py), [text parser tests](../../python/tests/test_cas_text_parser.py) | Final native and Rust suites, malformed/oversized input and enclosure corruption controls; constructor/parse/print agreement. |
 | EVD-5 SAT export census/independent checking/source binding | Six clausal routes plus two reference fixtures; parent focused Python49/census15/existing consumers1154 pass; [miter source tests](../../crates/axeyum-solver/tests/source_bound_miter_replay.rs) | Both private source-correspondence controls complete:7baseline ->6pass/one intended failure each, original bytes independently verified. Current branch runtime/stubs pass production; final typed checks44pass0skip include configured external export checks; Py lint passes. Retain optional LRAT and guarded external checker provenance. |
@@ -29,8 +29,8 @@ use actual terminal output before changing any item to complete.
 | O1 shared budgets/honest unboundedness | Intake, parsing, optimization and replay deadline repairs; quantifier polling controls | Final deterministic exhaustion/overflow checks. Resource ceilings cannot certify unboundedness; unsupported ray production must decline. |
 | O2 evidence-bearing Python gold answers | Box/lex results, source-bound model and strict-better UNSAT certificates | Final feasible/optimality replay, tampered value/model/order controls and objective-mode documentation; fresh OMT tests. |
 | CON-6 signed literal convenience/corrections | Signed integer compatibility parser; abs/distinct capability correction in audit | Final wide/quoted/declaration-precedence/roundtrip controls and all required parser frontdoors. Exact `notes/80` path remains unidentified; do not guess a historical file. |
-| R0 typed Date and existing-pack API | [Date tests](../../python/tests/test_rules_dates.py), [pack tests](../../python/tests/test_rules_packs.py) | Final lifting/leap/invalid/boundary controls and all existing-pack reuse; Python Date facade is explicit, native Date sort is a separate decision. |
-| R1 real-statute computation-of-time template | [Statute tests](../../python/tests/test_rules_statute_deadline.py), pinned official-text identity and source validator in ancestry | Current validator20 tests,7packs/4source snapshots pass; one exported certificate replays against preserved native7437a1356. Final native validation, independent bounded reference agreement and deadline/minimality checks remain. Applicability is an explicit assumption; retrieval date does not establish effective dates. |
+| R0 typed Date and existing-pack API | [Date tests](../../python/tests/test_rules_dates.py), [pack tests](../../python/tests/test_rules_packs.py) | Final native Date/pack/metadata controls included in1166pass population; bounded contracts accepted inADR3200/3300. Aggregate gates remain; Python Date facade is explicit, native Date sort is a separate decision. |
+| R1 real-statute computation-of-time template | [Statute tests](../../python/tests/test_rules_statute_deadline.py), pinned official-text identity and source validator in ancestry | Current validator20 tests,7packs/4source snapshots pass; one exported certificate now replays on final sealed native99af1a4c. Deadline/reference/minimality controls are included in1166pass native population. Aggregate gates and integration remain. Applicability is an explicit assumption; retrieval date does not establish effective dates. |
 
 ## Shared closing gates
 
@@ -47,3 +47,23 @@ correction `a7df59e83`, preserve unrelated checkout files, and archive completed
 lane snapshots with their evidence. Integration and final verification are still
 required; an isolated local commit is not a main landing. No item in this audit
 is marked complete solely because its implementation exists.
+
+## Final-native receipt update
+
+Sealed native SHA-256 `99af1a4ceb22c36626b6d011dc0e6dc6cfe35b4737c15fc128a1b7b1325b09b7`
+was reused without rebuilding for the two committed trace-cost examples and
+`validate-rules-as-code.py --statute-certificates`. Both examples exit zero:
+small polynomial workloads have 2/3/4 steps and 2549/3856/5597 JSON bytes;
+closed-rational and 360-payment workloads retain exact independent Fraction
+checks and byte replay. Timings remain host diagnostics, not performance parity.
+The statute validator exits zero with 7 packs, 1 template, 4 source snapshots
+and 1 replayed conditional certificate. Date/statute ADR adoption does not
+remove caller-supplied applicability/calendar assumptions.
+
+Final workspace session11433 remains live and uncredited. All-targets22417
+is queued after it; complete Clippy12036 is queued after the verified all-targets
+watcher3180124 and requires its recorded zero exit before launching. A temporary
+cargo shim wraps the script's heavy Clippy call with cargo-serialized while
+leaving read-only metadata direct; the wrapper's memory/admission limits remain.
+Read-only complete-format gate88573 is running. None of these pending gates
+is counted as a pass.
