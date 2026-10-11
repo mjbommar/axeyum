@@ -522,3 +522,23 @@ Helper53719 v1 terminal1 after2 successful queries: test assumed generic OMT Unk
 Trace-to-kernel code exists only in private complex/cas_bridge_tests.rs; public Ring/Rat helpers are mostly crate-private, and no CAS dispatch manifest exists. Do not treat successful bounded admission controls as the public producer/discovery handoff. Added an implementation plan; source remains frozen until an isolated continuation is created.
 
 Reordered only idle queued watchers after verifying each owned PID/command, empty child list and zero-length gate log. Stopped leaf-first3930154/3404801/3325630/3180124; sessions54766/43772/12036/22417 authoritatively terminal143, no gate attempted. Cargo3092650 remains live/untouched. New chain: frontier87172/PID88026 waits workspace; targets99970/PID92130 waits confirmed frontier success; Clippy54143/PID94141 waits target success; CLI97027/PID96536 waits Clippy success. All scripts/logs have v2 names under /var/tmp; original empty watcher logs retained. This gives the old unresolved timing regression a quiet slot before builds. Parent baseline source remains cc65885a3; future public-source additions cannot inherit whole-gate credit.
+
+
+## User-requested pause and publication checkpoint — 2026-10-11
+
+Implementation branch: `feat/nested-conditional-cas-trace-20261011`; pre-checkpoint
+HEAD `d1d20daf5`, Rust baseline `cc65885a3`. Main has not been integrated.
+The user requested documentation, commit and branch push, and paused further work.
+Stopped only the owned workspace scope and four verified idle downstream watchers.
+Workspace completed ten crates (3297 passed, zero failed, 15 ignored); the kernel
+suite was interrupted, so the aggregate gate is **not passed**. Frontier, all-targets,
+complete Clippy and refreshed CLI gates were cancelled before starting. The retained
+frontier timing failure remains unresolved. Earlier individual receipts keep their
+original source boundaries; no cancellation earns pass credit.
+
+The public CAS producer/discovery handoff is still required and planned in
+[the handoff plan](../cas-trace-public-handoff-plan-2026-10-11.md). The existing intake
+is private test code and the CAS bridge manifest is absent. Resume with that work,
+fresh required gates, the completion audit, then main integration. Cleanup removed
+231.68 GiB of inactive main-checkout build caches; source, active caches, checker
+binaries and evidence were preserved. No further cleanup is pending in this checkpoint.

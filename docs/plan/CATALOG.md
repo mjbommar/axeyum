@@ -11,7 +11,7 @@ rg -n 'QF_LRA' docs/plan/archive/lanes/      # every archived lane that mentions
 rg -n '<lane-or-topic>' docs/plan/CATALOG.md  # find the file, then open it
 ```
 
-Counts: 773 archived lanes (177 not DONE when archived), 55 older archive files, 348 dated plan notes, 88 lane notes, 508 strand and planning documents.
+Counts: 774 archived lanes (178 not DONE when archived), 55 older archive files, 349 dated plan notes, 88 lane notes, 508 strand and planning documents.
 
 ## Lanes that were not DONE when archived
 
@@ -21,6 +21,7 @@ the block's prose rather than its status token; `-` means the file states none.
 
 | Date | Lane | Status | Title |
 |---|---|---|---|
+| 2026-10-11 | [28-wide-real-smtlib-writer](archive/lanes/28-wide-real-smtlib-writer.md) | PAUSED | wide-real-smtlib-writer — exact input and source evidence |
 | 2026-09-17 | [nra-algebraic-witness](archive/lanes/nra-algebraic-witness.md) | - | `nra-algebraic-witness` — exact replay at an algebraic sample (ADR-2134) |
 | 2026-09-17 | [ax-proptest](archive/lanes/ax-proptest.md) | WIP | `ax-proptest` — property-test box audit (improvement-list item 5, ADR-2141) |
 | 2026-09-17 | [ax-policy](archive/lanes/ax-policy.md) | WIP | ax-policy — which model a `sat` returns (ADR-2140; items 6, 7, 9 of the 2026-09-16 list) |
@@ -868,6 +869,7 @@ Result notes, designs, handoffs and earlier queues. Evidence for claims; never t
 |---|---|---|
 | 2026-10-11 | [`docs/plan/user-feedback-completion-audit-2026-10-11.md`](user-feedback-completion-audit-2026-10-11.md) | User feedback completion audit — 2026-10-11 |
 | 2026-10-11 | [`docs/plan/sat-python-route-census-2026-10-11.md`](sat-python-route-census-2026-10-11.md) | Python SAT certificate route census — 2026-10-11 |
+| 2026-10-11 | [`docs/plan/cas-trace-public-handoff-plan-2026-10-11.md`](cas-trace-public-handoff-plan-2026-10-11.md) | CAS trace public intake and discovery handoff |
 | 2026-10-11 | [`docs/plan/cas-pi-enclosure-transport-2026-10-11.md`](cas-pi-enclosure-transport-2026-10-11.md) | Portable exact pi enclosure evidence — 2026-10-11 |
 | 2026-10-11 | [`docs/plan/cas-expression-wire-2026-10-11.md`](cas-expression-wire-2026-10-11.md) | Exact CAS expression transport — 2026-10-11 |
 | 2026-10-10 | [`docs/plan/user-feedback-audit-2026-10-10.md`](user-feedback-audit-2026-10-10.md) | User feedback audit and implementation map — 2026-10-10 |
@@ -1372,6 +1374,7 @@ Result notes, designs, handoffs and earlier queues. Evidence for claims; never t
 
 | Date | Lane | Status | Title |
 |---|---|---|---|
+| 2026-10-11 | [28-wide-real-smtlib-writer](archive/lanes/28-wide-real-smtlib-writer.md) | PAUSED | wide-real-smtlib-writer — exact input and source evidence |
 | 2026-10-11 | [27-eval-quantifier-deadline-controls](archive/lanes/27-eval-quantifier-deadline-controls.md) | DONE | eval-quantifier-deadline-controls — finite enumeration budget checks |
 | 2026-10-11 | [26-statute-source-snapshots](archive/lanes/26-statute-source-snapshots.md) | DONE | statute-source-snapshots — replayable official source identities |
 | 2026-10-10 | [01-user-feedback-plan](archive/lanes/01-user-feedback-plan.md) | DONE | user-feedback-plan — completed research and roadmap integration |

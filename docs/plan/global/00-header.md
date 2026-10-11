@@ -8,9 +8,10 @@ first; a lane updates its own file under `docs/plan/status/`, never this one.
   (2026-09-17). That consolidation archived the earlier campaign lanes.
 - Current feedback work: **2026-10-11**, in isolated implementation branches.
   The [completion audit](docs/plan/user-feedback-completion-audit-2026-10-11.md)
-  records bounded capabilities and verification; final aggregate gates and
-  main integration remain open. Active lane files below supersede the earlier
-  paused state. Main currently carries the research plans and corrections.
+  records bounded capabilities and verification. This feedback campaign is
+  **PAUSED at user request**; final aggregate gates, the public CAS discovery
+  handoff, and main integration remain open. Historical lane receipts below
+  describe prior work, not running jobs. Main carries research plans/corrections.
 - Status vocabulary: `TODO` · `WIP` · `BLOCKED` · `DONE` · `PAUSED`.
 - History moved out of this file. The 770 lane files of the August–September
   campaigns are in [`docs/plan/archive/lanes/`](docs/plan/archive/README.md);

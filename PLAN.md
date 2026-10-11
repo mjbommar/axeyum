@@ -15,9 +15,10 @@ first; a lane updates its own file under `docs/plan/status/`, never this one.
   (2026-09-17). That consolidation archived the earlier campaign lanes.
 - Current feedback work: **2026-10-11**, in isolated implementation branches.
   The [completion audit](docs/plan/user-feedback-completion-audit-2026-10-11.md)
-  records bounded capabilities and verification; final aggregate gates and
-  main integration remain open. Active lane files below supersede the earlier
-  paused state. Main currently carries the research plans and corrections.
+  records bounded capabilities and verification. This feedback campaign is
+  **PAUSED at user request**; final aggregate gates, the public CAS discovery
+  handoff, and main integration remain open. Historical lane receipts below
+  describe prior work, not running jobs. Main carries research plans/corrections.
 - Status vocabulary: `TODO` · `WIP` · `BLOCKED` · `DONE` · `PAUSED`.
 - History moved out of this file. The 770 lane files of the August–September
   campaigns are in [`docs/plan/archive/lanes/`](docs/plan/archive/README.md);
@@ -709,49 +710,6 @@ Public checker uses fail-closed fallback.
 Next: remaining broad gates, mid-quantifier budget controls, integration.
 Logs /var/tmp/axeyum-omt-{ingest-*,checker-budget-tests,deadline-ir-tests}.log.
 Entire feedback objective remains incomplete.
-
-**LIB-5/6 / EVD-5 / P0 (`WIP`, wide-real-smtlib-writer, 2026-10-11).**
-Current Rust cc65885a3 (last change is Python documentation); generated stub
-6c11a0008. [Detailed receipts](docs/plan/notes/28-wide-real-smtlib-writer.md).
-Goal active; not on main. Freed231.68GiB; active caches/evidence kept.
-
-Earlier exact Real intake/writer, wide NRA/FP safety, datatype source export
-and source-bound SAT/ref-miter replay are in ancestry. SMT396 and required
-parser frontdoors158 pass; MSRV/default Wasm pass; facts2971 validated on ancestor.
-Private decimal/FP/NRA guards each kill one intended test. Full-feature solver
-2033pass/0fail/0ignore826.10s on9fd9721d0 predates nested CAS additions.
-
-Reference-miter replay binds final CNF and independently reconstructed miter
-CNF to original Bool/BV terms. Private v2:7baseline; each of two guard removals
-6pass/one intended failure; both files independently match9fd9721d0 bytewise.
-Parent native focused49/census15 and existing consumers1154 pass0 skips.
-General theory correspondence and kernel admission are explicit separate gaps.
-
-Nested conditional composition checks source/path/context/congruence/continuity,
-partial domains, local guarded-v2 witnesses and bounded transport/work.
-T0 surface reviewed;6Rust/13Python controls cover wide coefficients/partial declines.
-Private congruence guard:6baseline ->5pass/one intended failure; restored bytewise.
-Full CAS on lint-fixed0b829e980:2154pass/0fail/11ignored85.25s. CAS lint passes.
-Fresh native99af1a4c preserved:34trace tests pass0skip0.32s;25consumer files
-1166pass/1external-checker skip65.53s. No partial evidence on unsupported steps.
-
-Python lint final rerun49809 passes after cc65885a3 doc fix; generator62778
-passes27modules/667items/5qualified integer annotations. Generated stubs committed.
-Sealed typed52388 passes drift27/1888, type95.4%, runtime44/0skip22.84s including configured guarded LRAT exports.
-Current CAS registry6894 passes:1310public/153certified/116checker/1041uncertified;
-no logging credit. Plan/link gates45795 pass. Merge hygiene36970 exits0 with
-shape duplicate/projection scopes explicitly skipped, not full population credit.
-
-Facts60449 passes2971. Workspace11433:3297pass/10crates; kernel2658 running,
-whole gate uncredited. Queued chain after workspace:frontier87172/targets99970/
-Clippy54143/CLI97027, each requires predecessor success. Old idle watchers
-22417/12036/43772/54766 cancelled143; Cargo3092650 untouched.
-Main preview conflict-free; main stays untouched until implementation/gates close.
-ADR3200/3300/3400/3500/7200 accepted; validator20pass.
-Final native costs/statute/5examples/6original probes pass; fmt2294files passes.
-ADR6700 release3/current workspace3controls pass; intake is test-only and CAS
-manifest absent. Public producer/discovery handoff remains required.
-Next: isolated handoff, closing gates, archival/integration/audit.
 
 ### SOL — Solver parity
 

@@ -160,3 +160,23 @@ no child process and empty logs, then deliberately stopped (terminal143). No
 Cargo/test process was stopped or restarted. Each new downstream watcher requires
 its predecessor's success receipt. These gates cover the frozen baseline; new
 production handoff source will need its own appropriate validation.
+
+
+## User-requested pause and publication checkpoint — 2026-10-11
+
+Implementation branch: `feat/nested-conditional-cas-trace-20261011`; pre-checkpoint
+HEAD `d1d20daf5`, Rust baseline `cc65885a3`. Main has not been integrated.
+The user requested documentation, commit and branch push, and paused further work.
+Stopped only the owned workspace scope and four verified idle downstream watchers.
+Workspace completed ten crates (3297 passed, zero failed, 15 ignored); the kernel
+suite was interrupted, so the aggregate gate is **not passed**. Frontier, all-targets,
+complete Clippy and refreshed CLI gates were cancelled before starting. The retained
+frontier timing failure remains unresolved. Earlier individual receipts keep their
+original source boundaries; no cancellation earns pass credit.
+
+The public CAS producer/discovery handoff is still required and planned in
+[the handoff plan](cas-trace-public-handoff-plan-2026-10-11.md). The existing intake
+is private test code and the CAS bridge manifest is absent. Resume with that work,
+fresh required gates, the completion audit, then main integration. Cleanup removed
+231.68 GiB of inactive main-checkout build caches; source, active caches, checker
+binaries and evidence were preserved. No further cleanup is pending in this checkpoint.

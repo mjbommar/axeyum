@@ -2,10 +2,10 @@
 
 <!-- plan-section: lane-status -->
 
-**LIB-5/6 / EVD-5 / P0 (`WIP`, wide-real-smtlib-writer, 2026-10-11).**
+**LIB-5/6 / EVD-5 / P0 (`PAUSED`, wide-real-smtlib-writer, 2026-10-11).**
 Current Rust cc65885a3 (last change is Python documentation); generated stub
-6c11a0008. [Detailed receipts](../notes/28-wide-real-smtlib-writer.md).
-Goal active; not on main. Freed231.68GiB; active caches/evidence kept.
+6c11a0008. [Detailed receipts](../../notes/28-wide-real-smtlib-writer.md).
+Paused at user request; not on main. Freed231.68GiB; active caches/evidence kept.
 
 Earlier exact Real intake/writer, wide NRA/FP safety, datatype source export
 and source-bound SAT/ref-miter replay are in ancestry. SMT396 and required
@@ -34,13 +34,12 @@ Current CAS registry6894 passes:1310public/153certified/116checker/1041uncertifi
 no logging credit. Plan/link gates45795 pass. Merge hygiene36970 exits0 with
 shape duplicate/projection scopes explicitly skipped, not full population credit.
 
-Facts60449 passes2971. Workspace11433:3297pass/10crates; kernel2658 running,
-whole gate uncredited. Queued chain after workspace:frontier87172/targets99970/
-Clippy54143/CLI97027, each requires predecessor success. Old idle watchers
-22417/12036/43772/54766 cancelled143; Cargo3092650 untouched.
-Main preview conflict-free; main stays untouched until implementation/gates close.
-ADR3200/3300/3400/3500/7200 accepted; validator20pass.
-Final native costs/statute/5examples/6original probes pass; fmt2294files passes.
-ADR6700 release3/current workspace3controls pass; intake is test-only and CAS
-manifest absent. Public producer/discovery handoff remains required.
-Next: isolated handoff, closing gates, archival/integration/audit.
+Facts60449 passes2971. Workspace11433 completed ten crates:3297pass/0fail/
+15ignored; kernel suite was interrupted at user request, aggregate uncredited.
+Owned workspace scope and idle frontier/targets/Clippy/CLI watchers stopped.
+Old frontier failure (11pass/1timing failure) remains unresolved; no new gate credit.
+Main stays untouched. Final native costs/statute/5examples/6original probes pass;
+fmt2294files passes. ADR6700 release3/current workspace3controls pass, but intake
+is test-only and CAS manifest absent. Public producer/discovery handoff required.
+Resume: public handoff plan, fresh aggregate/frontier/targets/Clippy/CLI gates,
+then audit and main integration. Branch feat/nested-conditional-cas-trace-20261011.
