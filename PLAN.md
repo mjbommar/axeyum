@@ -292,6 +292,9 @@ changes claimed maxima/minima to expose circular proofs. Generate after all
 solves to stabilize relaxation columns; test box/lex certificate replay and
 integer-cut-only optima with missing real refutation. Runner 42842 queued, log
 `/var/tmp/axeyum-omt-strict-better.log`. Not yet verified.
+Added Python replay_optimality with explicit None for missing evidence and
+controls for max/min, integer-only cuts, unknown and BV results. Native rebuild
+and tests pending; gold stays false.
 Next: compile/test, checker guard mutations, Boolean lowering binding,
 strict-better certificates, model-plus-optimality Python results, serialization
 and independent process replay, then required full gates. Gold still false.

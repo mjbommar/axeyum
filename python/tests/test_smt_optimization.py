@@ -109,3 +109,21 @@ def test_lexicographic_results_match_independent_finite_enumeration():
                                for row in result.objectives)
                     cases += 1
     assert cases == 24
+
+
+
+def test_optimality_replay_checks_a_separate_original_query():
+    for direction in ("maximize", "minimize"):
+        row = smt.optimize(f"{BOUNDS}({direction} x)(check-sat)")[0]
+        assert row.replay() is True
+        assert row.replay_optimality() is True
+    integer_cut = """(declare-const x Int)(assert (>= x 0))
+(assert (<= (* 2 x) 1))(maximize x)(check-sat)"""
+    row = smt.optimize(integer_cut)[0]
+    assert row.value == 0 and row.replay() is True
+    assert row.replay_optimality() is None
+    unknown = smt.optimize(f"{BOUNDS}(maximize x)(check-sat)", timeout_ms=0)[0]
+    assert unknown.replay_optimality() is None
+    bv = smt.optimize("(declare-const b (_ BitVec 4))(maximize b)(check-sat)")[0]
+    assert bv.value == 15 and bv.replay() is True
+    assert bv.replay_optimality() is None

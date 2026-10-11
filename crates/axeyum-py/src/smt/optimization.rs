@@ -111,6 +111,12 @@ impl OptimizationObjective {
         py.detach(|| self.report.replay(self.index))
             .map_err(map_solver_error)
     }
+    /// Rebuild and check the original strict-better query's refutation.
+    /// None means missing evidence, including integer-only cut or BV routes.
+    fn replay_optimality(&self, py: Python<'_>) -> PyResult<Option<bool>> {
+        py.detach(|| self.report.replay_optimality(self.index))
+            .map_err(map_solver_error)
+    }
     /// False until a source-bound no-better certificate is checked. A model
     /// replay alone never grants gold-answer credit.
     #[getter]
