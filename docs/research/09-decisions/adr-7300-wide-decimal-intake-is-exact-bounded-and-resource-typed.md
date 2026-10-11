@@ -1,6 +1,6 @@
 # ADR-7300: Wide decimal intake is exact, bounded, and resource typed
 
-Status: proposed
+Status: accepted; bounded source/evidence contract adopted, final integration gates remain open
 Date: 2026-10-11
 
 ## Decision
@@ -36,3 +36,20 @@ concrete discriminating inputs. Nonlinear and zero-divisor syntax stays intact.
 Malformed decimals and resource excess must have distinct controls. Promoted
 Real-to-FP conversion declines without panic. Record actual gate counts in the
 lane record before integration.
+
+## Adoption and evidence scope
+
+The bounded source/evidence contract is adopted. See the
+[current receipts](../../plan/notes/28-wide-real-smtlib-writer.md) and
+[completion audit](../../plan/user-feedback-completion-audit-2026-10-11.md).
+The implementation retains unsupported-route declines and source identity;
+source-bound replay never substitutes search for checking. Parser/solver gates,
+fresh native public-route tests and private source-binding controls supply the
+recorded evidence. SAT clausal checking, checked source correspondence, external
+proof checking and kernel admission remain separate claims. External reference
+checks retain the pinned guard patches documented in
+[scripts/patches](../../../scripts/patches/README.md); no unmodified-checker
+credit or hole acceptance is inferred. Integer-only `lia_generic` proofs remain
+internal-only; scopes/macros and broader portable theory reconstruction remain
+explicit open coverage. This adoption does not declare the final workspace or
+main integration gates complete.

@@ -371,3 +371,7 @@ Reviewed ADR2900/3000/6000/6100/6200/6800/6900 against current implementations a
 ## OMT/source-binding/deadline contract adoption
 
 Reviewed ADR2300/6300/6301/6302/7000/7100 against optimize ray checking, typed report/model pins, portable Farkas source binding and deadline intake/quantifier controls. Fresh-native consumer OMT suites pass; solver full2033 source includes these modules. Adopted six bounded contracts, including2300 curated Index-status so generated status is consistent. Existing historical follow-up lists now forward-reference the later composed contracts; unsupported integer-cut/BV gold remains false. Thirteen new ADRs remain for review. Final workspace/all-target integration still pending.
+
+## Parser and proof/source-correspondence contract adoption
+
+Reviewed ADR2400/2600/2700/2800/7300/8000/8300 against current signatures, source adapters, scalar rules, signed/wide literal policies, restored text caps, deterministic CNF/reference-miter reconstruction and terminal guard results. Adopted seven bounded contracts. Integer-only Alethe remains internal, unmodified Carcara/DRAT-trim checks receive no credit, and general theory/kernel coverage remains separate. Six new ADRs remain for review. Final workspace/all-target gates are still live/pending.

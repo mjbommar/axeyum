@@ -1,6 +1,6 @@
 # ADR-2400: signed integer atoms are convenience syntax with quoted identity
 
-Status: proposed; parser contract implemented, public-route validation pending
+Status: accepted; bounded source/evidence contract adopted, final integration gates remain open
 Date: 2026-10-10
 
 ## Context
@@ -42,3 +42,20 @@ identity, declared-symbol precedence, lets/macros, coercion, abs/distinct and
 malformed controls. Solver, Python, and CLI routes must be tested against fresh
 builds before CON-6 is marked done. The audit's unidentified `notes/80` remains
 unresolved; do not edit an unrelated historical note.
+
+## Adoption and evidence scope
+
+The bounded source/evidence contract is adopted. See the
+[current receipts](../../plan/notes/28-wide-real-smtlib-writer.md) and
+[completion audit](../../plan/user-feedback-completion-audit-2026-10-11.md).
+The implementation retains unsupported-route declines and source identity;
+source-bound replay never substitutes search for checking. Parser/solver gates,
+fresh native public-route tests and private source-binding controls supply the
+recorded evidence. SAT clausal checking, checked source correspondence, external
+proof checking and kernel admission remain separate claims. External reference
+checks retain the pinned guard patches documented in
+[scripts/patches](../../../scripts/patches/README.md); no unmodified-checker
+credit or hole acceptance is inferred. Integer-only `lia_generic` proofs remain
+internal-only; scopes/macros and broader portable theory reconstruction remain
+explicit open coverage. This adoption does not declare the final workspace or
+main integration gates complete.
