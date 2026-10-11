@@ -40,4 +40,5 @@ Overall goal remains active.
 Nested conditional child04f5337fd started in isolated worktree; ADR8400
 binds congruence, definedness, caller context and aggregate replay limits.
 Rust producer/replay implemented with five controls; compile gate32748 live.
-Python and private congruence mutation pending; no completion claim.
+Python code committed6c4077ab9. Private congruence helper73515 queued;
+compile/runtime and mutation results pending; no completion claim.

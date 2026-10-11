@@ -194,3 +194,12 @@ quotients. It distinguishes aggregate declared witness-work units from total
 wall time or every validation operation, shared arithmetic from independent
 checking, and trace validity from kernel admission. Current compile/test jobs
 remain live/pending; no additional pass credited.
+
+Private congruence guard snapshot8818 requested atd7d0a8d3e using lane-snapshot,
+owner nested-conditional-congruence. Helper73515 waits for completed snapshot
+then requires baseline5 pass and mutant4 pass/one exact surrounding-subtree test
+failure, restores source bytewise in finally, and refuses all weaker outcomes.
+Logs `/var/tmp/axeyum-nested-conditional-congruence-mutation.log` and
+`/var/tmp/axeyum-nested-conditional-guard-{baseline,mutant}.log`. No result yet.
+Parent Rust workers2343744/2348469 confirmed filesystem folio wait; live jobs
+retained. All new nested checks remain host-admission queued, not passes.
