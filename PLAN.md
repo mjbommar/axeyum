@@ -698,17 +698,6 @@ Next: remaining broad gates, mid-quantifier budget controls, integration.
 Logs /var/tmp/axeyum-omt-{ingest-*,checker-budget-tests,deadline-ir-tests}.log.
 Entire feedback objective remains incomplete.
 
-**CON-7 source provenance (`WIP`, statute-source-snapshots, 2026-10-11).**
-Child ad0bdfca7 on /data0 (root checkout creation failed for disk space).
-Four official edition-pinned source hashes matched fresh HTTPS downloads.
-ADR7200 proposes bounded normalized bytes in manifest source order. Four
-snapshots added; validator now replays exact hashes offline, separately counting
-source snapshots and conditional certificates. Controls20 passed; seven packs,
-one template/four source snapshots validated. Next: private digest guard mutation,
-certificate replay, doc gates and archive this micro-lane. This verifies text
-identity, not historical applicability, holiday policy or legal conclusions.
-Overall feedback goal remains active; parent solver83566 still running.
-
 ### SOL — Solver parity
 
 Close the measured gap to the named reference division by division, never

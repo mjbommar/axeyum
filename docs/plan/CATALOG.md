@@ -11,7 +11,7 @@ rg -n 'QF_LRA' docs/plan/archive/lanes/      # every archived lane that mentions
 rg -n '<lane-or-topic>' docs/plan/CATALOG.md  # find the file, then open it
 ```
 
-Counts: 771 archived lanes (177 not DONE when archived), 55 older archive files, 347 dated plan notes, 87 lane notes, 508 strand and planning documents.
+Counts: 772 archived lanes (177 not DONE when archived), 55 older archive files, 347 dated plan notes, 87 lane notes, 508 strand and planning documents.
 
 ## Lanes that were not DONE when archived
 
@@ -1370,6 +1370,7 @@ Result notes, designs, handoffs and earlier queues. Evidence for claims; never t
 
 | Date | Lane | Status | Title |
 |---|---|---|---|
+| 2026-10-11 | [26-statute-source-snapshots](archive/lanes/26-statute-source-snapshots.md) | DONE | statute-source-snapshots — replayable official source identities |
 | 2026-10-10 | [01-user-feedback-plan](archive/lanes/01-user-feedback-plan.md) | DONE | user-feedback-plan — completed research and roadmap integration |
 | 2026-09-17 | [nra-algebraic-witness](archive/lanes/nra-algebraic-witness.md) | - | `nra-algebraic-witness` — exact replay at an algebraic sample (ADR-2134) |
 | 2026-09-17 | [coordinator-three-repos-2026-09-16](archive/lanes/coordinator-three-repos-2026-09-16.md) | CLOSED? | coordinator-solver — the three improvement lists (cindergraph, Glaurung, Axeyum) |
