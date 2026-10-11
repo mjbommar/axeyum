@@ -32,16 +32,12 @@ and zero-rate2500/3. Stub generation completed:27 modules/658 items. Runtime stu
 1867 symbols; type check1817 parameters/1732 typed,131 Any all allowlisted.
 Private controls completed:baseline7 passed; condition/domain/bit guards each
 removed cause6 passes+1 intended failure, exit101; snapshot restored bytewise.
-Own lint failed only convert length115/100. Extracted division validation into
-its own helper; post-refactor trace tests80303 live, uncredited, log
-`/var/tmp/axeyum-cas-wide-postlint-tests.log`. Full lint rerun remains required.
+Own lint failed convert length115/100; extracted division validation helper.
+Post-refactor suites passed8 v1+7 v2,0 failed/ignored;
+`/var/tmp/axeyum-cas-wide-postlint-tests.log`. Source commitc6b0a5db1.
+Full lint58742 live: `/var/tmp/axeyum-cas-wide-clippy-v2.log`.
+Serial full CAS29000 live: `/var/tmp/axeyum-cas-wide-full-cas.log`.
+Neither aggregate is credited. Parent solver2028 passed; workspace pending.
 
-
-Parent guarded full CAS serial gate: 2144 passed/0 failed/11 ignored/359.38s;
-full lint: 925 targets/27 crates/0 diagnostics. Its earlier parallel timing
-failure is retained in parent evidence. Parent solver/workspace runner58007
-remains uncredited. These are parent results, not this child's broad gates.
-
-Next: stub validation, private v2 guard mutations and own broad gates; wide
-symbolic guarded quotients, cost measurements, kernel reconstruction and branch
-integration remain open. The entire feedback goal stays active.
+Next: finish broad gates, wide guarded quotients, cost measurements, kernel
+reconstruction and branch integration. Entire feedback goal remains active.
