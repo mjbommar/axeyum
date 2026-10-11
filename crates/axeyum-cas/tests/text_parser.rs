@@ -147,3 +147,33 @@ fn all_shape_and_intake_caps_have_negative_controls() {
             .contains("shape")
     );
 }
+
+#[test]
+fn native_grammar_matches_independent_python_parser_fixtures() {
+    let corpus: serde_json::Value =
+        serde_json::from_str(include_str!("data/python_text_parser.json")).unwrap();
+    let rows = corpus["cases"].as_array().unwrap();
+    assert_eq!(rows.len(), 37);
+    let mut accepted = 0;
+    let mut rejected = 0;
+    for row in rows {
+        let source = row["source"].as_str().unwrap();
+        if let Some(expected) = row.get("expression") {
+            let parsed = parse(source).unwrap_or_else(|e| panic!("{source}: {e}"));
+            let actual: serde_json::Value =
+                serde_json::from_str(&expression_wire::to_json(&parsed).unwrap()).unwrap();
+            assert_eq!(
+                &actual, expected,
+                "structural grammar mismatch for {source}"
+            );
+            accepted += 1;
+        } else {
+            assert!(
+                parse(source).is_err(),
+                "native accepted rejected input {source}"
+            );
+            rejected += 1;
+        }
+    }
+    assert!(accepted > 20 && rejected > 10);
+}

@@ -1,0 +1,647 @@
+{
+  "cases": [
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "denominator": "1",
+            "numerator": "0"
+          },
+          "kind": "const"
+        },
+        "version": 1
+      },
+      "source": "0"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "denominator": "1",
+            "numerator": "1"
+          },
+          "kind": "const"
+        },
+        "version": 1
+      },
+      "source": "0001"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "denominator": "8",
+            "numerator": "1"
+          },
+          "kind": "const"
+        },
+        "version": 1
+      },
+      "source": "0.125"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "denominator": "2",
+            "numerator": "25"
+          },
+          "kind": "const"
+        },
+        "version": 1
+      },
+      "source": "12.5000"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "args": {
+              "base": {
+                "args": {
+                  "denominator": "1",
+                  "numerator": "2"
+                },
+                "kind": "const"
+              },
+              "exponent": 2
+            },
+            "kind": "pow"
+          },
+          "kind": "neg"
+        },
+        "version": 1
+      },
+      "source": "-2^2"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "base": {
+              "args": {
+                "args": {
+                  "denominator": "1",
+                  "numerator": "2"
+                },
+                "kind": "const"
+              },
+              "kind": "neg"
+            },
+            "exponent": 2
+          },
+          "kind": "pow"
+        },
+        "version": 1
+      },
+      "source": "(-2)^2"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "denominator": {
+              "args": {
+                "base": {
+                  "args": {
+                    "denominator": "1",
+                    "numerator": "2"
+                  },
+                  "kind": "const"
+                },
+                "exponent": 3
+              },
+              "kind": "pow"
+            },
+            "numerator": {
+              "args": {
+                "denominator": "1",
+                "numerator": "1"
+              },
+              "kind": "const"
+            }
+          },
+          "kind": "div"
+        },
+        "version": 1
+      },
+      "source": "2^-3"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "base": {
+              "args": {
+                "denominator": "1",
+                "numerator": "2"
+              },
+              "kind": "const"
+            },
+            "exponent": 3
+          },
+          "kind": "pow"
+        },
+        "version": 1
+      },
+      "source": "2**+3"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": "x",
+          "kind": "var"
+        },
+        "version": 1
+      },
+      "source": "x"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": "x_2",
+          "kind": "var"
+        },
+        "version": 1
+      },
+      "source": "x_2"
+    },
+    {
+      "expression": {
+        "expression": {
+          "kind": "pi"
+        },
+        "version": 1
+      },
+      "source": "pi"
+    },
+    {
+      "expression": {
+        "expression": {
+          "kind": "pi"
+        },
+        "version": 1
+      },
+      "source": "\u03c0"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": [
+            {
+              "kind": "pi"
+            },
+            {
+              "args": "x",
+              "kind": "var"
+            }
+          ],
+          "kind": "add"
+        },
+        "version": 1
+      },
+      "source": "pi+x"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": [
+            {
+              "args": {
+                "argument": {
+                  "args": "x",
+                  "kind": "var"
+                },
+                "head": {
+                  "kind": "sin"
+                }
+              },
+              "kind": "unary"
+            },
+            {
+              "args": {
+                "denominator": {
+                  "args": {
+                    "base": {
+                      "args": "x",
+                      "kind": "var"
+                    },
+                    "exponent": 2
+                  },
+                  "kind": "pow"
+                },
+                "numerator": {
+                  "args": {
+                    "denominator": "1",
+                    "numerator": "1"
+                  },
+                  "kind": "const"
+                }
+              },
+              "kind": "div"
+            }
+          ],
+          "kind": "add"
+        },
+        "version": 1
+      },
+      "source": "sin(x)+x^-2"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "argument": {
+              "args": {
+                "denominator": "1",
+                "numerator": "8"
+              },
+              "kind": "const"
+            },
+            "head": {
+              "kind": "nth_root",
+              "order": 3
+            }
+          },
+          "kind": "unary"
+        },
+        "version": 1
+      },
+      "source": "cbrt(8)"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "argument": {
+              "args": {
+                "args": {
+                  "denominator": "5",
+                  "numerator": "6"
+                },
+                "kind": "const"
+              },
+              "kind": "neg"
+            },
+            "head": {
+              "kind": "floor"
+            }
+          },
+          "kind": "unary"
+        },
+        "version": 1
+      },
+      "source": "floor(-1.2)"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "denominator": {
+              "args": {
+                "denominator": "1",
+                "numerator": "2"
+              },
+              "kind": "const"
+            },
+            "numerator": {
+              "args": {
+                "denominator": {
+                  "args": {
+                    "denominator": "1",
+                    "numerator": "2"
+                  },
+                  "kind": "const"
+                },
+                "numerator": {
+                  "args": {
+                    "denominator": "1",
+                    "numerator": "8"
+                  },
+                  "kind": "const"
+                }
+              },
+              "kind": "div"
+            }
+          },
+          "kind": "div"
+        },
+        "version": 1
+      },
+      "source": "8/2/2"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": [
+            {
+              "args": {
+                "denominator": "1",
+                "numerator": "1"
+              },
+              "kind": "const"
+            },
+            {
+              "args": [
+                {
+                  "args": {
+                    "denominator": "1",
+                    "numerator": "2"
+                  },
+                  "kind": "const"
+                },
+                {
+                  "args": {
+                    "denominator": "1",
+                    "numerator": "3"
+                  },
+                  "kind": "const"
+                }
+              ],
+              "kind": "mul"
+            }
+          ],
+          "kind": "add"
+        },
+        "version": 1
+      },
+      "source": "1+2*3"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": {
+                    "denominator": "1",
+                    "numerator": "1"
+                  },
+                  "kind": "const"
+                },
+                {
+                  "args": {
+                    "denominator": "1",
+                    "numerator": "2"
+                  },
+                  "kind": "const"
+                }
+              ],
+              "kind": "add"
+            },
+            {
+              "args": {
+                "denominator": "1",
+                "numerator": "3"
+              },
+              "kind": "const"
+            }
+          ],
+          "kind": "mul"
+        },
+        "version": 1
+      },
+      "source": "(1+2)*3"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "base": {
+              "args": {
+                "denominator": "1",
+                "numerator": "0"
+              },
+              "kind": "const"
+            },
+            "exponent": 0
+          },
+          "kind": "pow"
+        },
+        "version": 1
+      },
+      "source": "0^0"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "base": {
+              "args": {
+                "denominator": {
+                  "args": {
+                    "denominator": "1",
+                    "numerator": "0"
+                  },
+                  "kind": "const"
+                },
+                "numerator": {
+                  "args": {
+                    "denominator": "1",
+                    "numerator": "1"
+                  },
+                  "kind": "const"
+                }
+              },
+              "kind": "div"
+            },
+            "exponent": 0
+          },
+          "kind": "pow"
+        },
+        "version": 1
+      },
+      "source": "(1/0)^0"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "base": {
+              "args": "x",
+              "kind": "var"
+            },
+            "exponent": 4294967295
+          },
+          "kind": "pow"
+        },
+        "version": 1
+      },
+      "source": "x^4294967295"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "denominator": {
+              "args": [
+                {
+                  "args": {
+                    "denominator": "1",
+                    "numerator": "1"
+                  },
+                  "kind": "const"
+                },
+                {
+                  "args": {
+                    "args": {
+                      "denominator": {
+                        "args": {
+                          "base": {
+                            "args": [
+                              {
+                                "args": {
+                                  "denominator": "1",
+                                  "numerator": "1"
+                                },
+                                "kind": "const"
+                              },
+                              {
+                                "args": {
+                                  "denominator": {
+                                    "args": {
+                                      "denominator": "1",
+                                      "numerator": "240"
+                                    },
+                                    "kind": "const"
+                                  },
+                                  "numerator": {
+                                    "args": {
+                                      "denominator": "1",
+                                      "numerator": "1"
+                                    },
+                                    "kind": "const"
+                                  }
+                                },
+                                "kind": "div"
+                              }
+                            ],
+                            "kind": "add"
+                          },
+                          "exponent": 360
+                        },
+                        "kind": "pow"
+                      },
+                      "numerator": {
+                        "args": {
+                          "denominator": "1",
+                          "numerator": "1"
+                        },
+                        "kind": "const"
+                      }
+                    },
+                    "kind": "div"
+                  },
+                  "kind": "neg"
+                }
+              ],
+              "kind": "add"
+            },
+            "numerator": {
+              "args": [
+                {
+                  "args": {
+                    "denominator": "1",
+                    "numerator": "300000"
+                  },
+                  "kind": "const"
+                },
+                {
+                  "args": {
+                    "denominator": {
+                      "args": {
+                        "denominator": "1",
+                        "numerator": "240"
+                      },
+                      "kind": "const"
+                    },
+                    "numerator": {
+                      "args": {
+                        "denominator": "1",
+                        "numerator": "1"
+                      },
+                      "kind": "const"
+                    }
+                  },
+                  "kind": "div"
+                }
+              ],
+              "kind": "mul"
+            }
+          },
+          "kind": "div"
+        },
+        "version": 1
+      },
+      "source": "300000*(1/240)/(1-(1+1/240)^-360)"
+    },
+    {
+      "expression": {
+        "expression": {
+          "args": {
+            "denominator": "1",
+            "numerator": "1606938044258990275541962092341162602522202993782792835301376"
+          },
+          "kind": "const"
+        },
+        "version": 1
+      },
+      "source": "1606938044258990275541962092341162602522202993782792835301376"
+    },
+    {
+      "rejected": true,
+      "source": ""
+    },
+    {
+      "rejected": true,
+      "source": "x+"
+    },
+    {
+      "rejected": true,
+      "source": "x^y"
+    },
+    {
+      "rejected": true,
+      "source": "2^2^3"
+    },
+    {
+      "rejected": true,
+      "source": "x^4294967296"
+    },
+    {
+      "rejected": true,
+      "source": "foo(x)"
+    },
+    {
+      "rejected": true,
+      "source": "1e3"
+    },
+    {
+      "rejected": true,
+      "source": "x[0]"
+    },
+    {
+      "rejected": true,
+      "source": "sin(x,y)"
+    },
+    {
+      "rejected": true,
+      "source": ".5"
+    },
+    {
+      "rejected": true,
+      "source": "1."
+    },
+    {
+      "rejected": true,
+      "source": "\u03c0(x)"
+    },
+    {
+      "rejected": true,
+      "source": "x**--2"
+    }
+  ],
+  "native_sha256": "0f638f71c1cd68b3e6cf35260f1f10e945938c3137a982ea2c2072fd9dd2cf76",
+  "reference": "existing Python parser; native expression wire only"
+}

@@ -574,8 +574,15 @@ Entire feedback goal remains active; parent consolidated build remains separate.
 
 Added5 behavioral tests with constructor/precedence/wide/Pi/wire agreement,
 unary heads, malformed UTF8 byte spans and paired resource controls. Test51221
-running, uncredited: `/var/tmp/axeyum-cas-rust-parser-tests.log`.
+passed5/0 failed/ignored: `/var/tmp/axeyum-cas-rust-parser-tests.log`.
 Parent kernel release controls passed3/0 failed/ignored,72.62s.
+
+Differential suite48239 passed6/0 failed/ignored:37 independent Python grammar
+fixtures (24 accepted/13 rejected), canonical AST wire comparison. Fixture
+generator records sealed native SHA. `/var/tmp/axeyum-cas-rust-parser-differential.log`.
+Parser lint launched: `/var/tmp/axeyum-cas-rust-parser-clippy.log`, uncredited.
+Combined Python run originally failed collection(missing pinned SymPy); installed
+SymPy1.14.0/mpmath1.3.0, rerun45817 live and uncredited.
 
 ### SOL — Solver parity
 
