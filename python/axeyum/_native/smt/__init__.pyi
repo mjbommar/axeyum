@@ -41,6 +41,11 @@ class OptimizationCertificateCheck:
         True only after all required feasible-model and strict-better checks succeed.
         """
     @property
+    def resource_limited(self) -> builtins.bool:
+        r"""
+        True when replay exhausted its deadline without accepting or rejecting.
+        """
+    @property
     def examined(self) -> builtins.int:
         r"""
         Number of obligations actually examined.
@@ -395,7 +400,7 @@ class Witness:
         """
     def __repr__(self) -> builtins.str: ...
 
-def check_optimization_certificate(certificate_json: builtins.str, script: builtins.str) -> OptimizationCertificateCheck:
+def check_optimization_certificate(certificate_json: builtins.str, script: builtins.str, *, timeout_ms: builtins.int = 2000) -> OptimizationCertificateCheck:
     r"""
     Replay exported optimization JSON against the caller's original query.
     Never runs optimization search. Malformed/unsupported evidence raises an error.
