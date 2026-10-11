@@ -21,3 +21,10 @@ mutation baseline runner 75540, log
 has been performed yet. Required follow-up: both replay-guard mutations,
 string-lifting discriminating control, CLI nonzero controls, generated stub gates,
 front-door suites, arithmetic differential fuzzes, and broader validation.
+
+Follow-up: baseline 75540 terminal zero, 7 passed / 0 failed / 0 ignored.
+Mutation runner 45506 now checks both guards sequentially; completion uncredited
+until its asserted terminal result. New Python test
+`test_declared_string_model_is_lifted_without_decoding_real_bitvectors` passes
+against the sealed revision binary; OMT suite now 7 collected / 7 passed, 0.15s.
+Separate probes also replayed Int and BV optima with String model `AB`.

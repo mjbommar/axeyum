@@ -269,7 +269,9 @@ Fresh extension at 933fbbe02: six selected Python suites report 93 passed,
 34 skipped (CLI-dependent controls); all six OMT controls pass. Binary SHA-256
 89d3ef632addb05f453fa4ee2814b51ed34f8bab81cfcc1547a9fd108cae8e85.
 Full solver/workspace runner 55477 and stub runner 53264 are live, not passes;
-private mutation baseline runner 75540 is compiling.
+private mutation baseline 75540 passed all seven Rust tests; two guard
+mutations run under 45506 in the private snapshot. Added fresh Python lifting
+control: declared String decodes, actual BV stays BV; OMT suite 7 passed.
 Gold eligibility stays false until source-bound no-better evidence is checked;
 generic self-contained evidence checks cannot provide that binding by themselves.
 Next: nonzero focused tests, fresh native/stubs, replay guard mutations, required

@@ -70,3 +70,15 @@ def test_unsigned_bv_and_unsupported_modes_are_explicit():
 def test_generic_satisfiability_route_still_declines_objectives():
     with pytest.raises(AxeyumError, match="optimization"):
         smt.solve(f"{BOUNDS}(maximize x)(check-sat)")
+
+
+def test_declared_string_model_is_lifted_without_decoding_real_bitvectors():
+    query = '''(declare-const s String)(assert (= s "AB"))
+(declare-const b (_ BitVec 8))(assert (= b (_ bv65 8)))
+(declare-const x Int)(assert (and (>= x 0) (<= x 3)))
+(maximize x)(check-sat)'''
+    row = smt.optimize(query)[0]
+    assert row.status == "optimal" and row.value == 3
+    assert row.model["s"] == "AB"
+    assert row.model["b"].width == 8 and row.model["b"].value == 65
+    assert row.replay() is True
