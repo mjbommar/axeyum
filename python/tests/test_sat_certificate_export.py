@@ -23,6 +23,7 @@ def test_exports_preserve_optional_lrat_and_source_boundary(tmp_path: Path) -> N
     for route in ("boolean", "bit-vector"):
         assert report["routes"][route]["lrat"] == "present"
         assert report["routes"][route]["external_cnf_check"] == "not-run"
+        assert report["routes"][route]["source_binding"] == "replayed-with-trusted-bv-encoding"
         assert (tmp_path / "export" / route / "proof.lrat").stat().st_size > 0
 
 

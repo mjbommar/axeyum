@@ -52,11 +52,41 @@ Implementation is isolated; this is not an integration or whole-goal receipt.
 
 ## Running / remaining
 
-Full solver parent74254 and workspace87947 remain uncredited until terminal
-outputs are inspected. Prior parser-parent
+Full solver74254 on wide-decimal/NRA source69c3e0d7d completed:
+2033 passed,0 failed/ignored,909.38s. It predates datatype writer and Python
+source-binding commits; it is not a claim that those newer sources ran that
+same full gate. Workspace87947 on datatype sourceb8b237c65 remains running. Prior parser-parent
 workspace81069 and guard-parent workspace58007 are terminal143/-15, not passes.
 
 Source-to-CNF mapping export/independent translation evidence remains absent.
 These source serialization and independent verdict checks do not certify that
 translation. General integer Alethe portability/kernel reconstruction, wider
 conditional trace composition and final integration remain separate open work.
+
+
+## Python source-bound SAT replay
+
+Child30a4e434e (ADR8000) exposes the existing Rust
+`UnsatProof::recheck_for_bool_terms` and a frozen saved-text constructor. The
+constructor caps transport at8 MiB/component and16 MiB total; construction
+supplies no accepted verdict. Original term roots must deterministically encode
+into the exact certificate DIMACS before clausal checking. This reuses the
+trusted compiler and creates no independent translation/kernel admission claim.
+
+Fresh native build1m16s, SHA256
+`10021c3dfa772267b520db5c9744fd96c602717043a5e4da3edd97eaf57b84cc`.
+SAT/proof/OMT37 tests pass0 skips0.68s, including nine source-binding controls.
+Two child processes restore/check text with all exporter APIs disabled.
+Valid proof against substituted satisfiable terms rejects; optional LRAT,
+invalid hints, missing empty clause, unsupported sorts, foreign handles, malformed
+text and both byte caps have discriminating controls. Py warning-denied Clippy
+passes2m13s (including build-lock wait).
+
+Private snapshot30a4e434e guard runner95810 and stub generator91359 running;
+no passes credited until their terminal results are checked. Documentation adds
+actual caller-supplied arena terms; the Python Script arena remains distinct.
+The older independent-reference miter route does exist in Rust, but its saved
+`EndToEndUnsatOutcome::recheck` checks the two text refutations without rebuilding
+the subject miter. Its source-bound portable replay therefore needs an explicit
+subject/miter correspondence checker before a Python wrapper can claim that
+boundary closed. This is the next SAT evidence increment after this API.

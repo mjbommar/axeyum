@@ -20,11 +20,14 @@ CAS ratchet records two genuine Pi evidence functions, not trace logging;
 153 floor holds. Wasm default build passes32.66s with37 warnings.
 Original writer snapshot: six regressions fail0 passes/6 failures/0 ignores,
 exit101. Final parser frontdoors158 passes0 failures/ignores. MSRV1.88 workspace
-check passes1m41s; fact validation exits0. Full solver74254(parent) and
-workspace87947 still running, no passes credited. Tracked-note CATALOG regenerated and plan/link gates pass. Earlier workspace jobs81069/58007 terminal143/-15; no pass credited.
+check passes1m41s; fact validation exits0. Full solver74254 on wide-decimal/NRA source passed2033 tests0 failures/ignores
+909.38s; it predates later datatype/Python code. Workspace87947 still running. Tracked-note CATALOG regenerated and plan/link gates pass. Earlier workspace jobs81069/58007 terminal143/-15; no pass credited.
 Source-bound Python replay childfe3094477: expose existing Rust checker and
 restored text constructor; ADR8000 distinguishes trusted encoding from an
-independent translation proof. Nine controls written, no pass credited.
+independent translation proof. Fresh native SHA10021c3dfa772267b520db5c9744fd96c602717043a5e4da3edd97eaf57b84cc:
+SAT/proof/OMT37 tests pass0 skips0.68s, including nine new controls and two
+producer-disabled child replays. Py Clippy-D passes2m13s. Guard mutation95810
+and stub generator91359 running; no passes credited yet.
 Next: fresh native tests, private source-binding guard control, collect broad
 gate outputs, integrate, and finish remaining proof/conditional trace gaps. No broad completion claim;
 overall goal stays active.

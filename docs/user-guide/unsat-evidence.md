@@ -105,3 +105,43 @@ DRAT proves the reduced clausal query modulo the named trusted eliminations.
 Read the [capability matrix](../research/08-planning/capability-matrix.md) and
 [trust ledger](../research/08-planning/trust-ledger.md) before describing those
 as source-level proofs.
+
+## Python replay of saved certificates
+
+Restore the exported text and check it against the caller's original typed
+assertions. Constructing an `UnsatProof` stores data; it does not accept its claim.
+For example, after exporting the Boolean query `p` and `not p`:
+
+```python
+from pathlib import Path
+from axeyum import ir
+from axeyum.solver import proofs
+
+arena = ir.Arena()
+p = arena.bool_var("p")
+assertions = [p, arena.not_(p)]
+
+bundle = Path("boolean")
+lrat_path = bundle / "proof.lrat"
+proof = proofs.UnsatProof(
+    (bundle / "formula.cnf").read_text(),
+    (bundle / "proof.drat").read_text(),
+    lrat_path.read_text() if lrat_path.exists() else None,
+)
+assert proof.recheck_for_bool_terms(arena, assertions) is True
+assert proof.recheck_for_bool_terms(arena, [p]) is False
+```
+
+This method also accepts supported BV expressions under Boolean assertion roots.
+It reconstructs the deterministic bit-blast/Tseitin CNF, requires exact DIMACS
+agreement, then checks the refutation. It reuses the trusted reduction and does
+not prove that reduction independently. It accepts `ir.Arena` terms;
+`smt.parse` owns a distinct Script arena. Array, UF, datatype and finite-width
+LIA elimination certificates need their own source correspondence checks.
+
+`False` means a source/CNF mismatch or rejected proof. Unsupported terms and
+malformed proof text raise `AxeyumError`; mixed arena handles raise `EpochError`.
+Saved text is limited to 8 MiB per component and 16 MiB total; exceeding a cap
+raises a resource-limit `ValueError`. Replay uses the existing unlimited Rust
+checker contract. An absent LRAT remains `None` and permits DRAT checking;
+a present invalid LRAT cannot silently fall back to a successful DRAT check.
