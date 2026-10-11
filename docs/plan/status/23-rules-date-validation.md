@@ -17,9 +17,14 @@ restored bytewise. Logs /var/tmp/axeyum-rules-date-v2-{calendar,integer,interval
 Pack loader now rejects invalid/noncanonical/empty/reversed intervals at load
 time. Local changed facade plus sealed combined native binary passed35 tests
 (metadata/packs/dates),2.33s; native source unchanged by this Python run.
-Next: runtime guard controls, broader dated/statute integration and closure.
+Runtime guard controls passed in private47c91033e snapshot: type/canonical/
+order removal each turns2 passing tests into1 failed/1 passed; originals restored.
+Logs /var/tmp/axeyum-rules-runtime-control-{type,canonical,order}.log.
+Next: broader dated/statute integration and full feedback closure.
 Parent targeted gamma tests passed19/0 failed/ignored,3.90s;
 /var/tmp/axeyum-feedback-cas-lint-tests.log. Complete lint15399 terminated101 after930/932 targets: four duplicate
 doc_markdown diagnostics at CAS expr.rs275 (ValueError/BudgetExceeded).
 Corrected both backticks; complete rerun still required.
-Entire feedback objective remains incomplete; no legal applicability claim.
+Parent full CAS3957 passed2147/0 failed/11 ignored,411.14s;
+/var/tmp/axeyum-cas-rust-parser-full-cas.log. Workspace81069 and complete
+lint13564 confirmed live. Entire objective remains incomplete; no legal claim.
