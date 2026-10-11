@@ -7,6 +7,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass
+from datetime import date
 from fractions import Fraction
 from pathlib import Path
 from typing import Any
@@ -41,8 +42,12 @@ def require_keys(context: str, value: dict[str, Any], keys: set[str]) -> None:
 
 
 def require_date(context: str, value: Any) -> str:
-    if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+    if not isinstance(value, str) or not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
         fail(f"{context} must be YYYY-MM-DD")
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        fail(f"{context} must be a valid Gregorian date")
     return value
 
 
@@ -53,7 +58,7 @@ def require_string(context: str, value: Any) -> str:
 
 
 def require_int(context: str, value: Any) -> int:
-    if not isinstance(value, int):
+    if isinstance(value, bool) or not isinstance(value, int):
         fail(f"{context} must be an integer")
     return value
 
