@@ -11,7 +11,7 @@ rg -n 'QF_LRA' docs/plan/archive/lanes/      # every archived lane that mentions
 rg -n '<lane-or-topic>' docs/plan/CATALOG.md  # find the file, then open it
 ```
 
-Counts: 771 archived lanes (177 not DONE when archived), 55 older archive files, 345 dated plan notes, 84 lane notes, 508 strand and planning documents.
+Counts: 771 archived lanes (177 not DONE when archived), 55 older archive files, 347 dated plan notes, 87 lane notes, 508 strand and planning documents.
 
 ## Lanes that were not DONE when archived
 
@@ -867,6 +867,8 @@ Result notes, designs, handoffs and earlier queues. Evidence for claims; never t
 | Date | File | Title |
 |---|---|---|
 | 2026-10-11 | [`docs/plan/sat-python-route-census-2026-10-11.md`](sat-python-route-census-2026-10-11.md) | Python SAT certificate route census — 2026-10-11 |
+| 2026-10-11 | [`docs/plan/cas-pi-enclosure-transport-2026-10-11.md`](cas-pi-enclosure-transport-2026-10-11.md) | Portable exact pi enclosure evidence — 2026-10-11 |
+| 2026-10-11 | [`docs/plan/cas-expression-wire-2026-10-11.md`](cas-expression-wire-2026-10-11.md) | Exact CAS expression transport — 2026-10-11 |
 | 2026-10-10 | [`docs/plan/user-feedback-audit-2026-10-10.md`](user-feedback-audit-2026-10-10.md) | User feedback audit and implementation map — 2026-10-10 |
 | 2026-10-10 | [`docs/plan/proof-api-consumer-plan-2026-10-10.md`](proof-api-consumer-plan-2026-10-10.md) | Proof export, SMT APIs and Rules-as-Code plan — 2026-10-10 |
 | 2026-10-10 | [`docs/plan/cas-certified-trace-plan-2026-10-10.md`](cas-certified-trace-plan-2026-10-10.md) | Certified CAS traces and exact expression surface — 2026-10-10 |
@@ -1219,6 +1221,9 @@ Result notes, designs, handoffs and earlier queues. Evidence for claims; never t
 | 2026-10-11 | [`docs/plan/notes/rules-dates.md`](notes/rules-dates.md) | Typed Date facade evidence — 2026-10-11 |
 | 2026-10-11 | [`docs/plan/notes/python-omt-results.md`](notes/python-omt-results.md) | Python OMT validation record |
 | 2026-10-11 | [`docs/plan/notes/feedback-integration.md`](notes/feedback-integration.md) | Feedback branch integration — 2026-10-11 |
+| 2026-10-11 | [`docs/plan/notes/cas-pi.md`](notes/cas-pi.md) | CAS pi identity migration — 2026-10-11 |
+| 2026-10-11 | [`docs/plan/notes/cas-pi-certificate.md`](notes/cas-pi-certificate.md) | Portable pi certificate evidence — 2026-10-11 |
+| 2026-10-11 | [`docs/plan/notes/cas-expression-wire.md`](notes/cas-expression-wire.md) | Expression transport evidence — 2026-10-11 |
 | 2026-10-10 | [`docs/plan/notes/omt-correctness.md`](notes/omt-correctness.md) | OMT correctness validation — 2026-10-10 |
 | 2026-09-06 | [`docs/plan/notes/coordinator-math-five-topics-2026-09-06.md`](notes/coordinator-math-five-topics-2026-09-06.md) | coordinator-math, 2026-09-06 — detail behind the five topics |
 | 2026-08-25 | [`docs/plan/notes/126-top-three-focus.md`](notes/126-top-three-focus.md) | Notes: top-three-focus |

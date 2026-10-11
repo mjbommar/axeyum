@@ -613,7 +613,11 @@ impl MvPoly {
                 factors.push(CasExpr::Const(*coeff));
             }
             for (var, exp) in &mono.powers {
-                let base = CasExpr::Var(var.clone());
+                let base = if var == crate::PI_ATOM_NAME {
+                    CasExpr::Pi
+                } else {
+                    CasExpr::Var(var.clone())
+                };
                 factors.push(if *exp == 1 { base } else { base.pow(*exp) });
             }
             let term = match factors.len() {
@@ -635,7 +639,9 @@ impl MvPoly {
     #[must_use]
     pub fn from_cas_expr(expr: &CasExpr) -> Option<MvPoly> {
         match expr {
+            CasExpr::Pi => Some(MvPoly::var(crate::PI_ATOM_NAME)),
             CasExpr::Const(value) => Some(MvPoly::constant(*value)),
+            CasExpr::Var(name) if name == crate::PI_ATOM_NAME => None,
             CasExpr::Var(name) => Some(MvPoly::var(name)),
             CasExpr::Add(terms) => terms.iter().try_fold(MvPoly::zero(), |acc, term| {
                 acc.add(&MvPoly::from_cas_expr(term)?)

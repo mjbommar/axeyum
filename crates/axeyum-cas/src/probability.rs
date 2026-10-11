@@ -1564,7 +1564,7 @@ fn normal_rate(variance: &CasExpr) -> CasExpr {
 /// That it really is the normalizer is [`normal_symbolic_coeff_is_the_pdf`]'s
 /// job to **decide**, not this function's to assert.
 fn normal_symbolic_coeff(variance: &CasExpr) -> CasExpr {
-    crate::simplify_radicals(&normal_rate(variance).sqrt()) / CasExpr::var("pi").sqrt()
+    crate::simplify_radicals(&normal_rate(variance).sqrt()) / CasExpr::pi().sqrt()
 }
 
 /// Decide that [`normal_symbolic_coeff`] is the `Normal` pdf's normalizing
@@ -1581,7 +1581,7 @@ fn normal_symbolic_coeff(variance: &CasExpr) -> CasExpr {
 /// gated on it.
 fn normal_symbolic_coeff_is_the_pdf(coeff: &CasExpr, variance: &CasExpr) -> bool {
     let squared =
-        coeff.clone() * coeff.clone() * CasExpr::int(2) * CasExpr::var("pi") * variance.clone();
+        coeff.clone() * coeff.clone() * CasExpr::int(2) * CasExpr::pi() * variance.clone();
     let settled = crate::simplify_radicals(&simplify(&crate::simplify_radicals(&squared)));
     matches!(
         equal(&settled, &CasExpr::one()),
@@ -2190,7 +2190,7 @@ fn normal_raw_moment(variance: Rational, power: u32) -> Option<CasExpr> {
 
 /// The Normal pdf's normalizing constant `1/√(2π·variance)`.
 fn normal_coeff(variance: Rational) -> CasExpr {
-    CasExpr::one() / (CasExpr::int(2) * CasExpr::var("pi") * CasExpr::Const(variance)).sqrt()
+    CasExpr::one() / (CasExpr::int(2) * CasExpr::pi() * CasExpr::Const(variance)).sqrt()
 }
 
 fn normal_decline_reason(variance: Rational) -> String {
@@ -3581,12 +3581,12 @@ mod tests {
             &s
         ));
         // `√(1/σ²)/√π` — the same shape with the `2` dropped out of the rate.
-        let missing_two = crate::simplify_radicals(&(CasExpr::one() / s.clone()).sqrt())
-            / CasExpr::var("pi").sqrt();
+        let missing_two =
+            crate::simplify_radicals(&(CasExpr::one() / s.clone()).sqrt()) / CasExpr::pi().sqrt();
         assert!(!normal_symbolic_coeff_is_the_pdf(&missing_two, &s));
         // `1/√(2πσ)` — the standard deviation where the variance belongs.
         let sigma_not_variance =
-            CasExpr::one() / (CasExpr::int(2) * CasExpr::var("pi") * s.clone().sqrt()).sqrt();
+            CasExpr::one() / (CasExpr::int(2) * CasExpr::pi() * s.clone().sqrt()).sqrt();
         assert!(!normal_symbolic_coeff_is_the_pdf(&sigma_not_variance, &s));
     }
 

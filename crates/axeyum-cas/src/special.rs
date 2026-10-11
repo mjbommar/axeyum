@@ -12,7 +12,7 @@ use crate::{CasExpr, combinatorics, ntheory};
 
 /// `√π` as a `CasExpr` (the reserved constant `pi` under a square root).
 fn sqrt_pi() -> CasExpr {
-    CasExpr::var("pi").sqrt()
+    CasExpr::pi().sqrt()
 }
 
 /// The **Gamma function** `Γ(x)` at a rational `x`, when it has an elementary closed
@@ -90,7 +90,7 @@ pub fn beta(x: Rational, y: Rational) -> Option<CasExpr> {
 /// use axeyum_cas::{CasExpr, special::zeta, equal, ZeroTest};
 /// // ζ(2) = π²/6.
 /// let z2 = zeta(2).unwrap();
-/// let expected = CasExpr::rat(1, 6) * CasExpr::var("pi").pow(2);
+/// let expected = CasExpr::rat(1, 6) * CasExpr::pi().pow(2);
 /// assert!(matches!(equal(&z2, &expected), ZeroTest::Certified { equal: true, .. }));
 /// // ζ(−1) = −1/12.
 /// assert_eq!(zeta(-1), Some(CasExpr::rat(-1, 12)));
@@ -132,7 +132,7 @@ pub fn zeta(s: i64) -> Option<CasExpr> {
         // (−1)^{k+1} = −1 when k is even.
         coeff = coeff.checked_neg()?;
     }
-    Some(CasExpr::Const(coeff) * CasExpr::var("pi").pow(n))
+    Some(CasExpr::Const(coeff) * CasExpr::pi().pow(n))
 }
 
 /// The **polygamma function** `ψ⁽ᵐ⁾(1)` at `1`, when it has an elementary closed
@@ -147,7 +147,7 @@ pub fn zeta(s: i64) -> Option<CasExpr> {
 /// use axeyum_cas::{CasExpr, special::polygamma_at_one, equal, ZeroTest};
 /// // ψ′(1) = ζ(2) = π²/6.
 /// let value = polygamma_at_one(1).unwrap();
-/// let expected = CasExpr::rat(1, 6) * CasExpr::var("pi").pow(2);
+/// let expected = CasExpr::rat(1, 6) * CasExpr::pi().pow(2);
 /// assert!(matches!(equal(&value, &expected), ZeroTest::Certified { equal: true, .. }));
 /// ```
 #[must_use]
@@ -172,7 +172,7 @@ pub fn polygamma_at_one(m: u32) -> Option<CasExpr> {
 /// use axeyum_cas::{CasExpr, special::dirichlet_eta, equal, ZeroTest};
 /// // η(2) = π²/12.
 /// let value = dirichlet_eta(2).unwrap();
-/// let expected = CasExpr::rat(1, 12) * CasExpr::var("pi").pow(2);
+/// let expected = CasExpr::rat(1, 12) * CasExpr::pi().pow(2);
 /// assert!(matches!(equal(&value, &expected), ZeroTest::Certified { equal: true, .. }));
 /// ```
 #[must_use]
@@ -201,7 +201,7 @@ pub fn dirichlet_eta(s: i64) -> Option<CasExpr> {
 /// use axeyum_cas::{CasExpr, special::dirichlet_lambda, equal, ZeroTest};
 /// // λ(2) = π²/8.
 /// let value = dirichlet_lambda(2).unwrap();
-/// let expected = CasExpr::rat(1, 8) * CasExpr::var("pi").pow(2);
+/// let expected = CasExpr::rat(1, 8) * CasExpr::pi().pow(2);
 /// assert!(matches!(equal(&value, &expected), ZeroTest::Certified { equal: true, .. }));
 /// ```
 #[must_use]
@@ -297,7 +297,7 @@ mod tests {
 
     #[test]
     fn dirichlet_lambda_closed_forms() {
-        let pi = || CasExpr::var("pi");
+        let pi = || CasExpr::pi();
         // λ(2)=π²/8, λ(4)=π⁴/96; and the identity λ(s) = (ζ(s)+η(s))/2 for s=2,4,6.
         assert_equal(
             &dirichlet_lambda(2).unwrap(),
@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn dirichlet_eta_closed_forms() {
-        let pi = || CasExpr::var("pi");
+        let pi = || CasExpr::pi();
         // η(2)=π²/12, η(4)=7π⁴/720, η(6)=31π⁶/30240; η(0)=1/2.
         assert_equal(
             &dirichlet_eta(2).unwrap(),
@@ -340,7 +340,7 @@ mod tests {
 
     #[test]
     fn polygamma_at_one_closed_forms() {
-        let pi = || CasExpr::var("pi");
+        let pi = || CasExpr::pi();
         // ψ′(1) = ζ(2) = π²/6; ψ‴(1) = 6ζ(4) = π⁴/15; ψ⁽⁵⁾(1) = 120ζ(6) = 8π⁶/63.
         assert_equal(
             &polygamma_at_one(1).unwrap(),
@@ -362,7 +362,7 @@ mod tests {
 
     #[test]
     fn zeta_closed_forms() {
-        let pi = || CasExpr::var("pi");
+        let pi = || CasExpr::pi();
         // Positive even: ζ(2)=π²/6, ζ(4)=π⁴/90, ζ(6)=π⁶/945.
         assert_equal(&zeta(2).unwrap(), &(CasExpr::rat(1, 6) * pi().pow(2)));
         assert_equal(&zeta(4).unwrap(), &(CasExpr::rat(1, 90) * pi().pow(4)));

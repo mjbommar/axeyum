@@ -20,7 +20,7 @@ def test_constructor_agreement_and_amortization():
     assert cas.parse('x^-1').eval({}) is None
 
 
-@pytest.mark.parametrize('text', ['', '1+', '2x', 'x.y', 'x[0]', 'f(x)', 'sin(x,y)', '2^0.5', '2^2^3', '1e3', 'pi', 'π', '__import__(x)', '(' * 34 + '1' + ')' * 34, '1+' * 33 + '1', '9'*1025, ' '*8193, '+'*513, '2^4294967296'])
+@pytest.mark.parametrize('text', ['', '1+', '2x', 'x.y', 'x[0]', 'f(x)', 'sin(x,y)', '2^0.5', '2^2^3', '1e3', '__import__(x)', '(' * 34 + '1' + ')' * 34, '1+' * 33 + '1', '9'*1025, ' '*8193, '+'*513, '2^4294967296'])
 def test_malformed_and_resource_inputs_have_spans(text):
     with pytest.raises(cas.ParseError) as error:
         cas.parse(text)

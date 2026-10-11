@@ -194,7 +194,9 @@ impl Normalizer {
                 }
                 result
             }
-            CasExpr::Unary(..) => return Err(TraceError::Unsupported("nonpolynomial head".into())),
+            CasExpr::Pi | CasExpr::Unary(..) => {
+                return Err(TraceError::Unsupported("nonpolynomial head".into()));
+            }
         };
         self.polynomial(&result)?;
         Ok(result)

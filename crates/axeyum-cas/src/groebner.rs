@@ -260,7 +260,7 @@ fn expand(expr: &CasExpr) -> Option<BTreeMap<Exponents, Rational>> {
             }
             Some(acc)
         }
-        CasExpr::Div(..) | CasExpr::Unary(..) => None,
+        CasExpr::Pi | CasExpr::Div(..) | CasExpr::Unary(..) => None,
     }
 }
 

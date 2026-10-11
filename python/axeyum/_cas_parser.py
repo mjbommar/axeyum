@@ -75,7 +75,8 @@ def parse(text: str) -> Expr:
             exact = Fraction(token)
             left = node(lambda: Expr.rat(exact.numerator, exact.denominator))
         elif token in ("pi", "π"):
-            fail("symbolic pi constructor is not available")
+            index += 1
+            left = node(Expr.pi)
         elif token and (token[0].isalpha() or token[0] == "_"):
             index += 1
             if tokens[index][0] == "(":

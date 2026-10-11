@@ -80,6 +80,6 @@ fn visit(
             }
             Ok(value)
         }
-        CasExpr::Unary(_, _) => Err(Decline::Unsupported),
+        CasExpr::Pi | CasExpr::Unary(_, _) => Err(Decline::Unsupported),
     }
 }

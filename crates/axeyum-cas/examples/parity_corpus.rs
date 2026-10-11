@@ -350,7 +350,7 @@ fn i4_gaussian_erf() -> Outcome {
     let f = (-x().pow(2)).exp();
     match integrate(&f, "x") {
         Some(result) => {
-            let expected = r(1, 2) * CasExpr::var("pi").sqrt() * x().erf();
+            let expected = r(1, 2) * CasExpr::pi().sqrt() * x().erf();
             eq_check(
                 &result.antiderivative,
                 &expected,
@@ -1128,7 +1128,7 @@ fn fps2_primes_decline() -> Outcome {
 fn enc1_pi() -> Outcome {
     match enclose_constant("pi", 64) {
         Some(enc) => {
-            let verified = enc.verify(&CasExpr::var("pi"), &[]).is_ok();
+            let verified = enc.verify(&CasExpr::pi(), &[]).is_ok();
             let decimal = enc.interval.decimal(6);
             // OEIS A000796: pi = 3.14159265358979323846...
             let matches_digits = decimal.starts_with("[3.141592");

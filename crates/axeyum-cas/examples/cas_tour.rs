@@ -97,7 +97,7 @@ fn main() {
         solution.len()
     );
     // Exact trig.
-    let pi = CasExpr::var("pi");
+    let pi = CasExpr::pi();
     println!("sin(pi/6) = {}", evaluate_trig(&(pi.clone() / i(6)).sin()));
 
     println!("\n-- differential equations --");

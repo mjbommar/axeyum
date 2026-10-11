@@ -831,7 +831,7 @@ fn step_tolerance(precision: u32, steps: usize) -> BigRational {
 /// valid certificate must carry.
 fn node_count(expr: &CasExpr) -> usize {
     match expr {
-        CasExpr::Const(_) | CasExpr::Var(_) => 1,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => 1,
         CasExpr::Add(parts) | CasExpr::Mul(parts) => {
             1 + parts.iter().map(node_count).sum::<usize>()
         }
@@ -1610,7 +1610,6 @@ pub const EULER_GAMMA_NAME: &str = "euler_gamma";
 /// the one it was produced for.
 fn reserved_constant(name: &str) -> Option<StepHead> {
     match name {
-        "pi" => Some(StepHead::Pi),
         EULER_GAMMA_NAME => Some(StepHead::EulerGamma),
         _ => None,
     }
@@ -1641,6 +1640,7 @@ pub fn enclose_fixed_order(
     order: u32,
 ) -> Result<BigInterval, DeclineReason> {
     match expr {
+        CasExpr::Pi => eval_head_raw(&StepHead::Pi, &[], order),
         CasExpr::Const(value) => Ok(BigInterval::point(from_rational(*value))),
         CasExpr::Var(name) => {
             if let Some(bound) = bindings.get(name) {
@@ -1703,6 +1703,18 @@ fn build(
         output
     };
     match expr {
+        CasExpr::Pi => {
+            let (output, remainder, order) = adaptive(&StepHead::Pi, &[], tolerance)?;
+            evidence.push(Step {
+                head: StepHead::Pi,
+                inputs: Vec::new(),
+                order,
+                remainder,
+                output: output.clone(),
+                signs: None,
+            });
+            Ok(output)
+        }
         CasExpr::Const(value) => Ok(leaf(
             StepHead::Const,
             BigInterval::point(from_rational(*value)),
@@ -1926,7 +1938,7 @@ impl Enclosure {
         cursor: &mut usize,
     ) -> Result<BigInterval, String> {
         let children: Vec<BigInterval> = match expr {
-            CasExpr::Const(_) | CasExpr::Var(_) => Vec::new(),
+            CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => Vec::new(),
             CasExpr::Add(parts) | CasExpr::Mul(parts) => {
                 let mut out = Vec::with_capacity(parts.len());
                 for part in parts {
@@ -2014,6 +2026,7 @@ fn expected_head(
     bindings: &BTreeMap<String, BigInterval>,
 ) -> Result<StepHead, String> {
     Ok(match expr {
+        CasExpr::Pi => StepHead::Pi,
         CasExpr::Const(_) => StepHead::Const,
         CasExpr::Var(name) => {
             if bindings.contains_key(name) {
@@ -2321,7 +2334,7 @@ pub fn rational_power_via_exp_ln(base: CasExpr, p: i64, q: u32) -> Option<CasExp
 /// ```
 pub fn enclose_constant(name: &str, precision: u32) -> Option<Enclosure> {
     match name {
-        "pi" => enclose(&CasExpr::var("pi"), &[], precision),
+        "pi" => enclose(&CasExpr::pi(), &[], precision),
         "e" => enclose(&CasExpr::int(1).exp(), &[], precision),
         "ln2" | "ln 2" => enclose(&CasExpr::int(2).ln(), &[], precision),
         "euler_gamma" | "gamma" => enclose(&CasExpr::var(EULER_GAMMA_NAME), &[], precision),
@@ -2440,7 +2453,7 @@ mod tests {
                 "pi at precision {precision}: width {} exceeds the bound",
                 e.interval.width()
             );
-            e.verify(&CasExpr::var("pi"), &[]).expect("pi verifies");
+            e.verify(&CasExpr::pi(), &[]).expect("pi verifies");
         }
         let tight = enclose_constant("pi", 130).expect("pi at 130");
         assert!(
@@ -2703,7 +2716,7 @@ mod tests {
     // -- Forged certificates: one guard, one death -------------------------
 
     fn pi_certificate() -> (CasExpr, Enclosure) {
-        let expr = CasExpr::var("pi");
+        let expr = CasExpr::pi();
         let e = enclose(&expr, &[], 40).expect("pi");
         (expr, e)
     }
@@ -3240,7 +3253,7 @@ mod tests {
             let e = enclose_constant("pi", precision).expect("pi");
             let produced = start.elapsed();
             let start = std::time::Instant::now();
-            e.verify(&CasExpr::var("pi"), &[]).expect("verifies");
+            e.verify(&CasExpr::pi(), &[]).expect("verifies");
             let verified = start.elapsed();
             println!(
                 "pi precision {precision:>3}: order {:>4}  produce {produced:?}  verify {verified:?}",

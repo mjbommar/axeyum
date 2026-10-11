@@ -258,6 +258,68 @@ remaining trace width/domains/kernel bridges, pi/serialization, OMT Python gold,
 SAT routes and consumer validation. Source branches retained; imports are linear.
 No combined runtime pass, main landing or overall completion claimed.
 
+**CAS pi (`WIP`, cas-pi, 2026-10-11).** Isolated from integration baf50f913.
+Distinct Pi leaf and Rust/Python constructors now preserve constant identity;
+ordinary Var(pi) no longer triggers constant evalf/enclosure/trig recognition.
+Internal formulas and examples migrate to Pi; polynomial decoding preserves its
+leaf and rejects forged source constant keys. Source-bound enclosure controls
+cover both constant and bound-variable subjects. ADR-6000 remains proposed.
+Core compile passes; five targeted Rust and 21 trig tests pass. Fresh native
+build succeeds and sealed Python CAS suites pass 269 tests/zero skips, including
+constructor, pi/Unicode parser and wrong-rewrite controls (hash/logs in notes).
+Stub generation passes (27 modules/649 items), name/arity and type ratchets pass.
+Same-interval constant/variable replay rejection strengthens the five Rust controls.
+Private head-guard mutation passes: baseline five; mutant four plus one failure.
+Parent runner21448: CAS 2140 pass/11 ignored; workspace is live. Child evidence
+repair gates nonzero Pi polynomial claims and rejects raw atom aliases in both
+producer and replay. Seven Rust controls pass. Fresh child native build passes; sealed Python suites pass 271/zero skips.
+Both private replay-guard mutations kill exactly one of seven controls. Child
+runner15629 on source286c6d445: CAS red (2139 pass/one Gaussian expectation
+failure/11 ignored); workspace live. Expression-wire child fixes that unsafe
+inequality expectation and focused Gaussian passes; broad child gates pending.
+Canonical tagged serialization and reconstruction remain pending.
+Version-1 traces and rational-only bridges explicitly decline unsupported Pi.
+Next: finish stubs and full gates, source-binding guard mutation, portable Pi
+encoding/replay and remaining consumer audits. No full Pi or goal completion claim.
+
+**Expression wire (`WIP`, cas-expression-wire, 2026-10-11).** Child of
+ff9e9301e, isolated from the Pi repair broad runner. ADR-6100 specifies tagged
+version1 JSON preserving Pi/Var(pi), ordered syntax, wide exact rationals and
+all unary heads. Rust and Python APIs implemented; four Rust transport tests
+pass, with every head and malformed/resource controls. Fresh native build
+passes; eight Python suites collect/pass279, zero skips. Stub generation and runtime name/arity/type ratchets pass. Private canonical
+guard mutation passes (four baseline, three plus one mutant failure).
+Read-only format and focused CAS-library Clippy pass. Broad runner64759 is
+on c34b7bc89: format passes and CAS 2140 pass/zero fail/11 ignored; workspace
+remains live. Pi certificate child retains this source while implementing replay. Parent CAS broad run is red: 2139 pass/one failure/11 ignored;
+Gaussian test expects a false opaque-atom inequality between equal functions.
+Require Unknown before radical simplification while preserving certified
+integration and simplified equality controls. Parent workspace remains pending.
+Focused Gaussian regression passes one test, retaining certified integration.
+Next: full CAS/workspace gates and remaining consumer/certificate work;
+checker controls and broad gates. Certificate transport and kernel admission
+remain separate unfinished requirements; no full goal completion claim.
+
+**Pi enclosure transport (`WIP`, cas-pi-certificate, 2026-10-11).** Isolated
+child of 087fc31b5; parent broad runner64759 retains immutable source. ADR-6200
+specifies version1 source-bound single-Pi Machin evidence, exact endpoints,
+remainder/order, precision up to256 and resource caps. Rust/Python transport,
+producer and counted replay implemented. Four Rust controls pass, including
+precision256. Fresh native rebuild and nine Python suites pass283/zero skips,
+including a separate-process certificate replay. Stub generation and runtime
+name/arity/type gates pass. Source-binding mutation passes (four baseline;
+three pass/one failure when the guard is removed). Format, focused CAS Clippy,
+link and plan-authority checks pass. Broad runner43938 is live on56fe5378d:
+full CAS suite terminal pass: 2,140 passed, 0 failed, 11 ignored, 373.02s
+(`/var/tmp/axeyum-pi-certificate-full-gates-_dy3bzlq/cas_lib.log`).
+Workspace libraries remain live; no workspace pass credited. Replay never
+invokes production; parsing alone grants no acceptance.
+Tamper tests require wrong-source, understated remainder and invalid endpoint/
+precision declines; conservative relaxations retain the verifier semantics.
+Next: workspace gates, general enclosure transport and checked Pi
+value inequalities; retain byte/source checking through reconstruction. General enclosure transport,
+checked Pi inequalities and kernel reconstruction remain separate open work.
+
 **Python OMT reports (`WIP`, python-omt-results, 2026-10-11).** Isolated from
 integration9221ebb67. ADR-6300 adds typed Rust/Python optimization reports with
 exact Int/unsigned-BV values, direction/sort, explicit lex/box semantics, shared
@@ -482,6 +544,14 @@ unused-code warnings (37/35 respectively), not warning-free claims. Added
 fractional/wide/domain/foreign-variable translation declines and hostile added-
 assumption intake controls. Release13258 running, uncredited:
 `/var/tmp/axeyum-cas-trace-kernel-controls.log`.
+
+**LIB/EVD/CON (`WIP`, feedback-consolidation, 2026-10-11).** Child97e700533.
+Merging Pi/canonical expression wire/Machin certificates cb5d142b1 into wide,
+guarded and kernel-trace ancestry. Resolve generated files by regeneration;
+preserve v2 closed division and explicitly decline Pi in polynomial traces.
+No integrated gate results yet. Next: commit merge, hygiene/inventory recount,
+focused Rust/Python compilation and replay, broad integration gates; Rust parser
+and remaining proof/consumer requirements remain active. No push authorized.
 
 ### SOL — Solver parity
 

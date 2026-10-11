@@ -477,7 +477,7 @@ impl PolynomialExpr {
                     numerator: Box::new(child(numerator)?),
                     denominator: Box::new(child(denominator)?),
                 },
-                CasExpr::Div(..) | CasExpr::Unary(..) => {
+                CasExpr::Pi | CasExpr::Div(..) | CasExpr::Unary(..) => {
                     return Err(TraceError::Unsupported(
                         "domain-dependent/nonpolynomial rewrite".to_owned(),
                     ));

@@ -1091,6 +1091,9 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [3300](adr-3300-python-rule-packs-reuse-native-obligations.md) | Python rule packs reuse metadata and native obligations | proposed |
 | [3400](adr-3400-statute-time-template-carries-calendar-and-applicability-inputs.md) | Statute time template carries calendar and applicability inputs | proposed |
 | [3500](adr-3500-finite-deadline-certificates-replay-native-ground-facts.md) | Finite deadline certificates replay native ground facts | proposed |
+| [6000](adr-6000-distinguished-cas-pi-has-constant-identity.md) | distinguished CAS pi has constant identity | proposed; implementation and full validation pending |
+| [6100](adr-6100-cas-expression-wire-preserves-source-identity.md) | CAS expression wire preserves source identity | proposed; implementation and validation in progress |
+| [6200](adr-6200-portable-pi-enclosure-replays-source-bound-machin-evidence.md) | portable pi enclosure replays source-bound Machin evidence | proposed; implementation and validation in progress |
 | [6300](adr-6300-typed-omt-results-retain-original-model-replay.md) | typed OMT results retain original model replay | proposed; implementation and validation in progress |
 | [6301](adr-6301-farkas-source-binding-precedes-optimality-credit.md) | Farkas source binding precedes optimality credit | proposed |
 | [6302](adr-6302-portable-omt-certificates-carry-the-original-query.md) | Portable OMT certificates carry the original query | proposed |

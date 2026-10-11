@@ -274,7 +274,7 @@ fn root_degree_of(expr: &CasExpr, var: &str) -> Option<u32> {
         CasExpr::Add(items) | CasExpr::Mul(items) => {
             items.iter().find_map(|t| root_degree_of(t, var))
         }
-        CasExpr::Const(_) | CasExpr::Var(_) => None,
+        CasExpr::Pi | CasExpr::Const(_) | CasExpr::Var(_) => None,
     }
 }
 
@@ -426,6 +426,7 @@ fn expand_series(expr: &CasExpr, var: &str, order: usize) -> Option<Series> {
 /// outside the supported set decline to `None`.
 fn coeffs_of(expr: &CasExpr, var: &str, order: usize) -> Option<Series> {
     match expr {
+        CasExpr::Pi => None,
         CasExpr::Const(value) => Some(Series::constant(order, *value)),
         CasExpr::Var(name) => {
             if name != var {
@@ -1005,7 +1006,7 @@ mod tests {
         ));
 
         // sin(x) about x=π/6, order 1: 1/2 + (√3/2)(x − π/6).
-        let center = crate::CasExpr::var("pi") / CasExpr::int(6);
+        let center = crate::CasExpr::pi() / CasExpr::int(6);
         let got = series_at(&var().sin(), "x", &center, 1).expect("taylor fallback");
         let expected =
             CasExpr::rat(1, 2) + CasExpr::rat(1, 2) * CasExpr::int(3).sqrt() * (var() - center);

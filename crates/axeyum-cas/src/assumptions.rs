@@ -198,7 +198,7 @@ impl Assumptions {
                     base_sign
                 }
             }
-            CasExpr::Unary(UnaryFunc::Exp, _) => Sign::Positive, // exp(x) > 0 always
+            CasExpr::Pi | CasExpr::Unary(UnaryFunc::Exp, _) => Sign::Positive, // pi and exp(x) > 0
             CasExpr::Unary(UnaryFunc::Abs, arg) => {
                 if self.is_nonzero(arg) {
                     Sign::Positive

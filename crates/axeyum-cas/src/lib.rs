@@ -81,6 +81,7 @@ pub mod combinatorics;
 pub mod enclosure;
 pub mod enclosure_integral;
 pub mod enclosure_special;
+pub mod expression_wire;
 pub mod extremum;
 mod factor_int;
 pub mod fps;
@@ -124,6 +125,7 @@ pub mod orthopoly;
 pub mod partial_fractions;
 pub mod permgroup;
 pub mod permutation;
+pub mod pi_certificate;
 pub mod probability;
 pub mod qe;
 mod ratint;
@@ -176,6 +178,8 @@ pub use sets::{RealSet, finite_set};
 pub enum CasExpr {
     /// An exact rational constant.
     Const(Rational),
+    /// The mathematical real constant pi, independent of variable bindings.
+    Pi,
     /// A named variable or parameter symbol.
     Var(String),
     /// A sum of subexpressions (empty sum denotes `0`).
@@ -198,8 +202,16 @@ pub enum CasExpr {
     Unary(UnaryFunc, Box<CasExpr>),
 }
 
+const PI_ATOM_NAME: &str = "\0constant:pi";
+
 /// A unary transcendental function head (see [`CasExpr::Unary`]).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(
+    tag = "kind",
+    content = "order",
+    rename_all = "snake_case",
+    deny_unknown_fields
+)]
 pub enum UnaryFunc {
     /// Natural logarithm `ln`.
     Ln,
@@ -375,8 +387,7 @@ impl UnaryFunc {
             UnaryFunc::Sign | UnaryFunc::Floor | UnaryFunc::Ceiling => CasExpr::zero(),
             // d/du erf(u) = (2/√π)·e^{−u²}
             UnaryFunc::Erf => {
-                CasExpr::int(2) / CasExpr::var("pi").sqrt()
-                    * CasExpr::Neg(Box::new(u().pow(2))).exp()
+                CasExpr::int(2) / CasExpr::pi().sqrt() * CasExpr::Neg(Box::new(u().pow(2))).exp()
             }
             // d/du Si(u) = sin u / u ; Ci(u) = cos u / u ; Ei(u) = eᵘ / u.
             UnaryFunc::Si => CasExpr::Unary(UnaryFunc::Sin, Box::new(u())) / u(),
@@ -396,8 +407,8 @@ impl UnaryFunc {
                 (exp_u + exp_neg) / (CasExpr::int(2) * u())
             }
             // d/du S(u) = sin(π u²/2) ; d/du C(u) = cos(π u²/2).
-            UnaryFunc::FresnelS => (CasExpr::var("pi") * u().pow(2) / CasExpr::int(2)).sin(),
-            UnaryFunc::FresnelC => (CasExpr::var("pi") * u().pow(2) / CasExpr::int(2)).cos(),
+            UnaryFunc::FresnelS => (CasExpr::pi() * u().pow(2) / CasExpr::int(2)).sin(),
+            UnaryFunc::FresnelC => (CasExpr::pi() * u().pow(2) / CasExpr::int(2)).cos(),
             // d/du Jₙ(u): J₀′ = −J₁; for n ≥ 1, Jₙ′ = (Jₙ₋₁ − Jₙ₊₁)/2.
             // At the public `u32::MAX` order, use the equivalent backward form
             // Jₙ′ = Jₙ₋₁ − (n/u)Jₙ rather than overflowing at `n + 1`.
@@ -482,6 +493,12 @@ impl CasExpr {
     #[must_use]
     pub fn rat(num: i128, den: i128) -> Self {
         CasExpr::Const(Rational::new(num, den))
+    }
+
+    /// The mathematical real constant pi.
+    #[must_use]
+    pub fn pi() -> Self {
+        CasExpr::Pi
     }
 
     /// The variable named `name`.
@@ -746,7 +763,7 @@ impl CasExpr {
     #[must_use]
     pub fn differentiate(&self, var: &str) -> CasExpr {
         match self {
-            CasExpr::Const(_) => CasExpr::zero(),
+            CasExpr::Const(_) | CasExpr::Pi => CasExpr::zero(),
             CasExpr::Var(v) => {
                 if v == var {
                     CasExpr::one()
@@ -824,7 +841,7 @@ impl CasExpr {
     #[must_use]
     pub fn substitute(&self, var: &str, replacement: &CasExpr) -> CasExpr {
         match self {
-            CasExpr::Const(_) => self.clone(),
+            CasExpr::Const(_) | CasExpr::Pi => self.clone(),
             CasExpr::Var(v) => {
                 if v == var {
                     replacement.clone()
@@ -902,7 +919,7 @@ impl CasExpr {
                 Some(acc)
             }
             // Transcendental: no exact rational value.
-            CasExpr::Unary(_, _) => None,
+            CasExpr::Pi | CasExpr::Unary(_, _) => None,
         }
     }
 }
@@ -964,6 +981,7 @@ impl CasExpr {
                 };
                 (prec, text)
             }
+            CasExpr::Pi => (4, "pi".to_owned()),
             CasExpr::Var(v) => (4, v.clone()),
             CasExpr::Pow(base, exp) => (3, format!("{}^{exp}", base.render(4))),
             CasExpr::Neg(inner) => (2, format!("-{}", inner.render(3))),
@@ -1742,7 +1760,11 @@ impl MultiPoly {
                 factors.push(CasExpr::Const(*coeff));
             }
             for (var, exp) in &mono.powers {
-                let base = CasExpr::Var(var.clone());
+                let base = if var == PI_ATOM_NAME {
+                    CasExpr::Pi
+                } else {
+                    CasExpr::Var(var.clone())
+                };
                 factors.push(if *exp == 1 { base } else { base.pow(*exp) });
             }
             let term = match factors.len() {
@@ -1899,6 +1921,8 @@ impl MultiPoly {
 pub fn normalize(expr: &CasExpr) -> Option<MultiPoly> {
     match expr {
         CasExpr::Const(r) => Some(MultiPoly::constant(*r)),
+        CasExpr::Pi => Some(MultiPoly::single_var(PI_ATOM_NAME)),
+        CasExpr::Var(v) if v == PI_ATOM_NAME => None,
         CasExpr::Var(v) => Some(MultiPoly::single_var(v)),
         CasExpr::Add(terms) => terms
             .iter()
@@ -2148,6 +2172,10 @@ fn normalize_rational_classified(expr: &CasExpr) -> Result<RatFunc, ZeroTestDecl
     let overflowed = || ZeroTestDecline::Overflowed;
     match expr {
         CasExpr::Const(r) => Ok(RatFunc::from_poly(MultiPoly::constant(*r))),
+        CasExpr::Pi => Ok(RatFunc::from_poly(MultiPoly::single_var(PI_ATOM_NAME))),
+        CasExpr::Var(v) if v == PI_ATOM_NAME => Err(ZeroTestDecline::OutOfFragment(
+            FragmentLimit::ReservedInternalSymbol,
+        )),
         CasExpr::Var(v) => Ok(RatFunc::from_poly(MultiPoly::single_var(v))),
         CasExpr::Add(terms) => {
             let mut acc = RatFunc::from_poly(MultiPoly::zero());
@@ -2389,7 +2417,14 @@ fn atom_name(head: &str, arg: &CasExpr) -> String {
         mark = ATOM_UNCANONICAL;
         arg.clone()
     };
-    format!("\0{head}:{mark}{}", canonical.render(0))
+    format!(
+        "\0{head}:{mark}{}",
+        if matches!(canonical, CasExpr::Const(_)) {
+            canonical.render(0)
+        } else {
+            format!("{canonical:?}")
+        }
+    )
 }
 
 /// Collect a decoding dictionary `atom_name → Unary(head, arg)` from every
@@ -2403,6 +2438,9 @@ fn atom_name(head: &str, arg: &CasExpr) -> String {
 /// `exp` argument — and its negation — is registered too.
 fn collect_atom_dictionary(source: &CasExpr, dict: &mut BTreeMap<String, CasExpr>) {
     match source {
+        CasExpr::Pi => {
+            dict.insert(PI_ATOM_NAME.to_owned(), CasExpr::Pi);
+        }
         CasExpr::Const(_) | CasExpr::Var(_) => {}
         CasExpr::Add(items) | CasExpr::Mul(items) => {
             for item in items {
@@ -2495,7 +2533,7 @@ fn deatomize(expr: &CasExpr, dict: &BTreeMap<String, CasExpr>) -> CasExpr {
         CasExpr::Var(name) if name.starts_with('\0') => {
             dict.get(name).cloned().unwrap_or_else(|| expr.clone())
         }
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
         CasExpr::Add(items) => CasExpr::Add(items.iter().map(|e| deatomize(e, dict)).collect()),
         CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(|e| deatomize(e, dict)).collect()),
         CasExpr::Neg(a) => CasExpr::Neg(Box::new(deatomize(a, dict))),
@@ -3109,7 +3147,7 @@ fn fold_gamma_reflection(expr: &CasExpr) -> CasExpr {
             Box::new(fold_gamma_reflection(a)),
             Box::new(fold_gamma_reflection(b)),
         ),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     };
     if !matches!(&expr, CasExpr::Mul(_)) {
         return expr;
@@ -3137,8 +3175,8 @@ fn fold_gamma_reflection(expr: &CasExpr) -> CasExpr {
             let (i, z) = (gammas[x].0, gammas[x].1.clone());
             let j = gammas[y].0;
             // π / sin(π·z), keeping the remaining factors.
-            let reflection = CasExpr::var("pi")
-                / CasExpr::Unary(UnaryFunc::Sin, Box::new(CasExpr::var("pi") * z));
+            let reflection =
+                CasExpr::pi() / CasExpr::Unary(UnaryFunc::Sin, Box::new(CasExpr::pi() * z));
             let rest: Vec<CasExpr> = factors
                 .iter()
                 .enumerate()
@@ -3199,6 +3237,11 @@ fn fold_gamma_reflection(expr: &CasExpr) -> CasExpr {
 /// [`ZeroTest::Unknown`] rather than reported as a false certificate.
 #[must_use]
 pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
+    if (contains_pi(a) || contains_pi(b))
+        && (contains_internal_variable(a) || contains_internal_variable(b))
+    {
+        return ZeroTest::Unknown;
+    }
     let direct = equal_core(a, b);
     // A certified equality is already sound (zero witness ⇒ identity holds).
     if matches!(
@@ -3213,7 +3256,21 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     let ca = canonicalize_for_equality(a);
     let cb = canonicalize_for_equality(b);
     match equal_core(&ca, &cb) {
-        certified @ (ZeroTest::Certified { .. } | ZeroTest::CertifiedBig { .. }) => certified,
+        certified @ (ZeroTest::Certified { .. } | ZeroTest::CertifiedBig { .. }) => {
+            // Canonicalization may eliminate Pi. A nonzero polynomial still does
+            // not carry the value certificate needed for the original fixed source.
+            if (contains_pi(a) || contains_pi(b))
+                && matches!(
+                    certified,
+                    ZeroTest::Certified { equal: false, .. }
+                        | ZeroTest::CertifiedBig { equal: false, .. }
+                )
+            {
+                ZeroTest::Unknown
+            } else {
+                certified
+            }
+        }
         // The Euler form could not decide. Never surface a relation-blind
         // inequality: downgrade a core `≠` to `Unknown`, else keep `Unknown`.
         ZeroTest::Unknown => match direct {
@@ -3341,7 +3398,7 @@ fn expand_log_over_primes(expr: &CasExpr) -> CasExpr {
         ),
         CasExpr::Pow(a, e) => CasExpr::Pow(Box::new(expand_log_over_primes(a)), *e),
         CasExpr::Unary(func, a) => CasExpr::Unary(*func, Box::new(expand_log_over_primes(a))),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -3453,6 +3510,10 @@ pub enum RelationLimit {
 /// and the claim is what licenses not entering the fallback.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FragmentLimit {
+    /// A source variable attempts to use a reserved internal constant-generator key.
+    ReservedInternalSymbol,
+    /// A fixed Pi inequality needs checked value evidence beyond polynomial nonzeroness.
+    FixedPiValue,
     /// A `Unary` head `normalize_rational_big_within` declines outright
     /// (today: `exp`, which the bounded path *decomposes* rather than atomizes
     /// and which has no unbounded twin yet). The `String` is the head's own
@@ -3507,6 +3568,13 @@ impl std::fmt::Display for RelationLimit {
 impl std::fmt::Display for FragmentLimit {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            FragmentLimit::FixedPiValue => {
+                write!(f, "a fixed Pi inequality requiring checked value evidence")
+            }
+            FragmentLimit::ReservedInternalSymbol => write!(
+                f,
+                "a source variable using a reserved internal constant key"
+            ),
             FragmentLimit::UnboundedRingDeclinesHead(head) => write!(
                 f,
                 "the `{head}` head, which the unbounded ring does not normalize"
@@ -3573,6 +3641,13 @@ impl std::fmt::Display for FragmentLimit {
 /// ```
 #[must_use]
 pub fn explain_decline(a: &CasExpr, b: &CasExpr) -> Option<ZeroTestDecline> {
+    if (contains_pi(a) || contains_pi(b))
+        && (contains_internal_variable(a) || contains_internal_variable(b))
+    {
+        return Some(ZeroTestDecline::OutOfFragment(
+            FragmentLimit::ReservedInternalSymbol,
+        ));
+    }
     if !matches!(equal(a, b), ZeroTest::Unknown) {
         return None;
     }
@@ -3651,6 +3726,33 @@ fn note_head_gated_decline(reason: &ZeroTestDecline) {
     let _ = reason;
 }
 
+/// Raw internal atom names are not a source encoding of fixed constants.
+fn contains_internal_variable(expr: &CasExpr) -> bool {
+    match expr {
+        CasExpr::Var(name) => name.starts_with('\0'),
+        CasExpr::Const(_) | CasExpr::Pi => false,
+        CasExpr::Add(parts) | CasExpr::Mul(parts) => parts.iter().any(contains_internal_variable),
+        CasExpr::Neg(inner) | CasExpr::Pow(inner, _) | CasExpr::Unary(_, inner) => {
+            contains_internal_variable(inner)
+        }
+        CasExpr::Div(a, b) => contains_internal_variable(a) || contains_internal_variable(b),
+    }
+}
+
+/// Whether a fixed Pi value is part of this source expression.
+/// Polynomial nonzeroness alone cannot check a fixed transcendental value.
+fn contains_pi(expr: &CasExpr) -> bool {
+    match expr {
+        CasExpr::Pi => true,
+        CasExpr::Const(_) | CasExpr::Var(_) => false,
+        CasExpr::Add(parts) | CasExpr::Mul(parts) => parts.iter().any(contains_pi),
+        CasExpr::Neg(inner) | CasExpr::Pow(inner, _) | CasExpr::Unary(_, inner) => {
+            contains_pi(inner)
+        }
+        CasExpr::Div(a, b) => contains_pi(a) || contains_pi(b),
+    }
+}
+
 /// The bounded (`i128`) cross-multiplication zero-test.
 ///
 /// A *nonzero* difference is a refutation only when no relation the normal form
@@ -3694,6 +3796,9 @@ fn equal_core_bounded_classified(a: &CasExpr, b: &CasExpr) -> Result<ZeroTest, Z
             equal: true,
             witness,
         }),
+        Ok(_) if contains_pi(a) || contains_pi(b) => {
+            Err(ZeroTestDecline::OutOfFragment(FragmentLimit::FixedPiValue))
+        }
         Ok(witness) if witness.relates_multiplicative_atoms() => Err(
             ZeroTestDecline::RelationBlind(RelationLimit::MultiplicativeAtomRelation),
         ),
@@ -4595,7 +4700,7 @@ fn big_ring_declines_head(func: UnaryFunc) -> bool {
 /// Euler form.
 fn unbounded_ring_declined_head(expr: &CasExpr) -> Option<String> {
     match expr {
-        CasExpr::Const(_) | CasExpr::Var(_) => None,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => None,
         CasExpr::Add(items) | CasExpr::Mul(items) => {
             items.iter().find_map(unbounded_ring_declined_head)
         }
@@ -4654,6 +4759,8 @@ fn normalize_rational_big_within(expr: &CasExpr, budget: &mut u64) -> Option<Big
             // this introduces is positive.
             den: BigPoly::constant(r.denominator_big()),
         }),
+        CasExpr::Pi => Some(BigRatFunc::from_poly(BigPoly::variable(PI_ATOM_NAME))),
+        CasExpr::Var(v) if v == PI_ATOM_NAME => None,
         CasExpr::Var(v) => Some(BigRatFunc::from_poly(BigPoly::variable(v))),
         CasExpr::Add(terms) => {
             let mut acc = BigRatFunc::from_poly(BigPoly::zero());
@@ -4918,11 +5025,22 @@ fn positive_rational_multiple(claimed: &BigPoly, actual: &BigPoly) -> bool {
 /// ```
 #[must_use]
 pub fn recheck_zero_test(a: &CasExpr, b: &CasExpr, result: &ZeroTest) -> bool {
+    if !matches!(result, ZeroTest::Unknown)
+        && (contains_pi(a) || contains_pi(b))
+        && (contains_internal_variable(a) || contains_internal_variable(b))
+    {
+        return false;
+    }
     let (equal, claimed) = match result {
         ZeroTest::Unknown => return true,
         ZeroTest::Certified { equal, witness } => (*equal, multipoly_as_big(witness)),
         ZeroTest::CertifiedBig { equal, witness } => (*equal, witness.poly.clone()),
     };
+    // Independent replay policy: a matching formal nonzero polynomial is not
+    // sufficient evidence about a fixed Pi value, even if a caller forges it.
+    if !equal && (contains_pi(a) || contains_pi(b)) {
+        return false;
+    }
     // The flag and the certificate must agree before the certificate is even
     // worth recomputing.
     if claimed.is_zero() != equal {
@@ -5688,7 +5806,7 @@ fn solve_transcendental(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
 /// of `x` — i.e. outside the `u = eˣ` substitution fragment.
 fn exp_to_power(expr: &CasExpr, var: &str, u: &str) -> Option<CasExpr> {
     match expr {
-        CasExpr::Const(_) => Some(expr.clone()),
+        CasExpr::Const(_) | CasExpr::Pi => Some(expr.clone()),
         CasExpr::Var(v) => {
             if v == var {
                 None // a bare `x` — not a pure polynomial in eˣ
@@ -5963,7 +6081,7 @@ fn solve_trigonometric(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     let func = func?;
     // f(m·var) = −C/A (`C` a possibly-surd constant expression).
     let target = simplify(&(CasExpr::Neg(Box::new(constant)) / CasExpr::Const(coeff)));
-    let pi = CasExpr::var("pi");
+    let pi = CasExpr::pi();
     let mut roots: Vec<CasExpr> = Vec::new();
     // Scan the tabulated angles θ = k·π/12 in [0, 2π) for the *argument* `m·var`.
     for k in 0..24u32 {
@@ -6090,7 +6208,7 @@ pub(crate) fn replace_subexpr(expr: &CasExpr, target: &CasExpr, replacement: &Ca
         CasExpr::Unary(func, a) => {
             CasExpr::Unary(*func, Box::new(replace_subexpr(a, target, replacement)))
         }
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -7175,7 +7293,7 @@ fn collect_constant_names(expr: &CasExpr, names: &mut BTreeSet<String>) {
         {
             names.insert(name.clone());
         }
-        CasExpr::Var(_) | CasExpr::Const(_) => {}
+        CasExpr::Var(_) | CasExpr::Const(_) | CasExpr::Pi => {}
         CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => {
             collect_constant_names(a, names);
         }
@@ -7614,7 +7732,7 @@ fn fold_trivial(expr: &CasExpr) -> CasExpr {
             }
         }
         CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(fold_trivial(arg))),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -7630,7 +7748,7 @@ fn algebraic_power(root: &CasExpr, positive: bool, index: &CasExpr) -> CasExpr {
     } else {
         // rⁿ = (−1)ⁿ·|r|ⁿ = cos(π·n)·exp(n·ln(−r)),  with −r = |r| > 0.
         let magnitude = fold_trivial(&CasExpr::Neg(Box::new(root.clone())));
-        let alternating = (CasExpr::var("pi") * index.clone()).cos();
+        let alternating = (CasExpr::pi() * index.clone()).cos();
         alternating * (index.clone() * magnitude.ln()).exp()
     }
 }
@@ -8800,7 +8918,7 @@ fn eval_concrete_big_rational(expr: &CasExpr) -> Option<BigRational> {
             let factorial = (1..argument).fold(BigInt::from(1), |value, factor| value * factor);
             Some(BigRational::from_integer(factorial))
         }
-        CasExpr::Var(_) | CasExpr::Pow(..) | CasExpr::Unary(..) => None,
+        CasExpr::Pi | CasExpr::Var(_) | CasExpr::Pow(..) | CasExpr::Unary(..) => None,
     }
 }
 
@@ -9889,7 +10007,7 @@ fn residue_rational(reduced: &CasExpr, var: &str, point: Rational) -> Option<Cas
 /// The number of nodes in an expression tree (a size metric for [`simplify`]).
 fn node_count(expr: &CasExpr) -> usize {
     1 + match expr {
-        CasExpr::Const(_) | CasExpr::Var(_) => 0,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => 0,
         CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().map(node_count).sum(),
         CasExpr::Neg(a) | CasExpr::Pow(a, _) | CasExpr::Unary(_, a) => node_count(a),
         CasExpr::Div(a, b) => node_count(a) + node_count(b),
@@ -11621,7 +11739,7 @@ pub fn simplify_under_assumptions(expr: &CasExpr, assumptions: &Assumptions) -> 
             Box::new(simplify_under_assumptions(base, assumptions)),
             *exp,
         ),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -11746,7 +11864,7 @@ pub fn simplify_radicals(expr: &CasExpr) -> CasExpr {
             }
             CasExpr::Pow(Box::new(simplified_base), *exponent)
         }
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -11800,8 +11918,7 @@ fn multipoly_as_constant(poly: &MultiPoly) -> Option<Rational> {
     None
 }
 
-/// If `arg` is a rational multiple of the reserved constant `pi` (the variable
-/// named `"pi"`), return that rational coefficient `c` (so `arg = c·π`); `Some(0)`
+/// If `arg` is a rational multiple of the distinguished constant [`CasExpr::Pi`], return that rational coefficient `c` (so `arg = c·π`); `Some(0)`
 /// for the constant `0`. Handles a constant denominator (e.g. `π/6`). `None` for
 /// any other shape.
 fn pi_coefficient(arg: &CasExpr) -> Option<Rational> {
@@ -11814,7 +11931,7 @@ fn pi_coefficient(arg: &CasExpr) -> Option<Rational> {
         return None;
     }
     let (monomial, coeff) = ratio.num.terms.iter().next()?;
-    if monomial.powers.len() == 1 && monomial.powers.get("pi") == Some(&1) {
+    if monomial.powers.len() == 1 && monomial.powers.get(PI_ATOM_NAME) == Some(&1) {
         coeff.checked_div(denominator)
     } else {
         None
@@ -11915,11 +12032,11 @@ fn strip_negation(expr: &CasExpr) -> Option<CasExpr> {
 ///
 /// This is a **compute** operation — the returned values come from the exact
 /// unit-circle table, definitionally, not from a zero-test certificate. The
-/// constant `π` is the variable named `"pi"`.
+/// constant `π` is the distinguished [`CasExpr::Pi`] leaf.
 ///
 /// ```
 /// use axeyum_cas::{CasExpr, evaluate_trig, equal, ZeroTest};
-/// let pi = CasExpr::var("pi");
+/// let pi = CasExpr::pi();
 /// // sin(π/6) = 1/2.
 /// let value = evaluate_trig(&(pi / CasExpr::int(6)).sin());
 /// assert!(matches!(equal(&value, &CasExpr::rat(1, 2)), ZeroTest::Certified { equal: true, .. }));
@@ -11963,7 +12080,7 @@ pub fn evaluate_trig(expr: &CasExpr) -> CasExpr {
             Box::new(evaluate_trig(denominator)),
         ),
         CasExpr::Pow(base, exponent) => CasExpr::Pow(Box::new(evaluate_trig(base)), *exponent),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -11972,7 +12089,7 @@ pub fn evaluate_trig(expr: &CasExpr) -> CasExpr {
 /// `acos(−1)=π`, … (and `f(0)` where finite). Surd arguments (`√3/2`, …) are not
 /// tabulated here. `None` for a non-tabulated argument.
 fn inverse_trig_special_value(func: UnaryFunc, arg: &CasExpr) -> Option<CasExpr> {
-    let pi = CasExpr::var("pi");
+    let pi = CasExpr::pi();
     // Returns `k·π` (folded: 0, π, or a rational multiple).
     let pi_multiple = |k: Rational| -> CasExpr {
         if k.is_zero() {
@@ -12135,7 +12252,7 @@ fn gamma_of_rational(c: Rational) -> Option<CasExpr> {
             let four_k = 4i128.checked_pow(u32::try_from(k).ok()?)?;
             let denominator = four_k.checked_mul(ntheory::factorial(k)?)?;
             let coeff = Rational::checked_new(numerator, denominator)?;
-            return Some(CasExpr::Const(coeff) * CasExpr::var("pi").sqrt());
+            return Some(CasExpr::Const(coeff) * CasExpr::pi().sqrt());
         }
     }
     None
@@ -12160,7 +12277,7 @@ fn polygamma_of_positive_integer(order: u32, n: i128) -> Option<CasExpr> {
             for k in 1..n {
                 harmonic2 = harmonic2.checked_add(Rational::checked_new(1, k.checked_mul(k)?)?)?;
             }
-            let zeta2 = CasExpr::var("pi").pow(2) / CasExpr::int(6);
+            let zeta2 = CasExpr::pi().pow(2) / CasExpr::int(6);
             Some(zeta2 - CasExpr::Const(harmonic2))
         }
         _ => None,
@@ -12210,7 +12327,7 @@ fn fold_gamma(expr: &CasExpr) -> CasExpr {
         CasExpr::Add(items) => CasExpr::Add(items.iter().map(fold_gamma).collect()),
         CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(fold_gamma).collect()),
         CasExpr::Div(a, b) => CasExpr::Div(Box::new(fold_gamma(a)), Box::new(fold_gamma(b))),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -12260,7 +12377,7 @@ pub(crate) fn combine_gamma_ratios(expr: &CasExpr) -> CasExpr {
             Box::new(combine_gamma_ratios(a)),
             Box::new(combine_gamma_ratios(b)),
         ),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -12395,7 +12512,7 @@ fn fold_elementary_constants(expr: &CasExpr) -> CasExpr {
         CasExpr::Pow(base, exponent) => {
             CasExpr::Pow(Box::new(fold_elementary_constants(base)), *exponent)
         }
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -12605,7 +12722,7 @@ pub fn rewrite_exp(expr: &CasExpr) -> CasExpr {
             Box::new(rewrite_exp(denominator)),
         ),
         CasExpr::Pow(base, exponent) => CasExpr::Pow(Box::new(rewrite_exp(base)), *exponent),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -12640,7 +12757,7 @@ pub fn expand_log(expr: &CasExpr) -> CasExpr {
             Box::new(expand_log(denominator)),
         ),
         CasExpr::Pow(base, exponent) => CasExpr::Pow(Box::new(expand_log(base)), *exponent),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -12674,7 +12791,7 @@ pub fn expand_trig(expr: &CasExpr) -> CasExpr {
         CasExpr::Neg(inner) => CasExpr::Neg(Box::new(expand_trig(inner))),
         CasExpr::Div(n, d) => CasExpr::Div(Box::new(expand_trig(n)), Box::new(expand_trig(d))),
         CasExpr::Pow(base, exp) => CasExpr::Pow(Box::new(expand_trig(base)), *exp),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -12694,7 +12811,7 @@ fn fold_double_angle(expr: &CasExpr) -> CasExpr {
             Box::new(fold_double_angle(a)),
             Box::new(fold_double_angle(b)),
         ),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     };
     // `c·sin(u)·cos(u)·rest → (c/2)·sin(2u)·rest` — one matching sin/cos pair.
     if matches!(&expr, CasExpr::Mul(_)) {
@@ -12922,7 +13039,7 @@ pub fn logcombine(expr: &CasExpr) -> CasExpr {
         CasExpr::Div(a, b) => CasExpr::Div(Box::new(logcombine(a)), Box::new(logcombine(b))),
         CasExpr::Pow(base, exp) => CasExpr::Pow(Box::new(logcombine(base)), *exp),
         CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(logcombine(arg))),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -13012,7 +13129,7 @@ pub fn nsimplify(value: f64, max_denominator: i128) -> Option<CasExpr> {
     }
     // 3. Rational multiples of π, e, and small surds.
     if let Some(coeff) = try_scaled(std::f64::consts::PI) {
-        return Some(scale_by(coeff, CasExpr::var("pi")));
+        return Some(scale_by(coeff, CasExpr::pi()));
     }
     if let Some(coeff) = try_scaled(std::f64::consts::E) {
         return Some(scale_by(coeff, CasExpr::int(1).exp()));
@@ -13095,12 +13212,11 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 value.to_big_rational().to_f64()
             }
         }
+        CasExpr::Pi => Some(core::f64::consts::PI),
         CasExpr::Var(name) => bindings
             .iter()
             .find(|(bound, _)| bound == name)
-            .map(|&(_, value)| value)
-            // The reserved constant `pi` defaults to π when not explicitly bound.
-            .or_else(|| (name == "pi").then_some(core::f64::consts::PI)),
+            .map(|&(_, value)| value),
         CasExpr::Add(terms) => terms
             .iter()
             .try_fold(0.0, |acc, term| Some(acc + evalf(term, bindings)?)),
@@ -13527,7 +13643,7 @@ pub fn argument(expr: &CasExpr) -> Option<CasExpr> {
     if re_sign == 0.0 && im_sign == 0.0 {
         return None; // arg(0) is undefined
     }
-    let pi = CasExpr::var("pi");
+    let pi = CasExpr::pi();
     if re_sign == 0.0 {
         // Pure imaginary: ±π/2.
         let half = if im_sign > 0.0 {
@@ -13556,7 +13672,7 @@ pub fn roots_of_unity(n: u32) -> Option<Vec<CasExpr>> {
     if n == 0 {
         return None;
     }
-    let pi = CasExpr::var("pi");
+    let pi = CasExpr::pi();
     let mut roots = Vec::with_capacity(n as usize);
     for k in 0..n {
         // angle = 2πk/n
@@ -14590,7 +14706,7 @@ fn trig_in_denominator(expr: &CasExpr) -> bool {
         }
         CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => trig_in_denominator(a),
         CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(trig_in_denominator),
-        CasExpr::Const(_) | CasExpr::Var(_) => false,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => false,
     }
 }
 
@@ -14601,7 +14717,7 @@ fn contains_sin_or_cos(expr: &CasExpr) -> bool {
         CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => contains_sin_or_cos(a),
         CasExpr::Div(a, b) => contains_sin_or_cos(a) || contains_sin_or_cos(b),
         CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(contains_sin_or_cos),
-        CasExpr::Const(_) | CasExpr::Var(_) => false,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => false,
     }
 }
 
@@ -14613,7 +14729,7 @@ fn contains_trig(expr: &CasExpr) -> bool {
         CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => contains_trig(a),
         CasExpr::Div(a, b) => contains_trig(a) || contains_trig(b),
         CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(contains_trig),
-        CasExpr::Const(_) | CasExpr::Var(_) => false,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => false,
     }
 }
 
@@ -14644,7 +14760,7 @@ fn replace_trig_with_one(expr: &CasExpr, count: &mut usize) -> CasExpr {
                 .map(|t| replace_trig_with_one(t, count))
                 .collect(),
         ),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -14680,7 +14796,7 @@ fn contains_singular_integral_head(expr: &CasExpr) -> bool {
         CasExpr::Add(items) | CasExpr::Mul(items) => {
             items.iter().any(contains_singular_integral_head)
         }
-        CasExpr::Const(_) | CasExpr::Var(_) => false,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => false,
     }
 }
 
@@ -14688,7 +14804,7 @@ fn contains_singular_integral_head(expr: &CasExpr) -> bool {
 fn expr_contains_var(expr: &CasExpr, var: &str) -> bool {
     match expr {
         CasExpr::Var(name) => name == var,
-        CasExpr::Const(_) => false,
+        CasExpr::Const(_) | CasExpr::Pi => false,
         CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => expr_contains_var(a, var),
         CasExpr::Div(a, b) => expr_contains_var(a, var) || expr_contains_var(b, var),
         CasExpr::Add(items) | CasExpr::Mul(items) => {
@@ -14716,7 +14832,7 @@ fn substitute_asymptotic_heads(expr: &CasExpr, var: &str, point: LimitPoint) -> 
                     UnaryFunc::Erf => CasExpr::int(1),
                     // Si → π/2 (Dirichlet: ∫₀^∞ sin x/x = Si(∞) = π/2).
                     UnaryFunc::Atan | UnaryFunc::Si => {
-                        scaled_term(Rational::new(1, 2), CasExpr::var("pi"))
+                        scaled_term(Rational::new(1, 2), CasExpr::pi())
                     }
                     _ => CasExpr::rat(1, 2), // Fresnel S, C → 1/2
                 };
@@ -14776,7 +14892,7 @@ fn substitute_asymptotic_heads(expr: &CasExpr, var: &str, point: LimitPoint) -> 
         CasExpr::Pow(a, e) => {
             CasExpr::Pow(Box::new(substitute_asymptotic_heads(a, var, point)), *e)
         }
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -14794,7 +14910,7 @@ fn deep_normalize(expr: &CasExpr) -> CasExpr {
         }
         CasExpr::Add(items) => CasExpr::Add(items.iter().map(deep_normalize).collect()),
         CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(deep_normalize).collect()),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     };
     cancel(&rebuilt).unwrap_or(rebuilt)
 }
@@ -14881,7 +14997,7 @@ fn contains_exponential_head(expr: &CasExpr) -> bool {
             contains_exponential_head(numerator) || contains_exponential_head(denominator)
         }
         CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(contains_exponential_head),
-        CasExpr::Const(_) | CasExpr::Var(_) => false,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => false,
     }
 }
 
@@ -14902,7 +15018,7 @@ fn has_oversized_exponential_power(expr: &CasExpr) -> bool {
         CasExpr::Add(items) | CasExpr::Mul(items) => {
             items.iter().any(has_oversized_exponential_power)
         }
-        CasExpr::Const(_) | CasExpr::Var(_) => false,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => false,
     }
 }
 
@@ -15539,7 +15655,7 @@ fn inverse_laplace_additive_radicals(f: &CasExpr, s: &str, t: &str) -> Option<Ca
 /// retain their established whole-expression inversion path.
 fn inverse_laplace_contains_sqrt(expr: &CasExpr) -> bool {
     match expr {
-        CasExpr::Const(_) | CasExpr::Var(_) => false,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => false,
         CasExpr::Add(items) | CasExpr::Mul(items) => {
             items.iter().any(inverse_laplace_contains_sqrt)
         }
@@ -15665,7 +15781,7 @@ fn inverse_laplace_bessel_i0(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
 fn unique_sqrt_radicand(expr: &CasExpr) -> Option<&CasExpr> {
     fn visit<'a>(expr: &'a CasExpr, found: &mut Option<&'a CasExpr>) -> Option<()> {
         match expr {
-            CasExpr::Const(_) | CasExpr::Var(_) => {}
+            CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => {}
             CasExpr::Add(items) | CasExpr::Mul(items) => {
                 for item in items {
                     visit(item, found)?;
@@ -16139,7 +16255,7 @@ fn big_univariate_coefficients(expr: &CasExpr, var: &str) -> Option<Vec<BigRatio
             *exponent,
             MAX_Z_POLYNOMIAL_DEGREE,
         ),
-        CasExpr::Var(_) | CasExpr::Unary(..) => None,
+        CasExpr::Pi | CasExpr::Var(_) | CasExpr::Unary(..) => None,
     }
 }
 
@@ -16688,7 +16804,7 @@ fn rewrite_double_angle(expr: &CasExpr, var: &str) -> CasExpr {
         CasExpr::Mul(items) => {
             CasExpr::Mul(items.iter().map(|t| rewrite_double_angle(t, var)).collect())
         }
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -17124,7 +17240,7 @@ fn find_affine_abs(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         CasExpr::Add(items) | CasExpr::Mul(items) => {
             items.iter().find_map(|t| find_affine_abs(t, var))
         }
-        CasExpr::Const(_) | CasExpr::Var(_) => None,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => None,
     }
 }
 
@@ -17145,7 +17261,7 @@ fn find_affine_step(expr: &CasExpr, var: &str) -> Option<(UnaryFunc, CasExpr)> {
         CasExpr::Add(items) | CasExpr::Mul(items) => {
             items.iter().find_map(|t| find_affine_step(t, var))
         }
-        CasExpr::Const(_) | CasExpr::Var(_) => None,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => None,
     }
 }
 
@@ -17234,7 +17350,7 @@ fn find_abs_of_trig(expr: &CasExpr, var: &str) -> Option<(UnaryFunc, CasExpr)> {
         CasExpr::Add(items) | CasExpr::Mul(items) => {
             items.iter().find_map(|t| find_abs_of_trig(t, var))
         }
-        CasExpr::Const(_) | CasExpr::Var(_) => None,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => None,
     }
 }
 
@@ -17284,8 +17400,8 @@ fn definite_integrate_abs_periodic(
             _ => return None,
         };
         // Solve `slope·x + intercept = m·π` → `x = (m·π − intercept)/slope`.
-        let x_k = (CasExpr::Const(m) * CasExpr::var("pi") - CasExpr::Const(intercept))
-            / CasExpr::Const(slope);
+        let x_k =
+            (CasExpr::Const(m) * CasExpr::pi() - CasExpr::Const(intercept)) / CasExpr::Const(slope);
         let x_k_f = evalf(&x_k, &[])?;
         if x_k_f > lo_f + 1e-9 && x_k_f < hi_f - 1e-9 {
             breakpoints.push((simplify(&x_k), x_k_f));
@@ -17341,7 +17457,7 @@ fn find_affine_sign(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         CasExpr::Add(items) | CasExpr::Mul(items) => {
             items.iter().find_map(|t| find_affine_sign(t, var))
         }
-        CasExpr::Const(_) | CasExpr::Var(_) => None,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => None,
     }
 }
 
@@ -17530,7 +17646,7 @@ fn contains_ln_head(expr: &CasExpr) -> bool {
         CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => contains_ln_head(a),
         CasExpr::Div(a, b) => contains_ln_head(a) || contains_ln_head(b),
         CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(contains_ln_head),
-        CasExpr::Const(_) | CasExpr::Var(_) => false,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => false,
     }
 }
 
@@ -17562,7 +17678,7 @@ fn definite_log_trig_integral(
         return None;
     }
     let vx = CasExpr::var(var);
-    let pi = CasExpr::var("pi");
+    let pi = CasExpr::pi();
     let ln2 = CasExpr::int(2).ln();
     let half_pi = pi.clone() / CasExpr::int(2);
     let neg_half_pi_ln2 = CasExpr::rat(-1, 2) * pi.clone() * ln2.clone();
@@ -17645,7 +17761,7 @@ fn rewrite_tan_as_sin_cos(expr: &CasExpr) -> CasExpr {
             Box::new(rewrite_tan_as_sin_cos(a)),
             Box::new(rewrite_tan_as_sin_cos(b)),
         ),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -17680,7 +17796,7 @@ fn distribute_trig_args(expr: &CasExpr) -> CasExpr {
             Box::new(distribute_trig_args(a)),
             Box::new(distribute_trig_args(b)),
         ),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -17700,7 +17816,7 @@ fn simplify_head_arguments(expr: &CasExpr) -> CasExpr {
             Box::new(simplify_head_arguments(a)),
             Box::new(simplify_head_arguments(b)),
         ),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -17981,7 +18097,7 @@ fn definite_full_period_rational_trig(
     // `t = tan(x/2)` maps `[−π,π]` monotonically to the whole real line. On
     // `[0,2π]`, its two branches concatenate to that same `(-∞,∞)` integral.
     // The half-period `[0,π]` maps to `[0,∞)`.
-    let pi = CasExpr::var("pi");
+    let pi = CasExpr::pi();
     let starts_at_zero = matches!(
         equal(lower, &CasExpr::zero()),
         ZeroTest::Certified { equal: true, .. }
@@ -18039,7 +18155,7 @@ pub fn fourier_series(
 ) -> Option<CasExpr> {
     let l = half_period;
     let neg_l = CasExpr::Neg(Box::new(l.clone()));
-    let pi = CasExpr::var("pi");
+    let pi = CasExpr::pi();
     let x = CasExpr::var(var);
     let coefficient = |integrand: &CasExpr| -> Option<CasExpr> {
         let integral = definite_integrate(integrand, var, &neg_l, l)?;
@@ -18528,7 +18644,7 @@ fn improper_sinc_squared_integral(
         return None;
     }
     // `∫₀^∞ = c·π|a|/2`, full line doubles it.
-    let mut value = CasExpr::Const(coeff) * CasExpr::var("pi") * CasExpr::Const(a_abs);
+    let mut value = CasExpr::Const(coeff) * CasExpr::pi() * CasExpr::Const(a_abs);
     if half {
         value = value / CasExpr::int(2);
     }
@@ -18569,7 +18685,7 @@ fn find_linear_exp_rate(expr: &CasExpr, var: &str) -> Option<Rational> {
         }
         CasExpr::Neg(a) | CasExpr::Pow(a, _) | CasExpr::Unary(_, a) => find_linear_exp_rate(a, var),
         CasExpr::Div(a, b) => find_linear_exp_rate(a, var).or_else(|| find_linear_exp_rate(b, var)),
-        CasExpr::Const(_) | CasExpr::Var(_) => None,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => None,
     }
 }
 
@@ -18662,7 +18778,7 @@ fn find_linear_trig(expr: &CasExpr, var: &str) -> Option<(UnaryFunc, Rational)> 
         }
         CasExpr::Neg(a) | CasExpr::Pow(a, _) | CasExpr::Unary(_, a) => find_linear_trig(a, var),
         CasExpr::Div(a, b) => find_linear_trig(a, var).or_else(|| find_linear_trig(b, var)),
-        CasExpr::Const(_) | CasExpr::Var(_) => None,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => None,
     }
 }
 
@@ -18732,7 +18848,7 @@ fn improper_fourier_quadratic(
     // e^{−aβ}(cos aα + i·sin aα)`. Take Re for `cos`, Im for `sin`.
     let real_n = CasExpr::Const(c0.checked_add(c1.checked_mul(alpha)?)?); // c₀ + c₁α
     let imag_n = CasExpr::Const(c1) * beta.clone(); // c₁β
-    let prefactor = CasExpr::var("pi") / beta;
+    let prefactor = CasExpr::pi() / beta;
     let bracket = match head {
         // Re[(A + iB)(cos + i sin)] = A·cos − B·sin.
         UnaryFunc::Cos => real_n * cos_part - imag_n * sin_part,
@@ -19649,7 +19765,7 @@ fn gaussian_polynomial_antiderivative(
         match n {
             0 => {
                 decaying.push(CasExpr::zero());
-                erf_weight.push(CasExpr::var("pi").sqrt() / (CasExpr::int(2) * sqrt_rate.clone()));
+                erf_weight.push(CasExpr::pi().sqrt() / (CasExpr::int(2) * sqrt_rate.clone()));
             }
             1 => {
                 decaying.push(CasExpr::Neg(Box::new(CasExpr::one() / two_rate.clone())));
@@ -19765,7 +19881,7 @@ fn root_degrees_of_var(expr: &CasExpr, var: &str, out: &mut std::collections::BT
             root_degrees_of_var(a, var, out);
             root_degrees_of_var(b, var, out);
         }
-        CasExpr::Const(_) | CasExpr::Var(_) => {}
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => {}
     }
 }
 
@@ -19823,7 +19939,7 @@ fn contains_ln_of_var(expr: &CasExpr, var: &str) -> bool {
             items.iter().any(|e| contains_ln_of_var(e, var))
         }
         CasExpr::Div(a, b) => contains_ln_of_var(a, var) || contains_ln_of_var(b, var),
-        CasExpr::Const(_) | CasExpr::Var(_) => false,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => false,
     }
 }
 
@@ -19919,7 +20035,7 @@ fn power_reduce_even_trig(expr: &CasExpr) -> CasExpr {
         // (`1/(1+cos²u)`) would mangle a form the rational-trig/tan-substitution
         // finders integrate directly.
         CasExpr::Div(a, b) => CasExpr::Div(Box::new(power_reduce_even_trig(a)), b.clone()),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -19947,7 +20063,7 @@ fn has_odd_trig_power(expr: &CasExpr, var: &str) -> bool {
             items.iter().any(|e| has_odd_trig_power(e, var))
         }
         CasExpr::Div(a, b) => has_odd_trig_power(a, var) || has_odd_trig_power(b, var),
-        CasExpr::Const(_) | CasExpr::Var(_) => false,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => false,
     }
 }
 
@@ -20868,7 +20984,7 @@ fn integrate_gaussian(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         c1.checked_mul(c1)?
             .checked_div(Rational::integer(4).checked_mul(c2)?)?,
     )?; // k
-    let sqrt_pi = CasExpr::var("pi").sqrt();
+    let sqrt_pi = CasExpr::pi().sqrt();
     // erf(√a·(x + d)).
     let shifted = fold_trivial(&(CasExpr::var(var) + CasExpr::Const(shift)));
     let erf_term = fold_trivial(&(sqrt_a.clone() * shifted)).erf();
@@ -21114,7 +21230,7 @@ fn integrate_fresnel(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     };
     // The argument must equal `π·var²/2` (decided by the zero-test, so the exact
     // Div-vs-scaled-coefficient spelling does not matter).
-    let expected = CasExpr::var("pi") * CasExpr::var(var).pow(2) / CasExpr::int(2);
+    let expected = CasExpr::pi() * CasExpr::var(var).pow(2) / CasExpr::int(2);
     match equal(arg, &expected) {
         ZeroTest::Certified { equal: true, .. } => {
             Some(CasExpr::Unary(head, Box::new(CasExpr::var(var))))
@@ -21248,7 +21364,7 @@ fn replace_head_with_var(expr: &CasExpr, head: UnaryFunc, var: &str, replacement
                 .map(|t| replace_head_with_var(t, head, var, replacement))
                 .collect(),
         ),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -21278,7 +21394,7 @@ fn replace_trig_heads(
         CasExpr::Div(a, b) => CasExpr::Div(Box::new(recur(a)), Box::new(recur(b))),
         CasExpr::Add(items) => CasExpr::Add(items.iter().map(recur).collect()),
         CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(recur).collect()),
-        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -21769,7 +21885,7 @@ fn integrate_power_of_inner(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         // constant/variable (handled by the polynomial path).
         let (base, n): (&CasExpr, u32) = match factor {
             CasExpr::Pow(base, power) if *power >= 1 => (base.as_ref(), *power),
-            CasExpr::Const(_) | CasExpr::Var(_) | CasExpr::Pow(_, _) => continue,
+            CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) | CasExpr::Pow(_, _) => continue,
             other => (other, 1),
         };
         // The cofactor is the product of every other numerator factor, over the
@@ -22080,7 +22196,7 @@ fn expr_contains_ln(expr: &CasExpr) -> bool {
         CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => expr_contains_ln(a),
         CasExpr::Div(a, b) => expr_contains_ln(a) || expr_contains_ln(b),
         CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(expr_contains_ln),
-        CasExpr::Const(_) | CasExpr::Var(_) => false,
+        CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => false,
     }
 }
 
@@ -23198,7 +23314,7 @@ mod tests {
     fn cancel_absorbs_constant_denominator() {
         // A fully-constant denominator folds into the numerator rather than staying a
         // quotient — the common Wallis/Beta shape `(3/8·π)/2 → (3/16)·π`.
-        let pi = || v("pi");
+        let pi = || CasExpr::pi();
         let c = cancel(&((CasExpr::rat(3, 8) * pi()) / CasExpr::int(2))).expect("reduces");
         assert_equal(&c, &(CasExpr::rat(3, 16) * pi()));
         // The reduced form is now a genuine polynomial over atoms (denominator 1).
@@ -23619,7 +23735,7 @@ mod tests {
         assert_equal(&symbolic, &(v("A") * x().cos() + v("B") * x().sin()));
 
         // The existing exact-point folding and rational solve remain intact.
-        let half_pi = v("pi") / CasExpr::int(2);
+        let half_pi = CasExpr::pi() / CasExpr::int(2);
         let nonzero_point = apply_initial_conditions(
             &oscillator,
             "x",
@@ -24124,20 +24240,20 @@ mod tests {
         // p-series Σ_{1}^{∞} c/kˢ = c·ζ(s): ζ(2)=π²/6, 3·ζ(2)=π²/2, ζ(4)=π⁴/90.
         assert_equal(
             &infinite_sum(&(CasExpr::int(1) / k().pow(2)), "k", &at(1)).unwrap(),
-            &(CasExpr::rat(1, 6) * v("pi").pow(2)),
+            &(CasExpr::rat(1, 6) * CasExpr::pi().pow(2)),
         );
         assert_equal(
             &infinite_sum(&(CasExpr::int(3) / k().pow(2)), "k", &at(1)).unwrap(),
-            &(CasExpr::rat(1, 2) * v("pi").pow(2)),
+            &(CasExpr::rat(1, 2) * CasExpr::pi().pow(2)),
         );
         assert_equal(
             &infinite_sum(&(CasExpr::int(1) / k().pow(4)), "k", &at(1)).unwrap(),
-            &(CasExpr::rat(1, 90) * v("pi").pow(4)),
+            &(CasExpr::rat(1, 90) * CasExpr::pi().pow(4)),
         );
         // Non-1 lower bound subtracts the finite head: Σ_{2}^{∞} 1/k² = π²/6 − 1.
         assert_equal(
             &infinite_sum(&(CasExpr::int(1) / k().pow(2)), "k", &at(2)).unwrap(),
-            &(CasExpr::rat(1, 6) * v("pi").pow(2) - CasExpr::int(1)),
+            &(CasExpr::rat(1, 6) * CasExpr::pi().pow(2) - CasExpr::int(1)),
         );
         // Odd ζ (no elementary form) and harmonic (s=1 diverges) still decline.
         assert!(infinite_sum(&(CasExpr::int(1) / k().pow(3)), "k", &at(1)).is_none());
@@ -24234,7 +24350,9 @@ mod tests {
         assert!(result.is_certified());
         // The differentiate-and-check only closes UNDER `simplify_radicals`: the
         // raw derivative keys `exp(−(√2·x)²)`, the integrand keys `exp(−2x²)`,
-        // and those are two unrelated atoms to the zero-test. This is exactly
+        // and those are two unrelated formal atoms. Their nonzero difference
+        // is not a value inequality certificate; Pi-source comparison declines.
+        // This is exactly
         // the retry `prove_derivative` performs, asserted here so removing it
         // fails a test rather than silently narrowing the fragment.
         assert!(matches!(
@@ -24242,7 +24360,7 @@ mod tests {
                 &result.antiderivative.differentiate("x"),
                 &(CasExpr::int(-2) * x().pow(2)).exp(),
             ),
-            ZeroTest::Certified { equal: false, .. }
+            ZeroTest::Unknown
         ));
         assert_equal(
             &simplify_radicals(&result.antiderivative.differentiate("x")),
@@ -24266,7 +24384,7 @@ mod tests {
         assert!(definite.is_certified());
         assert_equal(
             &simplify_radicals(&definite.value),
-            &(v("pi").sqrt() / CasExpr::int(2).sqrt()),
+            &(CasExpr::pi().sqrt() / CasExpr::int(2).sqrt()),
         );
 
         // GUARD: an upward Gaussian (`a ≤ 0`) is not an erf antiderivative.
@@ -24300,11 +24418,14 @@ mod tests {
         // `√(c·u) = √c·√u` splits only for a POSITIVE rational `c`: `√(2π)`
         // becomes `√2·√π`…
         assert_eq!(
-            simplify_radicals(&(CasExpr::int(2) * v("pi")).sqrt()),
-            fold_trivial(&CasExpr::Mul(vec![CasExpr::int(2).sqrt(), v("pi").sqrt()])),
+            simplify_radicals(&(CasExpr::int(2) * CasExpr::pi()).sqrt()),
+            fold_trivial(&CasExpr::Mul(vec![
+                CasExpr::int(2).sqrt(),
+                CasExpr::pi().sqrt()
+            ])),
         );
         // …and `√(−2·π)` must NOT, since the split would need `u ≤ 0`.
-        let negative = (CasExpr::int(-2) * v("pi")).sqrt();
+        let negative = (CasExpr::int(-2) * CasExpr::pi()).sqrt();
         assert_eq!(simplify_radicals(&negative), negative);
     }
 
@@ -26948,7 +27069,7 @@ mod tests {
         // must never be classified from that residual.
         let machin_zero = CasExpr::int(16) * CasExpr::rat(1, 5).atan()
             - CasExpr::int(4) * CasExpr::rat(1, 239).atan()
-            - CasExpr::var("pi");
+            - CasExpr::pi();
         let epsilon = CasExpr::rat(1, 100_000_000_000_000_000);
         for rate in [
             machin_zero.clone(),
@@ -27148,11 +27269,11 @@ mod tests {
         assert_eq!(arg_tends_to_infinity(&even_algebraic, "x", neg), Some(true));
         assert_equal(
             &limit(&surd_linear.clone().atan(), "x", pos).unwrap(),
-            &(CasExpr::rat(1, 2) * v("pi")),
+            &(CasExpr::rat(1, 2) * CasExpr::pi()),
         );
         assert_equal(
             &limit(&surd_linear.atan(), "x", neg).unwrap(),
-            &(CasExpr::rat(-1, 2) * v("pi")),
+            &(CasExpr::rat(-1, 2) * CasExpr::pi()),
         );
 
         // Numeric samples are not proof. Bounded/oscillatory special heads,
@@ -28389,10 +28510,10 @@ mod tests {
         );
         // avg sin x on [0,π] = 2/π.
         assert_equal(
-            &average_value(&x().sin(), "x", &CasExpr::int(0), &v("pi"))
+            &average_value(&x().sin(), "x", &CasExpr::int(0), &CasExpr::pi())
                 .unwrap()
                 .value,
-            &(CasExpr::int(2) / v("pi")),
+            &(CasExpr::int(2) / CasExpr::pi()),
         );
         // Zero-width interval declines.
         assert!(average_value(&x(), "x", &CasExpr::int(2), &CasExpr::int(2)).is_none());
@@ -28479,7 +28600,7 @@ mod tests {
         .unwrap();
         assert!(gaussian.is_certified());
         assert!(matches!(
-            equal(&gaussian.value, &v("pi").sqrt()),
+            equal(&gaussian.value, &CasExpr::pi().sqrt()),
             ZeroTest::Certified { equal: true, .. }
         ));
         // Gaussian moments (non-elementary antiderivative; definite value reduces
@@ -28497,7 +28618,7 @@ mod tests {
                     LimitPoint::NegInfinity,
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi").sqrt() / CasExpr::int(2))
+                &(CasExpr::pi().sqrt() / CasExpr::int(2))
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28508,7 +28629,7 @@ mod tests {
                     LimitPoint::NegInfinity,
                     LimitPoint::PosInfinity
                 ),
-                &(CasExpr::int(3) * v("pi").sqrt() / CasExpr::int(4))
+                &(CasExpr::int(3) * CasExpr::pi().sqrt() / CasExpr::int(4))
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28521,7 +28642,7 @@ mod tests {
                     zero(),
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi").sqrt() / CasExpr::int(4))
+                &(CasExpr::pi().sqrt() / CasExpr::int(4))
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28552,7 +28673,7 @@ mod tests {
                     LimitPoint::NegInfinity,
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi") / e())
+                &(CasExpr::pi() / e())
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28563,7 +28684,7 @@ mod tests {
                     LimitPoint::NegInfinity,
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi") / e())
+                &(CasExpr::pi() / e())
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28574,7 +28695,7 @@ mod tests {
                     LimitPoint::NegInfinity,
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi") / e().pow(2))
+                &(CasExpr::pi() / e().pow(2))
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28597,7 +28718,7 @@ mod tests {
                     zero(),
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi") / (CasExpr::int(2) * e()))
+                &(CasExpr::pi() / (CasExpr::int(2) * e()))
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28608,7 +28729,7 @@ mod tests {
                     zero(),
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi") / (CasExpr::int(2) * e()))
+                &(CasExpr::pi() / (CasExpr::int(2) * e()))
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28624,14 +28745,14 @@ mod tests {
                     LimitPoint::NegInfinity,
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi").sqrt() * CasExpr::rat(-1, 4).exp())
+                &(CasExpr::pi().sqrt() * CasExpr::rat(-1, 4).exp())
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
         assert!(matches!(
             equal(
                 &gauss(gauss_cos(1, 1), zero(), LimitPoint::PosInfinity),
-                &(v("pi").sqrt() / CasExpr::int(2) * CasExpr::rat(-1, 4).exp())
+                &(CasExpr::pi().sqrt() / CasExpr::int(2) * CasExpr::rat(-1, 4).exp())
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28643,7 +28764,7 @@ mod tests {
                     LimitPoint::NegInfinity,
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi").sqrt() / CasExpr::int(2) * CasExpr::rat(-1, 4).exp())
+                &(CasExpr::pi().sqrt() / CasExpr::int(2) * CasExpr::rat(-1, 4).exp())
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28675,7 +28796,7 @@ mod tests {
                     zero(),
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi").pow(2) / CasExpr::int(6))
+                &(CasExpr::pi().pow(2) / CasExpr::int(6))
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28686,7 +28807,7 @@ mod tests {
                     zero(),
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi").pow(4) / CasExpr::int(15))
+                &(CasExpr::pi().pow(4) / CasExpr::int(15))
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28698,7 +28819,7 @@ mod tests {
                     zero(),
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi").pow(2) / CasExpr::int(12))
+                &(CasExpr::pi().pow(2) / CasExpr::int(12))
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28724,7 +28845,7 @@ mod tests {
         // Squared-sinc: ∫₀^∞ (sin ax/x)² = π|a|/2, full line doubles it.
         assert_equal(
             &gauss((x().sin() / x()).pow(2), zero(), LimitPoint::PosInfinity),
-            &(v("pi") / CasExpr::int(2)),
+            &(CasExpr::pi() / CasExpr::int(2)),
         );
         assert_equal(
             &gauss(
@@ -28732,7 +28853,7 @@ mod tests {
                 LimitPoint::NegInfinity,
                 LimitPoint::PosInfinity,
             ),
-            &v("pi"),
+            &CasExpr::pi(),
         );
         assert_equal(
             &gauss(
@@ -28740,7 +28861,7 @@ mod tests {
                 zero(),
                 LimitPoint::PosInfinity,
             ),
-            &v("pi"),
+            &CasExpr::pi(),
         );
         // Alternate spelling sin²x/x², and the divergent (cos x/x)² declines.
         assert_equal(
@@ -28749,7 +28870,7 @@ mod tests {
                 zero(),
                 LimitPoint::PosInfinity,
             ),
-            &(v("pi") / CasExpr::int(2)),
+            &(CasExpr::pi() / CasExpr::int(2)),
         );
         assert!(
             improper_integrate(
@@ -28768,7 +28889,7 @@ mod tests {
                 zero(),
                 LimitPoint::PosInfinity,
             ),
-            &(v("pi") / CasExpr::int(4)),
+            &(CasExpr::pi() / CasExpr::int(4)),
         );
         assert!(matches!(
             equal(
@@ -28788,7 +28909,7 @@ mod tests {
                 zero(),
                 LimitPoint::PosInfinity,
             ),
-            &(v("pi") / CasExpr::int(4)),
+            &(CasExpr::pi() / CasExpr::int(4)),
         );
         assert_equal(
             &gauss(
@@ -28796,7 +28917,7 @@ mod tests {
                 zero(),
                 LimitPoint::PosInfinity,
             ),
-            &(CasExpr::int(3) * v("pi") / CasExpr::int(4)),
+            &(CasExpr::int(3) * CasExpr::pi() / CasExpr::int(4)),
         );
         // General irreducible quadratic (p ≠ 0): ∫ cos x/(x²+2x+2) = π·cos(1)/e
         // (pole at −1+i; damped oscillation).
@@ -28807,7 +28928,7 @@ mod tests {
                     LimitPoint::NegInfinity,
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi") * CasExpr::int(1).cos() / e()),
+                &(CasExpr::pi() * CasExpr::int(1).cos() / e()),
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28842,7 +28963,7 @@ mod tests {
         assert!(matches!(
             equal(
                 &gauss(x().sin() / x(), zero(), LimitPoint::PosInfinity),
-                &(v("pi") / CasExpr::int(2))
+                &(CasExpr::pi() / CasExpr::int(2))
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28853,13 +28974,13 @@ mod tests {
                     zero(),
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi") / CasExpr::int(2))
+                &(CasExpr::pi() / CasExpr::int(2))
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
         assert_equal(
             &gauss(
-                (v("pi") * x().pow(2) / CasExpr::int(2)).sin(),
+                (CasExpr::pi() * x().pow(2) / CasExpr::int(2)).sin(),
                 zero(),
                 LimitPoint::PosInfinity,
             ),
@@ -28875,7 +28996,7 @@ mod tests {
                     zero(),
                     LimitPoint::PosInfinity
                 ),
-                &(CasExpr::int(2) * v("pi") / (CasExpr::int(3) * CasExpr::int(3).sqrt())),
+                &(CasExpr::int(2) * CasExpr::pi() / (CasExpr::int(3) * CasExpr::int(3).sqrt())),
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28901,7 +29022,7 @@ mod tests {
                     LimitPoint::NegInfinity,
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi") / CasExpr::int(2).sqrt()),
+                &(CasExpr::pi() / CasExpr::int(2).sqrt()),
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28913,7 +29034,7 @@ mod tests {
                     LimitPoint::NegInfinity,
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi") / CasExpr::int(2).sqrt()),
+                &(CasExpr::pi() / CasExpr::int(2).sqrt()),
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28926,7 +29047,7 @@ mod tests {
                     zero(),
                     LimitPoint::PosInfinity
                 ),
-                &v("pi").sqrt()
+                &CasExpr::pi().sqrt()
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28937,7 +29058,7 @@ mod tests {
                     zero(),
                     LimitPoint::PosInfinity
                 ),
-                &(v("pi").sqrt() / CasExpr::int(2))
+                &(CasExpr::pi().sqrt() / CasExpr::int(2))
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28953,7 +29074,7 @@ mod tests {
                 )
                 .unwrap()
                 .value,
-                &(CasExpr::int(2) * v("pi") / CasExpr::int(3).sqrt()),
+                &(CasExpr::int(2) * CasExpr::pi() / CasExpr::int(3).sqrt()),
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -28966,7 +29087,7 @@ mod tests {
             )
             .unwrap()
             .value,
-            &v("pi"),
+            &CasExpr::pi(),
         );
         // ∫₀^∞ 1/(1+x²) = π/2 (arctan → π/2); ∫_{−∞}^∞ = π.
         let arctan_half = improper_integrate(
@@ -28976,21 +29097,21 @@ mod tests {
             LimitPoint::PosInfinity,
         )
         .unwrap();
-        assert_equal(&arctan_half.value, &(CasExpr::rat(1, 2) * v("pi")));
+        assert_equal(&arctan_half.value, &(CasExpr::rat(1, 2) * CasExpr::pi()));
         // Repeated irreducible quadratic (rational→0 + atan→π/2 by limit linearity):
         // ∫_{−∞}^∞ 1/(x²+1)² = π/2, 1/(x²+1)³ = 3π/8, x²/(x²+1)² = π/2.
         for (integrand, value) in [
             (
                 CasExpr::int(1) / (x().pow(2) + CasExpr::int(1)).pow(2),
-                CasExpr::rat(1, 2) * v("pi"),
+                CasExpr::rat(1, 2) * CasExpr::pi(),
             ),
             (
                 CasExpr::int(1) / (x().pow(2) + CasExpr::int(1)).pow(3),
-                CasExpr::rat(3, 8) * v("pi"),
+                CasExpr::rat(3, 8) * CasExpr::pi(),
             ),
             (
                 x().pow(2) / (x().pow(2) + CasExpr::int(1)).pow(2),
-                CasExpr::rat(1, 2) * v("pi"),
+                CasExpr::rat(1, 2) * CasExpr::pi(),
             ),
         ] {
             let r = improper_integrate(
@@ -29077,7 +29198,7 @@ mod tests {
     #[test]
     fn definite_integral_folds_elementary_constants() {
         let x = || v("x");
-        let pi = || v("pi");
+        let pi = || CasExpr::pi();
         // ∫₀^π sin x = −cos π + cos 0 = 2 (trig constants folded).
         let s = definite_integrate(&x().sin(), "x", &CasExpr::int(0), &pi()).unwrap();
         assert!(s.is_certified());
@@ -29616,7 +29737,7 @@ mod tests {
             &x().tan(),
             "x",
             &CasExpr::int(0),
-            &(v("pi") / CasExpr::int(3)),
+            &(CasExpr::pi() / CasExpr::int(3)),
         )
         .unwrap();
         assert!(matches!(
@@ -29695,7 +29816,7 @@ mod tests {
 
     #[test]
     fn exact_trig_values() {
-        let pi = || v("pi");
+        let pi = || CasExpr::pi();
         let sin = |c: CasExpr| evaluate_trig(&c.sin());
         let cos = |c: CasExpr| evaluate_trig(&c.cos());
         let tan = |c: CasExpr| evaluate_trig(&c.tan());
@@ -29742,7 +29863,7 @@ mod tests {
 
     #[test]
     fn exact_inverse_trig_values() {
-        let pi = || v("pi");
+        let pi = || CasExpr::pi();
         let inv = |head, arg: CasExpr| evaluate_trig(&CasExpr::Unary(head, Box::new(arg)));
         // atan: 0→0, 1→π/4, −1→−π/4.
         assert_equal(&inv(UnaryFunc::Atan, CasExpr::int(0)), &CasExpr::zero());
@@ -29834,9 +29955,12 @@ mod tests {
         );
         assert_equal(
             &nsimplify(std::f64::consts::FRAC_PI_2, 10_000).unwrap(),
-            &(CasExpr::rat(1, 2) * v("pi")),
+            &(CasExpr::rat(1, 2) * CasExpr::pi()),
         );
-        assert_equal(&nsimplify(std::f64::consts::PI, 10_000).unwrap(), &v("pi"));
+        assert_equal(
+            &nsimplify(std::f64::consts::PI, 10_000).unwrap(),
+            &CasExpr::pi(),
+        );
         assert_equal(
             &nsimplify(std::f64::consts::E, 10_000).unwrap(),
             &CasExpr::int(1).exp(),
@@ -30563,7 +30687,7 @@ mod tests {
     #[test]
     fn complex_argument_phase() {
         let i = CasExpr::imaginary_unit();
-        let pi = || v("pi");
+        let pi = || CasExpr::pi();
         // arg over the four quadrants and the axes (exact, tabulated reference angles).
         assert_equal(
             &argument(&(CasExpr::int(1) + i.clone())).unwrap(),
@@ -30787,7 +30911,7 @@ mod tests {
     #[test]
     fn solve_trigonometric_equations() {
         let x = || v("x");
-        let pi = || v("pi");
+        let pi = || CasExpr::pi();
         // 2sin x − 1 = 0 ⇒ x ∈ {π/6, 5π/6}; each root certifies against the equation.
         let s = solve(&(CasExpr::int(2) * x().sin() - CasExpr::int(1)), "x").expect("solvable");
         assert_eq!(s.len(), 2);
@@ -31562,7 +31686,7 @@ mod tests {
     #[test]
     fn fourier_series_of_x_and_x_squared() {
         let x = || v("x");
-        let pi = || v("pi");
+        let pi = || CasExpr::pi();
         // f(x)=x on [−π,π]: 2 sin x − sin 2x + (2/3) sin 3x.
         let fx = fourier_series(&x(), "x", &pi(), 3).unwrap();
         let expected_x = CasExpr::int(2) * x().sin() - (CasExpr::int(2) * x()).sin()
@@ -31614,7 +31738,7 @@ mod tests {
             assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
         // Fourier orthogonality: ∫₀^{2π} sin(2x)sin(3x) = 0; ∫₀^{2π} sin²(3x) = π.
-        let two_pi = CasExpr::int(2) * v("pi");
+        let two_pi = CasExpr::int(2) * CasExpr::pi();
         let orthogonal = definite_integrate(
             &((CasExpr::int(2) * x()).sin() * (CasExpr::int(3) * x()).sin()),
             "x",
@@ -31630,7 +31754,7 @@ mod tests {
             &two_pi,
         )
         .unwrap();
-        assert_equal(&norm.value, &v("pi"));
+        assert_equal(&norm.value, &CasExpr::pi());
     }
 
     #[test]
@@ -32016,7 +32140,7 @@ mod tests {
     #[test]
     fn definite_integrals_of_abs_trig() {
         let x = || v("x");
-        let pi = || v("pi");
+        let pi = || CasExpr::pi();
         let check = |integrand: CasExpr, lower: CasExpr, upper: CasExpr, want: CasExpr| {
             let got = definite_integrate(&integrand, "x", &lower, &upper).unwrap();
             assert!(got.is_certified(), "not certified: {integrand}");
@@ -32086,7 +32210,7 @@ mod tests {
         let x = || v("x");
         let one = || CasExpr::int(1);
         let zero = || CasExpr::int(0);
-        let pi_sq = || v("pi").pow(2);
+        let pi_sq = || CasExpr::pi().pow(2);
         // The four canonical Li₂(±1) kernels on [0,1], value via ζ(2)=π²/6.
         let check = |integrand: CasExpr, want: CasExpr| {
             let got = definite_integrate(&integrand, "x", &zero(), &one()).unwrap();
@@ -32133,7 +32257,7 @@ mod tests {
     #[test]
     fn trig_even_odd_argument_folding() {
         let x = || v("x");
-        let pi = || v("pi");
+        let pi = || CasExpr::pi();
         let reduce = |e: &CasExpr| simplify(&evaluate_trig(&expand_trig(e)));
         // cos is even, sin/tan odd: fold negated arguments.
         assert_equal(
@@ -32162,7 +32286,7 @@ mod tests {
     #[test]
     fn reflection_symmetry_definite_integrals() {
         let x = || v("x");
-        let pi = || v("pi");
+        let pi = || CasExpr::pi();
         let one = || CasExpr::int(1);
         let half_pi = || pi() / CasExpr::int(2);
         let check = |integrand: CasExpr| {
@@ -32214,7 +32338,7 @@ mod tests {
         )
         .unwrap();
         assert!(matches!(
-            equal(&pi_half.value, &(v("pi") / CasExpr::int(2))),
+            equal(&pi_half.value, &(CasExpr::pi() / CasExpr::int(2))),
             ZeroTest::Certified { equal: true, .. }
         ));
     }
@@ -32222,7 +32346,7 @@ mod tests {
     #[test]
     fn log_trig_definite_integrals() {
         let x = || v("x");
-        let pi = || v("pi");
+        let pi = || CasExpr::pi();
         let ln2 = || CasExpr::int(2).ln();
         let zero = || CasExpr::int(0);
         let check = |integrand: CasExpr, upper: CasExpr, want: CasExpr| {
@@ -32273,7 +32397,7 @@ mod tests {
     #[test]
     fn full_period_rational_trig_definite_integrals() {
         let x = || v("x");
-        let two_pi = || CasExpr::int(2) * v("pi");
+        let two_pi = || CasExpr::int(2) * CasExpr::pi();
         // ∫₀^{2π} k/(a+b·cos x) = 2πk/√(a²−b²) — correct where FTC on the
         // discontinuous tan(x/2) antiderivative gives a wrong 0.
         // ∫₀^{2π} 1/(5+3cos x) = 2π/√16 = π/2.
@@ -32286,7 +32410,7 @@ mod tests {
             )
             .unwrap()
             .value,
-            &(CasExpr::rat(1, 2) * v("pi")),
+            &(CasExpr::rat(1, 2) * CasExpr::pi()),
         );
         // ∫₀^{2π} 3/(5+4cos x) = 6π/√9 = 2π.
         assert_equal(
@@ -32326,7 +32450,7 @@ mod tests {
                 )
                 .unwrap()
                 .value,
-                &(CasExpr::int(4) * v("pi") / (CasExpr::int(3) * CasExpr::int(3).sqrt())),
+                &(CasExpr::int(4) * CasExpr::pi() / (CasExpr::int(3) * CasExpr::int(3).sqrt())),
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -32337,11 +32461,11 @@ mod tests {
                     &(CasExpr::int(1) / (CasExpr::int(2) + x().cos())),
                     "x",
                     &CasExpr::int(0),
-                    &v("pi")
+                    &CasExpr::pi()
                 )
                 .unwrap()
                 .value,
-                &(v("pi") / CasExpr::int(3).sqrt()),
+                &(CasExpr::pi() / CasExpr::int(3).sqrt()),
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
@@ -32351,18 +32475,18 @@ mod tests {
                 &(CasExpr::int(1) / (CasExpr::int(5) + CasExpr::int(3) * x().cos())),
                 "x",
                 &CasExpr::int(0),
-                &v("pi"),
+                &CasExpr::pi(),
             )
             .unwrap()
             .value,
-            &(CasExpr::rat(1, 4) * v("pi")),
+            &(CasExpr::rat(1, 4) * CasExpr::pi()),
         );
     }
 
     #[test]
     fn symmetric_full_period_rational_trig_fourier_is_exact() {
         let x = || v("x");
-        let pi = || v("pi");
+        let pi = || CasExpr::pi();
         let integrand = CasExpr::int(1) / (CasExpr::int(2) + x().cos());
 
         // The canonical Fourier interval [−π,π] is the same full-period
@@ -32707,7 +32831,7 @@ mod tests {
     #[test]
     fn fresnel_integrals() {
         let x = || v("x");
-        let arg = || v("pi") * x().pow(2) / CasExpr::int(2); // π·x²/2
+        let arg = || CasExpr::pi() * x().pow(2) / CasExpr::int(2); // π·x²/2
         // Defining derivatives: S′=sin(πx²/2), C′=cos(πx²/2).
         assert_equal(
             &CasExpr::Unary(UnaryFunc::FresnelS, Box::new(x())).differentiate("x"),
@@ -32883,12 +33007,12 @@ mod tests {
         assert!(matches!(
             equal(
                 &gamma(x().sqrt() * e_neg()),
-                &(v("pi").sqrt() / CasExpr::int(2))
+                &(CasExpr::pi().sqrt() / CasExpr::int(2))
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
         assert!(matches!(
-            equal(&gamma(e_neg() / x().sqrt()), &v("pi").sqrt()),
+            equal(&gamma(e_neg() / x().sqrt()), &CasExpr::pi().sqrt()),
             ZeroTest::Certified { equal: true, .. }
         ));
         // Cube-root powers return the symbolic Γ head (no elementary value):
@@ -32911,14 +33035,17 @@ mod tests {
         // Functional values: Γ(n)=(n−1)!, Γ(½)=√π, Γ(3/2)=√π/2, Γ(5/2)=3√π/4.
         assert!(certified(&CasExpr::int(5).gamma(), &CasExpr::int(24)));
         assert!(certified(&CasExpr::int(6).gamma(), &CasExpr::int(120)));
-        assert!(certified(&CasExpr::rat(1, 2).gamma(), &v("pi").sqrt()));
+        assert!(certified(
+            &CasExpr::rat(1, 2).gamma(),
+            &CasExpr::pi().sqrt()
+        ));
         assert!(certified(
             &CasExpr::rat(3, 2).gamma(),
-            &(v("pi").sqrt() / CasExpr::int(2))
+            &(CasExpr::pi().sqrt() / CasExpr::int(2))
         ));
         assert!(certified(
             &CasExpr::rat(5, 2).gamma(),
-            &(CasExpr::rat(3, 4) * v("pi").sqrt())
+            &(CasExpr::rat(3, 4) * CasExpr::pi().sqrt())
         ));
         // Functional equation Γ(x+1)=x·Γ(x) at x=4: Γ(5)=4·Γ(4).
         assert!(certified(
@@ -32963,7 +33090,7 @@ mod tests {
         ));
         assert!(certified(
             &beta_function(&CasExpr::rat(1, 2), &CasExpr::rat(1, 2)),
-            &v("pi")
+            &CasExpr::pi()
         ));
         assert!(certified(
             &beta_function(&CasExpr::int(3), &CasExpr::int(5)),
@@ -33009,11 +33136,11 @@ mod tests {
         ));
         assert!(certified(
             &CasExpr::int(1).polygamma(1),
-            &(v("pi").pow(2) / CasExpr::int(6))
+            &(CasExpr::pi().pow(2) / CasExpr::int(6))
         ));
         assert!(certified(
             &CasExpr::int(2).polygamma(1),
-            &(v("pi").pow(2) / CasExpr::int(6) - CasExpr::int(1))
+            &(CasExpr::pi().pow(2) / CasExpr::int(6) - CasExpr::int(1))
         ));
     }
 
@@ -33060,7 +33187,7 @@ mod tests {
             matches!(equal(a, b), ZeroTest::Certified { equal: true, .. })
         };
         let g = |num: i128, den: i128| CasExpr::rat(num, den).gamma();
-        let pi = || v("pi");
+        let pi = || CasExpr::pi();
         // Reflection Γ(z)Γ(1−z) = π/sin(πz) at rational z, folding the special-angle sine:
         // Γ(¼)Γ(¾) = π/sin(π/4) = π√2; Γ(⅓)Γ(⅔) = π/sin(π/3) = 2π/√3; Γ(½)² = π.
         assert!(certified(
@@ -33102,17 +33229,17 @@ mod tests {
         // d/dx erf(x) = (2/√π)·e^{−x²}.
         assert_equal(
             &x().erf().differentiate("x"),
-            &(CasExpr::int(2) / v("pi").sqrt() * (-x().pow(2)).exp()),
+            &(CasExpr::int(2) / CasExpr::pi().sqrt() * (-x().pow(2)).exp()),
         );
         // ∫e^{−a·x²} = (√π/(2√a))·erf(√a·x) for a perfect-square a — certified.
         for (integrand, expected) in [
             (
                 (-x().pow(2)).exp(),
-                v("pi").sqrt() / CasExpr::int(2) * x().erf(),
+                CasExpr::pi().sqrt() / CasExpr::int(2) * x().erf(),
             ),
             (
                 (CasExpr::int(-4) * x().pow(2)).exp(),
-                v("pi").sqrt() / CasExpr::int(4) * (CasExpr::int(2) * x()).erf(),
+                CasExpr::pi().sqrt() / CasExpr::int(4) * (CasExpr::int(2) * x()).erf(),
             ),
         ] {
             let result = integrate(&integrand, "x").expect("gaussian integral");
@@ -33136,7 +33263,7 @@ mod tests {
         assert!(surd.is_certified());
         assert_equal(
             &surd.antiderivative,
-            &(v("pi").sqrt() / (CasExpr::int(2) * CasExpr::int(2).sqrt())
+            &(CasExpr::pi().sqrt() / (CasExpr::int(2) * CasExpr::int(2).sqrt())
                 * (CasExpr::int(2).sqrt() * x()).erf()),
         );
         // Upward Gaussians (`a ≤ 0`) still decline: `∫e^{+x²}` is not an erf.
@@ -33155,13 +33282,13 @@ mod tests {
         let x = || v("x");
         // ∫ c·g = c·∫g for a var-free symbolic constant `c` (π, √2), or a parameter.
         for (integrand, _label) in [
-            (v("pi") * x().sin(), "π·sin x"),
+            (CasExpr::pi() * x().sin(), "π·sin x"),
             (
-                v("pi") * x().sin() / (CasExpr::int(1) + x().cos().pow(2)),
+                CasExpr::pi() * x().sin() / (CasExpr::int(1) + x().cos().pow(2)),
                 "π·sin/(1+cos²)",
             ),
             (CasExpr::int(2).sqrt() * x().pow(2), "√2·x²"),
-            (v("pi") * x().exp(), "π·eˣ"),
+            (CasExpr::pi() * x().exp(), "π·eˣ"),
             (v("y") * x().cos(), "y·cos x (parameter)"),
         ] {
             let result = integrate(&integrand, "x").expect("symbolic-constant factor pulls out");
@@ -33173,14 +33300,14 @@ mod tests {
         }
         // Concrete: ∫₀^π π·sin x/(1+cos²x) = π·(π/2) = π²/2.
         let d = definite_integrate(
-            &(v("pi") * x().sin() / (CasExpr::int(1) + x().cos().pow(2))),
+            &(CasExpr::pi() * x().sin() / (CasExpr::int(1) + x().cos().pow(2))),
             "x",
             &CasExpr::int(0),
-            &v("pi"),
+            &CasExpr::pi(),
         )
         .unwrap();
         assert!(matches!(
-            equal(&d.value, &(v("pi").pow(2) / CasExpr::int(2))),
+            equal(&d.value, &(CasExpr::pi().pow(2) / CasExpr::int(2))),
             ZeroTest::Certified { equal: true, .. }
         ));
     }
@@ -35872,7 +35999,7 @@ mod symbolic_geometric_and_gaussian {
         let mass = gaussian_line(0, &a).expect("mass");
         assert!(decides_equal(
             &mass.value,
-            &(CasExpr::var("pi").sqrt() / a.clone().sqrt())
+            &(CasExpr::pi().sqrt() / a.clone().sqrt())
         ));
         assert!(decides_equal(
             &gaussian_line(1, &a).expect("odd moment").value,
@@ -35887,7 +36014,7 @@ mod symbolic_geometric_and_gaussian {
         let result = gaussian_line(0, &CasExpr::one()).expect("concrete Gaussian");
         assert!(result.is_certified());
         assert!(result.hypotheses.is_empty());
-        assert!(decides_equal(&result.value, &CasExpr::var("pi").sqrt()));
+        assert!(decides_equal(&result.value, &CasExpr::pi().sqrt()));
     }
 
     /// **Negative control**, pinning the concrete-sign decision in

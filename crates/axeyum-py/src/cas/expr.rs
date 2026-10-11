@@ -1,9 +1,7 @@
 //! `axeyum.cas.Expr` and the certificate-shaped values calculus returns.
 //!
-//! There is **no text parser** for `CasExpr` (inventory §0.1): expressions are
-//! built by constructors and operators, and `__str__` renders but does not
-//! round-trip. Nothing here parses a string into an expression, because the Rust
-//! API has no such route to project.
+//! Constructors preserve exact syntax. The Python convenience parser is separate
+//! from the bounded, tagged Rust expression wire. Human display is not a wire.
 
 use std::collections::BTreeMap;
 
@@ -21,6 +19,17 @@ use crate::cas::poly::MultiPoly;
 use crate::cas::rational;
 use crate::cas::rational::RationalLike;
 use crate::stub_types::PyFraction;
+
+fn wire_error(error: axeyum_cas::expression_wire::WireError) -> PyErr {
+    match error {
+        axeyum_cas::expression_wire::WireError::Invalid(reason) => {
+            pyo3::exceptions::PyValueError::new_err(reason)
+        }
+        axeyum_cas::expression_wire::WireError::ResourceLimit(reason) => {
+            BudgetExceeded::new_err(reason)
+        }
+    }
+}
 
 /// How much trust an answer carries.
 ///
@@ -105,9 +114,8 @@ impl Sign {
 
 /// A symbolic expression.
 ///
-/// Built only by the constructors and operators below — the crate has no parser
-/// and `impl FromStr` does not exist. `str(expr)` renders the tree for humans
-/// and is **not** parseable back into an `Expr`.
+/// Constructors and operators build exact syntax. `to_json` / `from_json`
+/// preserve source identity; `str(expr)` renders the tree for humans.
 /// The right-hand side of an arithmetic operator: an `Expr`, a Python `int`,
 /// or a `fractions.Fraction` -- the exact operands. A `float` is refused with
 /// `TypeError` rather than approximated: the CAS is exact over Q, and `x + 0.5`
@@ -133,7 +141,7 @@ fn expr_depth(expr: &CasExpr) -> usize {
             max = depth;
         }
         match node {
-            CasExpr::Const(_) | CasExpr::Var(_) => {}
+            CasExpr::Const(_) | CasExpr::Pi | CasExpr::Var(_) => {}
             CasExpr::Neg(inner) | CasExpr::Pow(inner, _) | CasExpr::Unary(_, inner) => {
                 stack.push((inner, depth + 1));
             }
@@ -257,6 +265,21 @@ impl Expr {
 #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Expr {
+    /// Canonical version-1 JSON preserving Pi, variable names and exact rationals.
+    /// This transports syntax and carries no proof claim.
+    fn to_json(&self) -> PyResult<String> {
+        axeyum_cas::expression_wire::to_json(&self.inner).map_err(wire_error)
+    }
+
+    /// Decode bounded tagged syntax without normalization or proof search.
+    /// Malformed data raises ValueError; hard caps raise BudgetExceeded.
+    #[staticmethod]
+    fn from_json(encoded: &str) -> PyResult<Expr> {
+        axeyum_cas::expression_wire::from_json(encoded)
+            .map(Expr::wrap)
+            .map_err(wire_error)
+    }
+
     /// An exact integer constant.
     #[staticmethod]
     fn int(n: &Bound<'_, PyInt>) -> PyResult<Expr> {
@@ -292,6 +315,12 @@ impl Expr {
     #[staticmethod]
     fn one() -> Expr {
         Expr::wrap(CasExpr::one())
+    }
+
+    /// The mathematical real constant pi, independent of named variable bindings.
+    #[staticmethod]
+    fn pi() -> Expr {
+        Expr::wrap(CasExpr::pi())
     }
 
     /// The imaginary unit `i`.
@@ -644,7 +673,7 @@ impl Expr {
 /// Collects the variables of an expression.
 fn collect_variables(expr: &CasExpr, found: &mut std::collections::BTreeSet<String>) {
     match expr {
-        CasExpr::Const(_) => {}
+        CasExpr::Const(_) | CasExpr::Pi => {}
         CasExpr::Var(name) => {
             found.insert(name.clone());
         }

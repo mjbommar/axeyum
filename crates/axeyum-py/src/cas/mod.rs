@@ -37,6 +37,7 @@ pub(crate) mod functions;
 pub(crate) mod gf;
 pub(crate) mod normal_forms;
 pub(crate) mod ntheory;
+pub(crate) mod pi_certificate;
 pub(crate) mod poly;
 pub(crate) mod rational;
 pub(crate) mod special;
@@ -80,6 +81,7 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     module.add_class::<rational::Rational>()?;
     module.add_class::<expr::Expr>()?;
     trace::register(&module)?;
+    pi_certificate::register(&module)?;
     module.add_class::<expr::ZeroTest>()?;
     module.add_class::<expr::Certainty>()?;
     module.add_class::<expr::Sign>()?;

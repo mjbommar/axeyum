@@ -257,3 +257,29 @@ every witness under AddressSanitizer, UBSan or MemorySanitizer at the finding's
 line. Twelve textbook defect/fix pairs ship with it, and since 2026-09-17 it is
 a gate of `just py-check` (above), not an example that runs when someone
 remembers.
+
+## Distinguished CAS pi
+
+`cas.Expr.pi()` constructs the mathematical constant, and bounded
+`cas.parse("pi")` or `cas.parse("π")` constructs the same leaf. A variable
+created with `cas.Expr.var("pi")` is an ordinary variable: it needs a binding,
+is substitutable, and does not trigger exact special-angle rewrites. Internal
+special-function formulas now use the distinguished constant.
+
+```python
+from axeyum import cas
+pi = cas.Expr.pi()
+variable = cas.Expr.var("pi")
+cas.evalf(pi, {"pi": 2.0})       # approximate mathematical pi
+cas.evalf(variable, {"pi": 2.0}) # 2.0
+pi.differentiate("pi").eval({}) # 0
+pi.eval({})                    # None: pi is not a rational number
+```
+
+The existing Rust Machin enclosure route checks exact bounds against the
+constant leaf; it rejects replay against a variable subject. Approximate
+evaluation is not proof evidence. Rational-only series/Gröbner bridges and the
+version-1 polynomial trace format may explicitly decline pi. Human `str` prints
+pi for either spelling; it is not a tagged serialization or a round-trip promise
+for a variable named pi. Portable expression encoding and broader reconstruction
+remain work under [ADR-6000](../research/09-decisions/adr-6000-distinguished-cas-pi-has-constant-identity.md).

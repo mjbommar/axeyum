@@ -37,6 +37,8 @@ __all__ = [
     "MultiPoly",
     "MvPoly",
     "Permutation",
+    "PiEnclosure",
+    "PiEnclosureReport",
     "Rational",
     "RealInterval",
     "RealSet",
@@ -110,6 +112,7 @@ __all__ = [
     "dsolve_separable",
     "eigenvalues",
     "eigenvectors",
+    "enclose_pi",
     "equal",
     "euler_number",
     "euler_phi",
@@ -1162,6 +1165,17 @@ class DefiniteIntegral:
 
 @typing.final
 class Expr:
+    def to_json(self) -> builtins.str:
+        r"""
+        Canonical version-1 JSON preserving Pi, variable names and exact rationals.
+        This transports syntax and carries no proof claim.
+        """
+    @staticmethod
+    def from_json(encoded: builtins.str) -> Expr:
+        r"""
+        Decode bounded tagged syntax without normalization or proof search.
+        Malformed data raises ValueError; hard caps raise BudgetExceeded.
+        """
     @staticmethod
     def int(n: int) -> Expr:
         r"""
@@ -1191,6 +1205,11 @@ class Expr:
     def one() -> Expr:
         r"""
         The constant `1`.
+        """
+    @staticmethod
+    def pi() -> Expr:
+        r"""
+        The mathematical real constant pi, independent of named variable bindings.
         """
     @staticmethod
     def imaginary_unit() -> Expr:
@@ -1898,6 +1917,66 @@ class Permutation:
         """
     def __eq__(self, other: typing.Any) -> builtins.bool: ...
     def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class PiEnclosure:
+    r"""
+    Exact source-bound Pi enclosure. Its bounds are claims until check accepts.
+    """
+    @property
+    def precision(self) -> builtins.int:
+        r"""
+        Claimed precision in bits.
+        """
+    @property
+    def lower(self) -> fractions.Fraction:
+        r"""
+        Claimed exact lower endpoint; use check before trusting it.
+        """
+    @property
+    def upper(self) -> fractions.Fraction:
+        r"""
+        Claimed exact upper endpoint; use check before trusting it.
+        """
+    def to_json(self) -> builtins.str:
+        r"""
+        Serialize canonical exact certificate bytes as version1 JSON text.
+        """
+    @staticmethod
+    def from_json(encoded: builtins.str) -> PiEnclosure:
+        r"""
+        Parse bounded evidence; parsing alone does not verify it.
+        """
+    def check(self, subject: Expr) -> PiEnclosureReport:
+        r"""
+        Replay against the original distinguished Pi expression, without search.
+        """
+
+@typing.final
+class PiEnclosureReport:
+    r"""
+    Acceptance, actual examined/discharged steps and any failed obligation.
+    """
+    @property
+    def accepted(self) -> builtins.bool:
+        r"""
+        Whether replay discharged the certificate.
+        """
+    @property
+    def examined(self) -> builtins.int:
+        r"""
+        Number of steps examined.
+        """
+    @property
+    def discharged(self) -> builtins.int:
+        r"""
+        Number of steps discharged; zero is never success.
+        """
+    @property
+    def reason(self) -> typing.Optional[builtins.str]:
+        r"""
+        Failed obligation, or None for acceptance.
+        """
 
 @typing.final
 class Rational:
@@ -2797,6 +2876,11 @@ def eigenvalues(matrix: Matrix, var: builtins.str) -> typing.Optional[builtins.l
 def eigenvectors(matrix: Matrix, var: builtins.str) -> typing.Optional[builtins.list[tuple[Expr, builtins.list[Matrix]]]]:
     r"""
     `[(eigenvalue, [eigenvector, ...]), ...]`, or `None`.
+    """
+
+def enclose_pi(precision: builtins.int = 32) -> PiEnclosure:
+    r"""
+    Produce self-checked exact Machin bounds, up to 256 bits of precision.
     """
 
 def equal(a: Expr, b: Expr) -> ZeroTest:
