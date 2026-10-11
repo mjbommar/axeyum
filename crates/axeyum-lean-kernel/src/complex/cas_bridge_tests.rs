@@ -634,3 +634,131 @@ fn cas_verified_difference_of_squares_true_and_false_body() {
          x^2+1: {admitted_wrong:?}"
     );
 }
+
+/// Translate carried syntax directly, without first replacing it by a normal form.
+/// Unary numerals and expanded powers are deliberately bounded in this bridge.
+fn trace_ring_expr(expr: &axeyum_cas::rewrite_trace::PolynomialExpr, x: &CExpr) -> Option<CExpr> {
+    use axeyum_cas::rewrite_trace::PolynomialExpr;
+    match expr {
+        PolynomialExpr::Const {
+            numerator,
+            denominator,
+        } => {
+            if denominator != "1" {
+                return None;
+            }
+            let value: i128 = numerator.parse().ok()?;
+            if !(-8..=8).contains(&value) {
+                return None;
+            }
+            Some(int_cexpr(value))
+        }
+        PolynomialExpr::Var(name) if name == "x" => Some(x.clone()),
+        PolynomialExpr::Add(children) => {
+            let mut value = CExpr::Zero;
+            for child in children {
+                value = CExpr::add(value, trace_ring_expr(child, x)?);
+            }
+            Some(value)
+        }
+        PolynomialExpr::Mul(children) => {
+            let mut value = CExpr::One;
+            for child in children {
+                value = CExpr::mul(value, trace_ring_expr(child, x)?);
+            }
+            Some(value)
+        }
+        PolynomialExpr::Neg(child) => Some(CExpr::neg(trace_ring_expr(child, x)?)),
+        PolynomialExpr::Pow { base, exponent } if *exponent <= 4 => {
+            let base = trace_ring_expr(base, x)?;
+            let mut value = CExpr::One;
+            for _ in 0..*exponent {
+                value = CExpr::mul(value, base.clone());
+            }
+            Some(value)
+        }
+        _ => None,
+    }
+}
+
+#[test]
+fn generated_step_trace_composes_kernel_proofs_with_empty_footprint() {
+    on_a_deep_stack(|| {
+        use axeyum_cas::rewrite_trace::{TraceLimits, normalize_with_trace, replay_json};
+        let x = CasExpr::var("x");
+        let source = CasExpr::Mul(vec![
+            CasExpr::Add(vec![
+                x.clone(),
+                CasExpr::Add(vec![CasExpr::int(1), CasExpr::int(1)]),
+            ]),
+            CasExpr::Neg(Box::new(CasExpr::Neg(Box::new(x)))),
+        ]);
+        let limits = TraceLimits::default();
+        let produced = normalize_with_trace(&source, limits).expect("bounded trace");
+        assert!(produced.steps.len() >= 3, "must compose actual steps");
+        let bytes = produced.to_json(limits).expect("export trace");
+        replay_json(bytes.as_bytes(), &produced.input, &produced.result, limits)
+            .expect("source-bound byte replay");
+        let (mut kernel, p) = built();
+        let anon = kernel.anon();
+        let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+        let carrier = complex_ty(&mut d, p);
+        let x_fv = d.fresh_fvar();
+        let x_term = d.kernel().fvar(x_fv);
+        let x = CExpr::var(&mut d, p, x_term);
+        let first = trace_ring_expr(&produced.input, &x).expect("input syntax");
+        let first_term = render_c(&mut d, p, &first);
+        let mut accumulated = None;
+        let mut previous = first_term;
+        for step in &produced.steps {
+            let before = trace_ring_expr(&step.before, &x).expect("before syntax");
+            let after = trace_ring_expr(&step.after, &x).expect("after syntax");
+            let before_term = render_c(&mut d, p, &before);
+            let after_term = render_c(&mut d, p, &after);
+            assert_eq!(before_term, previous, "kernel term continuity");
+            let local = ring_law_proof(&mut d, p, &before, &after);
+            accumulated = Some(match accumulated {
+                None => local,
+                Some(prior) => d.lemma(
+                    p.equiv_trans,
+                    &[first_term, before_term, after_term, prior, local],
+                ),
+            });
+            previous = after_term;
+        }
+        let statement = zeq(&mut d, p, first_term, previous);
+        let ty = d.pi_fv(x_fv, carrier, statement);
+        let value = d.lam_fv(x_fv, carrier, accumulated.expect("nonempty trace"));
+        let name = d.kernel().name_str(anon, "Check.generated_cas_step_trace");
+        d.kernel()
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams: vec![],
+                ty,
+                value,
+            })
+            .expect("composed trace must be admitted");
+        assert!(d.kernel().axiom_footprint(name).is_empty());
+        // Same composed proof must not establish an altered endpoint.
+        let wrong = render_c(
+            &mut d,
+            p,
+            &CExpr::add(trace_ring_expr(&produced.result, &x).unwrap(), CExpr::One),
+        );
+        let wrong_statement = zeq(&mut d, p, first_term, wrong);
+        let wrong_ty = d.pi_fv(x_fv, carrier, wrong_statement);
+        let wrong_name = d
+            .kernel()
+            .name_str(anon, "Check.generated_cas_step_trace_wrong");
+        assert!(
+            d.kernel()
+                .add_declaration(Declaration::Theorem {
+                    name: wrong_name,
+                    uparams: vec![],
+                    ty: wrong_ty,
+                    value,
+                })
+                .is_err()
+        );
+    });
+}
