@@ -256,3 +256,11 @@ path. Full offline metadata now resolves the graph and updates the lockfile.
 Private congruence helper73515 terminal1 on the same baseline manifest failure,
 source restored bytewise and no mutation credit. Fresh fixed-source snapshot
 needs current six-test population and mutant5/one exact intended failure.
+
+Manifest fix e0a90431b verified three-file stat; full offline metadata succeeds
+and lockfile diff only adds existing serde_json to Py dependencies. New Rust
+six-test29625 and Python check12773 launched against fixed source, with v2 logs.
+Fresh private snapshot37464 requested ate0a90431b; v2 helper72923 requires6
+baseline passes and mutant5/one exact surrounding-subtree failure, restores
+bytewise. Original failed baseline and logs preserved. Lane rewritten compactly
+because the pre-write3000-byte guard rejected incremental status growth.
