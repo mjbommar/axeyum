@@ -19,4 +19,5 @@ lint result. All broader feedback requirements remain active.
 
 Trust registry checked:1296 public functions,151 certified floor held,114 checker,
 1031 uncertified. Generated plan and diff whitespace checks passed. Release44600
-confirmed live at kernel compilation; no test result credited.
+confirmed live at kernel compilation (rustc active near100% CPU); no test result
+credited. Fact-ledger/link validation33874 running, uncredited.
