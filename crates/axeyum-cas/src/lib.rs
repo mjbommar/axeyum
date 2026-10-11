@@ -4603,10 +4603,10 @@ fn unbounded_ring_declined_head(expr: &CasExpr) -> Option<String> {
 fn normalize_rational_big_within(expr: &CasExpr, budget: &mut u64) -> Option<BigRatFunc> {
     match expr {
         CasExpr::Const(r) => Some(BigRatFunc {
-            num: BigPoly::constant(BigInt::from(r.numerator())),
+            num: BigPoly::constant(r.numerator_big()),
             // `Rational` keeps the denominator positive, so the clearing factor
             // this introduces is positive.
-            den: BigPoly::constant(BigInt::from(r.denominator())),
+            den: BigPoly::constant(r.denominator_big()),
         }),
         CasExpr::Var(v) => Some(BigRatFunc::from_poly(BigPoly::variable(v))),
         CasExpr::Add(terms) => {

@@ -118,7 +118,13 @@ reproduction of ignored objectives and unboundedness classification; confirmed
 incorrect optimization claims invoke P0. Installed-extension probes are diagnostic,
 not a fresh solver board or a new parity measurement.
 
-
+**CAS exact inputs (`WIP`, cas-exact, 2026-10-10).** Rust Rational already carries
+promoted coefficients, but the big zero-test fallback narrowed them with getters
+that panic. Fix uses exact big numerator/denominator conversion. Two fresh
+integration controls are building: equality/replay/tamper and big refutation.
+Python transport remains bounded. Next: test the fix, audit other promoted-value
+boundaries, implement exact expression/Python arithmetic and amortization,
+negative powers, pi and bounded text parsing. No LIB-6 completion is claimed.
 
 ### SOL — Solver parity
 
