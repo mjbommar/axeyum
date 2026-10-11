@@ -57,3 +57,23 @@ three pass/one fail. Replacing required base evaluation with a zero fallback
 kills exactly `zero_and_missing_bases_do_not_acquire_reciprocal_values`.
 No mutation was made in the shared checkout. These focused results do not close
 workspace gates, conditional trace certification, kernel admission or integration.
+
+## Bounded Python text input
+
+ADR-3100 proposes the initial exact Python grammar. `cas.parse` now constructs
+existing Expr nodes without host eval: integer/decimal literals, ASCII names,
+parentheses, arithmetic, signed integer powers and twelve unary heads. It
+reports ParseError with source offsets and fixed source/token/digit/node/depth
+limits. Division and negative powers retain partial domains, including an
+undefined base at power zero. π is reserved pending its distinct constructor;
+canonical serialization and the Rust parser remain unimplemented.
+
+Against the revised extension identity recorded above, 251 Python tests passed
+(251 collected, 0.60 seconds): previous 223 plus 28 parser cases. They compare
+constructors, exact Fraction precedence/decimals, the 360-payment calculation,
+80 seeded cases with guaranteed zero-divisor inputs, malformed/executable
+syntax and resource bounds. Pure Python source was copied into the isolated
+package; no new native build was required. ADR index regeneration/check and
+diff whitespace checks pass. Historical duplicate ADRs 0166/0167 remain unchanged.
+Next is distinguished π and its checked enclosure/encoding route; this parser
+increment alone does not fulfill X2 or the full goal.

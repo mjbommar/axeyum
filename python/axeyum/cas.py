@@ -1,9 +1,8 @@
 """``axeyum.cas`` -- the computer-algebra surface, re-exported from the extension.
 
 This module exists so ``import axeyum.cas`` and ``from axeyum.cas.certify import
-geometry`` both resolve. It adds nothing: every name below is the object the
-native ``axeyum._native.cas`` module defines, and the whole surface is a
-projection of the Rust API.
+geometry`` both resolve. Native names project the Rust API; ``parse`` adds bounded exact text input
+using the same expression constructors.
 
 Two rules cross the language boundary unchanged.
 
@@ -45,3 +44,7 @@ for _route in ("ansatz", "geometry", "gf2", "groebner", "moments", "sos", "sturm
     _sys.modules[f"{__name__}.certify.{_route}"] = getattr(certify, _route)
 
 __all__ = [name for name in dir(_cas) if not name.startswith("_")]
+
+from ._cas_parser import ParseError, parse
+
+__all__ += ["ParseError", "parse"]
