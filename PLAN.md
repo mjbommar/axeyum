@@ -614,8 +614,10 @@ passed all7 packs. Baseline red: /var/tmp/axeyum-rules-date-before.log.
 Metadata now validates both interval dates and a strictly later finite end,
 matching the facade half-open interval semantics. Expanded suite passed10/0
 failures; all7 packs still validate. Input controls stop at first failure per
-method so private guard deletion produces exactly one failure. Next: rerun
-private mutations on this source, broader dated/statute pack integration.
+method so private guard deletion produces exactly one failure. Private snapshot cb15712ce: calendar/integer guards each kill exactly1 of6
+input tests; interval ordering kills exactly1 of4 metadata tests. Originals
+restored bytewise. Logs /var/tmp/axeyum-rules-date-v2-{calendar,integer,interval}.log.
+Next: broader dated/statute pack integration and full feedback closure.
 Parent targeted gamma tests passed19/0 failed/ignored,3.90s;
 /var/tmp/axeyum-feedback-cas-lint-tests.log. Complete lint15399 remains live.
 Entire feedback objective remains incomplete; no legal applicability claim.
