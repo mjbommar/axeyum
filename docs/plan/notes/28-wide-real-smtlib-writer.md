@@ -211,3 +211,11 @@ Independent evaluations compare exact values or undefinedness at nonzero
 assignments. New-source checks remain host-admission queued at edit time.
 Private snapshotd7d0a8d3e is complete and keeps its original five-test population;
 its exact-one congruence guard helper therefore still requires5->4/1.
+
+Nested-source documentation26054 terminal0: gen-plan --check (25 lanes),
+gen-adr-index --check (1035 rows; historical0166/0167 duplicates unchanged),
+check-links all links okay. Current six-test source is f701e8cbf; private
+five-test guard snapshot remains d7d0a8d3e. Compile32748/Python42846/private
+guard73515 handles re-polled live, no results credited. Next verification
+requires actual six-test execution, fresh native nine-test Python run,
+warning-denied lint, generated stubs, exact-one mutation and final broad gates.
