@@ -285,3 +285,7 @@ Parent generated-stub helper90059 terminal0: runtime/type/name checks pass;
 combined stub/reference-miter tests31 pass0 skips27.18s. Type gate1837 params,
 1752 typed,131 allowed Any,46 Any returns95.4%; drift27/1883/5 aliases.
 Parent generated proof-stub commit46874 still live at this observation.
+
+## Continuation: full CAS verification and parent stub commit
+
+Authoritative parent HEAD is d826846b9, the generated reference-miter proof stub commit; git show confirms exactly one file, 56 insertions. Current nested child remains clean at 5459911cc. Native Cargo2790977 and both private mutation helper processes were confirmed live; their results remain uncredited. Started full CAS library suite session6544 using serialized admission, CPU nice10 and best-effort I/O7, target nested-conditional-cas, log /var/tmp/axeyum-nested-conditional-full-cas.log. This expands verification beyond the six conditional tests; no broad pass assumed.

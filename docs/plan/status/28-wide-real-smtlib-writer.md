@@ -15,7 +15,7 @@ Reference-miter core7 plus old producer9 fixtures pass; full-feature solver
 Fresh preserved native7437a1356: focused Python49 and updated census15 pass0 skips;
 24 existing consumer files1154 pass0 skips170.80s. CLI exports six clausal/two
 reference fixtures. General theory correspondence and kernel admission remain
-separate. Parent stub generator41978/lint82361 and miter guard v2 still live.
+separate. Parent generated stubs committed d826846b9 (one file verified); lint82361 and miter guard v2 still live.
 
 Nested conditional Rust/Python production/replay committed1a8eab81d/6c4077ab9:
 full source/path/context/congruence/continuity binding, bounded transport and
@@ -34,5 +34,6 @@ Original failed baseline source restored and failure logs preserved.
 Older datatype workspace87947 and parent current workspace18900 remain live;
 no pass credited. Two owned parent build trees moved from idle to lowest
 best-effort I/O7 without restarts or changing CPU/memory/serialization caps.
+Full CAS library suite6544 started against frozen source; no result credited.
 Next: actual nested tests/native/stubs/lint/private guards, broad gates,
 integration and requirement-by-requirement completion audit.
