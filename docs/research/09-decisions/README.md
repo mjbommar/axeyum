@@ -1106,3 +1106,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [7000](adr-7000-omt-intake-shares-the-search-and-checking-deadline.md) | OMT intake shares the search and checking deadline | proposed |
 | [7100](adr-7100-ground-model-evaluation-shares-deadlines-through-finite-quantifiers.md) | Ground model evaluation shares deadlines through finite quantifiers | proposed |
 | [7200](adr-7200-statute-source-identities-replay-from-bounded-text-snapshots.md) | Statute source identities replay from bounded text snapshots | proposed |
+| [7300](adr-7300-wide-decimal-intake-is-exact-bounded-and-resource-typed.md) | Wide decimal intake is exact, bounded, and resource typed | proposed |

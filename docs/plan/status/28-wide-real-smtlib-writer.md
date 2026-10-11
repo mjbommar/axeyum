@@ -11,5 +11,11 @@ fixtures mistakenly used bounded arithmetic; corrected to wide_mul/wide_neg.
 Private original-source snapshot reproduces the numerator panic (one failed
 test, exit101); fixed source passes. All SMT-LIB tests385 passed, no failures/
 ignores; warning-denied Clippy passed11.09s.
-Next: wide decimal reader round trips, datatype source export, broad gates.
+ADR7300: exact bounded (4096-digit) wide decimal intake; promoted unary negation,
+quotient/floor/is_int folds; FP rounder explicitly declines promoted values.
+Round-trip controls6 passed, including zero divisor preservation; SMT/FP broad
+run passed486 tests (before added zero control),0 failed/ignored. Clippy SMT/FP
+passed; solver Clippy passed38.49s. New front-door2 passed after finding/fixing
+NRA sign-narrowing panic; existing NRA controls12 passed (2021 filtered).
+Next: private decimal-cap/NRA sign guard mutations, full gates, datatype export.
 No solver-wide completion or integration claim. Overall goal stays active.

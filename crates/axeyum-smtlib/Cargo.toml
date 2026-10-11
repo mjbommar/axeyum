@@ -15,6 +15,8 @@ publish = false
 axeyum-fp.workspace = true
 axeyum-ir.workspace = true
 axeyum-strings.workspace = true
+num-bigint.workspace = true
+num-rational.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true

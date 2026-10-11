@@ -1308,8 +1308,9 @@ pub fn from_real(
     r: Rational,
 ) -> Result<Option<TermId>, IrError> {
     let (eb, sb) = (dst.exp_bits, dst.sig_bits);
-    let num = r.numerator();
-    let den = r.denominator();
+    let (Some(num), Some(den)) = (r.checked_numerator(), r.checked_denominator()) else {
+        return Ok(None);
+    };
     let bits = round_rational_to_format(eb, sb, num, den, mode).or_else(|| {
         // Non-dyadic (or out of the exact-f64 window): round the exact rational by
         // pure-integer arithmetic under `mode` — no double-rounding.

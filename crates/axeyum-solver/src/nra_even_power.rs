@@ -139,7 +139,7 @@ fn match_even_power_eq_negative(arena: &TermArena, assertion: TermId) -> Option<
             continue;
         };
         // `c < 0` is the whole point: a nonnegative sum cannot equal it.
-        if c.numerator() >= 0 {
+        if c.wide_cmp(&Rational::zero()) != std::cmp::Ordering::Less {
             continue;
         }
         let Some(sum) = nonnegative_even_power_sum(arena, sum_side) else {
@@ -187,7 +187,7 @@ fn nonnegative_even_power_sum(arena: &TermArena, term: TermId) -> Option<Nonnega
     let mut constant = Rational::zero();
     for summand in summands {
         if let TermNode::RealConst(value) = arena.node(summand) {
-            if value.numerator() < 0 {
+            if value.wide_cmp(&Rational::zero()) == std::cmp::Ordering::Less {
                 return None;
             }
             constant = constant.checked_add(*value)?;

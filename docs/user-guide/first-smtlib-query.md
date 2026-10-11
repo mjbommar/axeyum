@@ -112,3 +112,15 @@ A returned `sat` is trustworthy because the model was **evaluated against your
 original query** before you saw it (the [trust boundary](../learn/07-how-axeyum-solves-a-query.md)).
 If Axeyum can't decide a query within its budget, it returns a first-class
 [`unknown`](../learn/05-models-unsat-and-unknown.md) — check for it explicitly.
+
+## Exact decimal input
+
+Real decimal literals are exact rationals, including values beyond `i128`.
+A literal may contain at most 4096 decimal digits; exceeding this limit returns
+a resource-limit `unknown` through the solver front door. Canonical negative
+values use unary subtraction, such as `(- 1.5)`. The script writer preserves
+wide numerators and denominators exactly.
+
+Accepted syntax does not imply that every solver or conversion supports the
+value's size. In particular, the bounded Real-to-FP rounder explicitly declines
+values outside its supported integer representation.

@@ -294,6 +294,8 @@ dependencies = [
  "axeyum-ir",
  "axeyum-strings",
  "criterion",
+ "num-bigint",
+ "num-rational",
  "serde_json",
  "sha2",
 ]

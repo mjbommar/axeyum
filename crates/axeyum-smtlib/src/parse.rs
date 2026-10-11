@@ -16538,7 +16538,7 @@ fn parse_atom(
         return Ok(arena.int_const_big(wide));
     }
     // A decimal literal `d.ddd` is a non-negative real (ADR-0015).
-    if let Some(rational) = parse_decimal(a) {
+    if let Some(rational) = parse_decimal(a)? {
         return Ok(arena.real_const(rational));
     }
     // A nullary datatype constructor (e.g. an enum value `red`) used as a term.
@@ -16724,8 +16724,8 @@ fn apply_fp_rounded_indexed(
                     let bv = axeyum_fp::from_real(arena, dst, mode, r)?.ok_or_else(|| {
                         SmtError::Unsupported(format!(
                             "(_ to_fp {eb} {sb}) exact rational {}/{} exceeds the current integer rounder",
-                            r.numerator(),
-                            r.denominator()
+                            r.numerator_big(),
+                            r.denominator_big()
                         ))
                     })?;
                     as_float(arena, dst, bv)?
@@ -20916,7 +20916,18 @@ fn apply_op(
         "-" => {
             let (real, a) = numeric_args(arena, args)?;
             match a.len() {
-                1 if real => arena.real_neg(a[0])?,
+                1 if real => {
+                    if let TermNode::RealConst(value) = *arena.node(a[0])
+                        && (value.checked_numerator().is_none()
+                            || value.checked_denominator().is_none())
+                    {
+                        arena.real_const(value.wide_neg().ok_or_else(|| {
+                            SmtError::ResourceLimit("exact rational negation pool exhausted".into())
+                        })?)
+                    } else {
+                        arena.real_neg(a[0])?
+                    }
+                }
                 1 => {
                     if let TermNode::IntConst(v) = arena.node(a[0])
                         && let Some(neg) = v.checked_neg()
@@ -21017,7 +21028,7 @@ fn apply_op(
             need(1)?;
             match *arena.node(args[0]) {
                 TermNode::RealConst(r) => {
-                    arena.int_const(r.numerator().div_euclid(r.denominator()))
+                    arena.int_const_big(WideInt::from_big(r.to_big_rational().floor().to_integer()))
                 }
                 _ => arena.real_to_int(args[0])?,
             }
@@ -21025,7 +21036,9 @@ fn apply_op(
         "is_int" => {
             need(1)?;
             match *arena.node(args[0]) {
-                TermNode::RealConst(r) => arena.bool_const(r.denominator() == 1),
+                TermNode::RealConst(r) => {
+                    arena.bool_const(r.denominator_big() == num_bigint::BigInt::from(1))
+                }
                 _ => arena.real_is_int(args[0])?,
             }
         }
@@ -21111,22 +21124,36 @@ fn find_selector(arena: &TermArena, name: &str) -> Option<(axeyum_ir::Constructo
 
 /// Parses a non-negative decimal literal `d.ddd` into an exact rational, or
 /// `None` if `a` is not a decimal numeral.
-fn parse_decimal(a: &str) -> Option<Rational> {
-    let (int_part, frac_part) = a.split_once('.')?;
+fn parse_decimal(a: &str) -> Result<Option<Rational>, SmtError> {
+    let Some((int_part, frac_part)) = a.split_once('.') else {
+        return Ok(None);
+    };
     if int_part.is_empty() && frac_part.is_empty() {
-        return None;
+        return Ok(None);
     }
     let digits = |s: &str| s.bytes().all(|b| b.is_ascii_digit());
     if !digits(int_part) || !digits(frac_part) {
-        return None;
+        return Ok(None);
     }
+    // Bound atomic decimal conversion independently of the numeral's value.
+    // Exhaustion is a resource decline, not malformed numeric syntax.
+    if int_part.len() + frac_part.len() > 4096 {
+        return Err(SmtError::ResourceLimit(
+            "decimal literal exceeds 4096 digits".into(),
+        ));
+    }
+    let exponent = u32::try_from(frac_part.len())
+        .map_err(|_| SmtError::ResourceLimit("decimal exponent exceeds u32".into()))?;
     let combined = format!("{int_part}{frac_part}");
-    let num: i128 = combined.parse().ok()?;
-    let mut den: i128 = 1;
-    for _ in 0..frac_part.len() {
-        den = den.checked_mul(10)?;
+    if let (Ok(num), Some(den)) = (combined.parse::<i128>(), 10i128.checked_pow(exponent)) {
+        return Ok(Some(Rational::new(num, den)));
     }
-    Some(Rational::new(num, den))
+    let num = num_bigint::BigInt::parse_bytes(combined.as_bytes(), 10)
+        .ok_or_else(|| SmtError::Syntax("invalid decimal numerator".into()))?;
+    let den = num_bigint::BigInt::from(10u8).pow(exponent);
+    Rational::from_big_rational(&num_rational::BigRational::new(num, den))
+        .map(Some)
+        .ok_or_else(|| SmtError::ResourceLimit("exact rational pool capacity exhausted".into()))
 }
 
 /// Classifies numeric `args` as real (any operand `Real`) and, if real, coerces
@@ -21228,7 +21255,11 @@ fn real_division(arena: &mut TermArena, args: &[TermId]) -> Result<TermId, SmtEr
         let mut all_const = true;
         for &next in &args[1..] {
             match value(arena, next) {
-                Some(divisor) if !divisor.is_zero() => acc = acc / divisor,
+                Some(divisor) if !divisor.is_zero() => {
+                    acc = acc.wide_div(divisor).ok_or_else(|| {
+                        SmtError::ResourceLimit("exact rational division pool exhausted".into())
+                    })?;
+                }
                 _ => {
                     all_const = false;
                     break;
