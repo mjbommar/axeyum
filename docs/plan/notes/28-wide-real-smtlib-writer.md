@@ -367,3 +367,7 @@ Reviewed ADR2500/6400/6500/6600 plus8400 against actual source, existing private
 ## Exact expression/transport/parser contract adoption
 
 Reviewed ADR2900/3000/6000/6100/6200/6800/6900 against current implementations and consumer controls. In particular signed powers have a seeded256case Fraction fuzz with guaranteed0^-1/0^-10/0^0/undefined-base classes; Pi guard controls are recorded in cas-pi notes and Pi-certificate lane, and native parser uses byte/final-AST caps. Adopted these seven bounded contracts; all broad/kernel/transport restrictions remain explicit. Nineteen new ADRs still require contract review; final integration gates remain open.
+
+## OMT/source-binding/deadline contract adoption
+
+Reviewed ADR2300/6300/6301/6302/7000/7100 against optimize ray checking, typed report/model pins, portable Farkas source binding and deadline intake/quantifier controls. Fresh-native consumer OMT suites pass; solver full2033 source includes these modules. Adopted six bounded contracts, including2300 curated Index-status so generated status is consistent. Existing historical follow-up lists now forward-reference the later composed contracts; unsupported integer-cut/BV gold remains false. Thirteen new ADRs remain for review. Final workspace/all-target integration still pending.

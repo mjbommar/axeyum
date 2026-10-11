@@ -1,9 +1,9 @@
 # ADR-2300: OMT unboundedness requires a checked ray; optimization budgets are shared
 
-Status: proposed
+Status: accepted; audited OMT contract adopted, final integration gates remain open
 Date: 2026-10-10
 Index-summary: Replace integer search-ceiling unboundedness with affine recession witnesses; honor text/probe deadlines and stop lexicographic optimization after an unresolved objective.
-Index-status: proposed
+Index-status: accepted
 
 ## Context
 
@@ -60,3 +60,21 @@ Required gates are the focused optimizer and SMT-LIB tests, workspace library
 suite, full-feature solver library suite, front-door regression suites and the
 five linear-arithmetic z3 differential fuzzes. This ADR remains proposed until
 the implemented increment is validated; it does not declare CON-5 complete.
+
+## Adoption and later composition
+
+The implemented bounded contract is adopted. Later ADR-6301/6302 bind finite
+integer optimality evidence to the original query; ADR-7000/7100 carry shared
+cooperative deadlines through intake and model replay. Earlier follow-up lists
+above record the original increment and are superseded where these later
+contracts supply the implementation. See the
+[current validation receipts](../../plan/notes/28-wide-real-smtlib-writer.md)
+and [completion audit](../../plan/user-feedback-completion-audit-2026-10-11.md).
+Current fresh-native OMT suites and full-feature solver regressions cover
+feasible/optimal/unknown/unsupported outcomes and changed evidence. A checked
+affine recession witness, not search exhaustion, justifies unboundedness.
+Gold remains false when strict-better evidence is absent; integer-cut, BV and
+other unsupported certificate producers retain explicit declines. Shared
+linearization/checking is not advertised as independent implementation or
+kernel admission. Final workspace/all-target verification and main integration
+remain open.
