@@ -307,3 +307,7 @@ Companion executable example python/examples/cas_polynomial_trace_cost.py comple
 - two_variables: 4 steps, 5597 JSON bytes; median ns/call {'ordinary_ns': 25257.5, 'trace_ns': 405342.7}.
 
 The original cas_trace_cost.py already includes wide amortization and byte-replay measurements. Its exact previous bytes were restored after detecting replacement during commit review; the new polynomial workload is retained in a separate companion.
+
+## Preserved wide cost experiment terminal evidence
+
+Original cas_trace_cost.py ran exit0 against native7437a1356/SHA dab497034b3f4b733d3fc70c49d89ba702f14946e9b6882deeb76b6595451356. Seven timing samples each verify exact results, deterministic exported bytes and source-bound replay. Closed rational:2steps/1354bytes; median untraced normalization10627ns, production144612ns, replay58391ns. Independent Fraction amortization-360:6steps/34998bytes; median exact evaluation10089231ns, production837558751ns, replay358788138ns. Ordinary wide polynomial normalization is explicitly absent, not equated with exact evaluation. Machine output /var/tmp/axeyum-wide-cas-trace-cost.json. Current nested-route runtime and final broad gates remain pending. Original example bytes match its pre-replacement version exactly.
