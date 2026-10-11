@@ -432,9 +432,9 @@ Fresh native32955 passed,1m35s; sealed package
 `/data0/axeyum/artifacts/python/cas-wide-guarded-k7j9mc0m/package`, SHA256
 `2d37d850399ac8caf485f41ba64625995d5587531fcd39f64cc1d10f29e62fe7`.
 Added10 Python runtime cases including separate-process replay with producer
-disabled; syntax compilation passed. All4 trace suites7355 running,
+disabled; syntax compilation passed. All4 trace suites7355 passed44/0 skipped,9.81s,
 `/var/tmp/axeyum-cas-wide-guarded-python.log`; stub generator53068 running,
-`/var/tmp/axeyum-cas-wide-guarded-stubs.log`; both uncredited.
+`/var/tmp/axeyum-cas-wide-guarded-stubs.log`; stub result uncredited.
 Parent wide CAS2147 passed/0 failed/11 ignored,389.32s; this is parent evidence.
 Next: Python runtime run and stubs, private
 mutations and broad gates. Entire feedback goal remains active.
