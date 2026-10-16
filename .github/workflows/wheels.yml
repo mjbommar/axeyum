@@ -65,7 +65,7 @@ jobs:
           count=$(ls dist/*-cp312-abi3-*.whl | wc -l)
           test "$count" -eq 1
           echo "WHEEL|abi3|$(ls dist/*.whl)"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wheels-linux-${{ matrix.target }}
           path: dist/*.whl
@@ -95,7 +95,7 @@ jobs:
           target: ${{ matrix.target }}
           args: --release --out dist
           sccache: 'true'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wheels-macos-${{ matrix.target }}
           path: dist/*.whl
@@ -113,7 +113,7 @@ jobs:
           target: x64
           args: --release --out dist
           sccache: 'true'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wheels-windows-x64
           path: dist/*.whl
@@ -154,7 +154,7 @@ jobs:
           test "$count" -eq 1
           test "$(ls dist/*abi3*.whl 2>/dev/null | wc -l)" -eq 0
           echo "WHEEL|freethreaded|$(ls dist/*.whl)"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wheels-linux-x86_64-freethreaded
           path: dist/*.whl
@@ -171,7 +171,7 @@ jobs:
         with:
           command: sdist
           args: --out dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sdist
           path: dist/*.tar.gz
@@ -329,7 +329,7 @@ jobs:
             esac
           done
           echo "RELEASE|wheels=${wheels}|version=${tag_version}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-staged
           path: staged/*
