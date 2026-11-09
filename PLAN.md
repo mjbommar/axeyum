@@ -100,7 +100,7 @@ measured after it are **not ledger entries** and are listed separately:
 
 | Date | Commit | Result |
 |---|---|---|
-
+| 2026-11-09 | `d0db9a442` | Real-statute rules-as-code: § 1030 lift, provision-keyed rule IR, CFAA pack with 8 checked obligations. |
 
 Rows come from active lane files; with none active the table is empty. The
 2026-09-17 results above are the last landings.
@@ -112,7 +112,16 @@ cannot fail (or is red) is reproduced, root-caused, regressed and repaired
 first. Otherwise work runs in five tracks; within a track, take the first
 unblocked item. Tracks may run in parallel, one lane per item.
 
-
+**Rules-as-code (`WIP`, rules-as-code, 2026-11-09).** 18 U.S.C. § 1030 is lifted
+from GovInfo (`scripts/uscode_lift.py`: 104 provisions, 49 resolved reference
+targets) and compiled through the provision-keyed rule IR (`scripts/rules_ir.py`:
+anchor, literal, dependency, and reference gates). The CFAA pack has 8 checked
+obligations in `rules_as_code_examples` (4 certified `unsat-arith-dpll`, 4
+replayed `sat` findings) and a 221,184-row three-way validator sweep. Next, in
+order: lift the OLRC USLM XML for Title 18 and diff it against the GovInfo lift;
+model § 1030(b) and the attempt clauses; model the (g) limitations period as date
+arithmetic; lift § 1029 and check a rule spanning both sections. Detail:
+[`docs/rules-as-code/ROADMAP.md`](docs/rules-as-code/ROADMAP.md).
 
 ### SOL — Solver parity
 
@@ -290,7 +299,7 @@ the state column is what a resuming lane inherits.
 | CON — consumers | `PAUSED`; the 2026-09-16 improvement lists closed for Axeyum (16/16) | Glaurung's default-backend decision is open (CON-1); cindergraph and Glaurung are pushed by the user only. |
 | ENG — hygiene | `TODO`; planning consolidated 2026-10-05 (lanes archived, size gate fixed) | 25 gates red when run alone on `a38d5f5da` (ENG-1); 198 agent worktrees and 14 unmerged branches (ENG-2). |
 
-Public documentation is guarded rather than tracked: all 260 Cargo examples and
+Public documentation is guarded rather than tracked: all 261 Cargo examples and
 the consumer 48-case aggregate are checked by `scripts/check-parity-docs.py`
 and `scripts/gen-example-inventory.py`.
 
