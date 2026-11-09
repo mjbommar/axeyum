@@ -73,7 +73,7 @@ def main() -> int:
             if args.kind and quantity["kind"] != args.kind:
                 continue
             value = "life" if quantity["value"] is None else quantity["value"]
-            unit = quantity.get("unit") or ""
+            unit = "" if quantity["value"] is None else (quantity.get("unit") or "")
             print(
                 f"{cite(lifted, quantity['provision'])}: {quantity['kind']} "
                 f"{quantity['comparator']} {value} {unit}".rstrip()
