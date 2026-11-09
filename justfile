@@ -1631,6 +1631,8 @@ foundational-resources:
     ./scripts/check-foundational-resources.sh
 
 rules-as-code:
+    python3 scripts/uscode_lift.py docs/rules-as-code/uscode/sources/USCODE-2023-title18-partI-chap47-sec1030.htm docs/rules-as-code/uscode/lifted/usc-t18-s1030.json --check
+    python3 scripts/rules_ir.py docs/rules-as-code/examples/cfaa-1030-v0/rules.json --check
     python3 scripts/gen-rules-as-code-dashboard.py
     python3 scripts/validate-rules-as-code.py
     python3 scripts/query-rules-as-code.py summary
@@ -1653,6 +1655,7 @@ rules-as-code:
     python3 scripts/query-rules-as-code.py checks --text monotonicity --require-any
     python3 scripts/query-rules-as-code.py families --text adjacent --require-any
     python3 scripts/query-rules-as-code.py rows --pack procurement_scoring_v0 --family quality_monotonicity_adjacent --limit 3 --require-any
+    python3 scripts/query-rules-as-code.py checks --pack cfaa_1030_v0 --proof-status checked --require-any
     git diff --exit-code docs/rules-as-code/generated
 
 # Guard live parity prose against the committed scoreboard, dominance audits,

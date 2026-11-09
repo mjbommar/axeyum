@@ -477,6 +477,8 @@ def validate_expected(pack_dir: Path, metadata: dict[str, Any], expected: dict[s
         witness_ids = validate_category_equivalence_expected(expected, citations)
     elif pack_id == "workflow_reachability_v0":
         witness_ids = validate_workflow_expected(expected, citations)
+    elif pack_id == "cfaa_1030_v0":
+        witness_ids = validate_cfaa_expected(expected, citations)
     else:
         fail(f"unsupported rules-as-code pack id {pack_id}")
 
@@ -868,9 +870,12 @@ def validate_citations(context: str, labels: Any, citations: set[str]) -> None:
 
 def validate_solver_fixture(pack_dir: Path, check: dict[str, Any]) -> None:
     check_id = check["id"]
-    if check["expected_result"] != "unsat":
+    if check["validation"] == "sat_model_solver_regression":
+        if check["expected_result"] != "sat":
+            fail(f"{check_id} sat_model_solver_regression must expect sat")
+    elif check["expected_result"] != "unsat":
         fail(f"{check_id} checked solver fixture must be unsat")
-    if check["validation"] not in {
+    elif check["validation"] not in {
         "bool_qf_lia_solver_regression",
         "qf_lra_farkas_solver_regression",
         "qf_uf_alethe_solver_regression",
@@ -895,6 +900,11 @@ def validate_solver_fixture(pack_dir: Path, check: dict[str, Any]) -> None:
     certificate = require_string(f"{check_id}.data.certificate", data.get("certificate"))
     if "certified evidence" not in certificate or "Evidence::check" not in certificate:
         fail(f"{check_id}.data.certificate must document checked evidence")
+    if check["validation"] == "sat_model_solver_regression":
+        if "Evidence::Sat" not in certificate or "replays_model" not in regression:
+            fail(f"{check_id} sat fixture must name the model replay regression")
+        if not check.get("witnesses"):
+            fail(f"{check_id} sat fixture must reference a replayed witness")
     if check["validation"] == "qf_uf_alethe_solver_regression":
         if "prove_qf_uf_unsat_alethe" not in certificate:
             fail(f"{check_id}.data.certificate must name prove_qf_uf_unsat_alethe")
@@ -1307,6 +1317,8 @@ def validate_generated_queries(
         validate_category_equivalence_generated_queries(expected, families)
     elif pack_id == "workflow_reachability_v0":
         validate_workflow_generated_queries(expected, families)
+    elif pack_id == "cfaa_1030_v0":
+        validate_cfaa_generated_queries(expected, families)
     else:
         fail(f"unsupported generated query pack id {pack_id}")
 
@@ -1987,6 +1999,240 @@ def validate_workflow_generated_queries(
         )
         if reached_approved != (final_state == params["approved_state"]):
             fail(f"generated workflow two-step row {index} has wrong approval flag")
+
+
+# ---------------------------------------------------------------------------
+# cfaa_1030_v0: a pack compiled from a lifted U.S. Code section.
+#
+# The rule model lives in rules.json and is evaluated by scripts/rules_ir.py.
+# The function below is a third, independent reading of 18 U.S.C. § 1030(c)
+# and (g), written clause by clause from the statute text; the validator
+# requires all three (rule model, decision-table implementation inside the
+# rules file, and this function) to agree on every region of the sample.
+
+CFAA_LIFE = 1000
+
+
+def cfaa_applicable_clauses(facts: dict[str, Any]) -> dict[str, int]:
+    """Map each (c) clause that reaches the count to its maximum term."""
+    offense = next(name for name in CFAA_OFFENSES if facts[name])
+    prior = facts["prior_conviction"]
+    harm = (
+        facts["loss_usd"] >= 5000
+        or facts["medical_impairment"]
+        or facts["physical_injury"]
+        or facts["public_safety_threat"]
+        or facts["justice_security_computer"]
+        or facts["computers_damaged"] >= 10
+    )
+    out: dict[str, int] = {}
+    if offense in ("off_a2", "off_a3", "off_a6"):
+        aggravated = offense == "off_a2" and (
+            facts["commercial_gain"]
+            or facts["criminal_or_tortious_purpose"]
+            or facts["info_value_usd"] > 5000
+        )
+        if aggravated:
+            out["(c)(2)(B)"] = 5
+        if prior:
+            out["(c)(2)(C)"] = 10
+        elif not aggravated:
+            out["(c)(2)(A)"] = 1
+    elif offense in ("off_a4", "off_a7"):
+        out["(c)(3)(B)" if prior else "(c)(3)(A)"] = 10 if prior else 5
+    else:
+        injury = offense == "off_a5A" and facts["serious_bodily_injury"]
+        death = offense == "off_a5A" and facts["death"]
+        if injury:
+            out["(c)(4)(E)"] = 20
+        if death:
+            out["(c)(4)(F)"] = CFAA_LIFE
+        if not (injury or death):
+            if offense in ("off_a5A", "off_a5B") and prior:
+                out["(c)(4)(C)"] = 20
+            elif offense == "off_a5A" and harm:
+                out["(c)(4)(B)"] = 10
+            elif offense == "off_a5B" and harm:
+                out["(c)(4)(A)"] = 5
+        if offense == "off_a5C" and prior:
+            out["(c)(4)(D)"] = 10
+        if not out:
+            out["(c)(4)(G)"] = 1
+    return out
+
+
+def cfaa_civil(facts: dict[str, Any]) -> tuple[bool, bool]:
+    factors = [
+        facts["loss_usd"] >= 5000,
+        facts["medical_impairment"],
+        facts["physical_injury"],
+        facts["public_safety_threat"],
+        facts["justice_security_computer"],
+    ]
+    available = facts["damage_or_loss_suffered"] and any(factors)
+    economic_only = available and factors[0] and not any(factors[1:])
+    return available, economic_only
+
+
+CFAA_OFFENSES = [
+    "off_a2",
+    "off_a3",
+    "off_a4",
+    "off_a5A",
+    "off_a5B",
+    "off_a5C",
+    "off_a6",
+    "off_a7",
+]
+CFAA_CLAUSE_PREDICATES = {
+    "(c)(2)(A)": "c2A_applies",
+    "(c)(2)(B)": "c2B_applies",
+    "(c)(2)(C)": "c2C_applies",
+    "(c)(3)(A)": "c3A_applies",
+    "(c)(3)(B)": "c3B_applies",
+    "(c)(4)(A)": "c4A_applies",
+    "(c)(4)(B)": "c4B_applies",
+    "(c)(4)(C)": "c4C_applies",
+    "(c)(4)(D)": "c4D_applies",
+    "(c)(4)(E)": "c4E_applies",
+    "(c)(4)(F)": "c4F_applies",
+    "(c)(4)(G)": "c4G_applies",
+}
+
+
+def cfaa_rules() -> Any:
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import rules_ir  # noqa: PLC0415 - sibling script module
+
+    return rules_ir.Rules(EXAMPLES_ROOT / "cfaa-1030-v0" / "rules.json")
+
+
+def cfaa_compare(
+    rules: Any, facts: dict[str, Any], context: str, interpreted: bool = False
+) -> dict[str, Any]:
+    env = rules.evaluate(facts)
+    if interpreted and rules.evaluate_interpreted(facts) != env:
+        fail(f"{context}: compiled and interpreted rule evaluation disagree")
+    clauses = cfaa_applicable_clauses(facts)
+    model_clauses = {
+        clause for clause, predicate in CFAA_CLAUSE_PREDICATES.items() if env[predicate]
+    }
+    if model_clauses != set(clauses):
+        fail(f"{context}: rule model clauses {sorted(model_clauses)} != statute reading {sorted(clauses)}")
+    if env["max_years"] != max(clauses.values()):
+        fail(f"{context}: rule model max {env['max_years']} != statute reading {max(clauses.values())}")
+    if env["impl_max_years"] != env["max_years"]:
+        fail(f"{context}: decision-table implementation disagrees with the rule model")
+    available, economic_only = cfaa_civil(facts)
+    if (env["civil_action_available"], env["civil_economic_damages_only"]) != (
+        available,
+        economic_only,
+    ):
+        fail(f"{context}: civil-action outputs disagree with the statute reading")
+    return env
+
+
+def validate_cfaa_expected(expected: dict[str, Any], citations: set[str]) -> set[str]:
+    params = expected["parameters"]
+    require_keys("parameters", params, {"rules", "lifted", "life_encoding"})
+    check_repo_path("parameters.rules", params["rules"])
+    check_repo_path("parameters.lifted", params["lifted"])
+    if params["life_encoding"] != CFAA_LIFE:
+        fail("parameters.life_encoding must match the validator's life encoding")
+    rules = cfaa_rules()
+    if rules.data["lifted"] != params["lifted"]:
+        fail("rules.json and expected.json name different lifted sections")
+    witness_ids: set[str] = set()
+    for index, witness in enumerate(expected["witnesses"]):
+        require_keys(
+            f"witnesses[{index}]",
+            witness,
+            {"id", "facts", "expected_outputs", "source_citations", "explanation"},
+        )
+        witness_id = witness["id"]
+        if witness_id in witness_ids:
+            fail(f"duplicate witness id {witness_id}")
+        witness_ids.add(witness_id)
+        env = cfaa_compare(rules, witness["facts"], witness_id, interpreted=True)
+        for name, value in witness["expected_outputs"].items():
+            if env.get(name) != value:
+                fail(f"{witness_id} replay mismatch on {name}: expected {value}, got {env.get(name)}")
+        validate_citations(witness_id, witness["source_citations"], citations)
+    validate_cfaa_finite_sample(rules, expected["sample_domain"])
+    return witness_ids
+
+
+def cfaa_sample_rows(sample_domain: dict[str, Any]) -> Any:
+    require_keys(
+        "sample_domain",
+        sample_domain,
+        {"offenses", "info_value_usd", "loss_usd", "computers_damaged", "booleans"},
+    )
+    if sample_domain["offenses"] != CFAA_OFFENSES:
+        fail("sample_domain.offenses must list the eight modeled offenses in order")
+    booleans = sample_domain["booleans"]
+    for offense in sample_domain["offenses"]:
+        for bits in range(1 << len(booleans)):
+            base = {name: False for name in CFAA_OFFENSES}
+            base[offense] = True
+            for position, name in enumerate(booleans):
+                base[name] = bool(bits >> position & 1)
+            for info in sample_domain["info_value_usd"]:
+                for loss in sample_domain["loss_usd"]:
+                    for computers in sample_domain["computers_damaged"]:
+                        facts = dict(base)
+                        facts["info_value_usd"] = info
+                        facts["loss_usd"] = loss
+                        facts["computers_damaged"] = computers
+                        yield facts
+
+
+def validate_cfaa_finite_sample(rules: Any, sample_domain: dict[str, Any]) -> None:
+    """Region-complete sweep: every threshold region and Boolean combination.
+
+    The modeled predicates compare dollar amounts only with 5,000 and computer
+    counts only with 10, so {4999, 5000, 5001} and {9, 10, 11} hit every region
+    of every comparison; with all Boolean combinations this sample decides the
+    same questions as the unbounded obligations, and all three readings must
+    agree on each row.
+    """
+    for value in (4999, 5000, 5001):
+        if value not in sample_domain["info_value_usd"] or value not in sample_domain["loss_usd"]:
+            fail("sample_domain must include 4999, 5000, and 5001 for both dollar amounts")
+    for value in (9, 10, 11):
+        if value not in sample_domain["computers_damaged"]:
+            fail("sample_domain.computers_damaged must include 9, 10, and 11")
+    if sorted(sample_domain["booleans"]) != sorted(
+        name for name, fact in rules.facts.items() if fact["sort"] == "Bool" and name not in CFAA_OFFENSES
+    ):
+        fail("sample_domain.booleans must list every non-offense Boolean fact")
+    rows = 0
+    for facts in cfaa_sample_rows(sample_domain):
+        cfaa_compare(rules, facts, f"sample row {rows}")
+        rows += 1
+    if rows == 0:
+        fail("cfaa sample produced no rows")
+
+
+def validate_cfaa_generated_queries(
+    expected: dict[str, Any], families: dict[str, dict[str, Any]]
+) -> None:
+    require_exact_families("cfaa_1030_v0", families, {"penalty_table_rows", "civil_gate_rows"})
+    rules = cfaa_rules()
+    for row in families["penalty_table_rows"]["rows"]:
+        facts = row["facts"]
+        env = cfaa_compare(rules, facts, f"penalty row {row}")
+        if row["max_years"] != env["max_years"]:
+            fail(f"penalty row max mismatch: {row}")
+        if row["clauses"] != sorted(cfaa_applicable_clauses(facts)):
+            fail(f"penalty row clause mismatch: {row}")
+    for row in families["civil_gate_rows"]["rows"]:
+        facts = row["facts"]
+        env = cfaa_compare(rules, facts, f"civil row {row}")
+        if (row["civil_action_available"], row["economic_damages_only"]) != cfaa_civil(facts):
+            fail(f"civil row mismatch: {row}")
+        if row["felony_factor"] != env["harm_any_I_VI"]:
+            fail(f"civil row felony-factor mismatch: {row}")
 
 
 def validate_pack(pack_dir: Path) -> str:

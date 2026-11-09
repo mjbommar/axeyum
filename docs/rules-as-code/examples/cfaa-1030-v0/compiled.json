@@ -1,0 +1,972 @@
+{
+  "schema": "axeyum.rules-ir.compiled/v1",
+  "generated_by": "python3 scripts/rules_ir.py",
+  "rules": "docs/rules-as-code/examples/cfaa-1030-v0/rules.json",
+  "lifted": "docs/rules-as-code/uscode/lifted/usc-t18-s1030.json",
+  "source_sha256": "4ae5e8f28403b826a6c540d4f204e8f8581cc434769b5fe23021a108760004a7",
+  "counts": {
+    "facts": 21,
+    "predicates": 39,
+    "implementations": 2,
+    "anchored_quotes": 60,
+    "literal_checks": 14,
+    "dependency_edges": 72,
+    "cross_provision_edges": 18,
+    "references_checked": 43,
+    "obligations": 8
+  },
+  "dependency_edges": [
+    {
+      "from": "harm_any_I_VI",
+      "to": "harm_I",
+      "from_provision": "/c/4/A/i",
+      "to_provision": "/c/4/A/i/I",
+      "justification": "structure"
+    },
+    {
+      "from": "harm_any_I_VI",
+      "to": "harm_II",
+      "from_provision": "/c/4/A/i",
+      "to_provision": "/c/4/A/i/II",
+      "justification": "structure"
+    },
+    {
+      "from": "harm_any_I_VI",
+      "to": "harm_III",
+      "from_provision": "/c/4/A/i",
+      "to_provision": "/c/4/A/i/III",
+      "justification": "structure"
+    },
+    {
+      "from": "harm_any_I_VI",
+      "to": "harm_IV",
+      "from_provision": "/c/4/A/i",
+      "to_provision": "/c/4/A/i/IV",
+      "justification": "structure"
+    },
+    {
+      "from": "harm_any_I_VI",
+      "to": "harm_V",
+      "from_provision": "/c/4/A/i",
+      "to_provision": "/c/4/A/i/V",
+      "justification": "structure"
+    },
+    {
+      "from": "harm_any_I_VI",
+      "to": "harm_VI",
+      "from_provision": "/c/4/A/i",
+      "to_provision": "/c/4/A/i/VI",
+      "justification": "structure"
+    },
+    {
+      "from": "c2B_aggravated",
+      "to": "c2B_iii_value",
+      "from_provision": "/c/2/B",
+      "to_provision": "/c/2/B/iii",
+      "justification": "structure"
+    },
+    {
+      "from": "c2A_applies",
+      "to": "c2B_applies",
+      "from_provision": "/c/2/A",
+      "to_provision": "/c/2/B",
+      "justification": "structure"
+    },
+    {
+      "from": "c2B_applies",
+      "to": "c2B_aggravated",
+      "from_provision": "/c/2/B",
+      "to_provision": "/c/2/B",
+      "justification": "structure"
+    },
+    {
+      "from": "c4A_applies",
+      "to": "c4E_applies",
+      "from_provision": "/c/4/A",
+      "to_provision": "/c/4/E",
+      "justification": "structure"
+    },
+    {
+      "from": "c4A_applies",
+      "to": "c4F_applies",
+      "from_provision": "/c/4/A",
+      "to_provision": "/c/4/F",
+      "justification": "structure"
+    },
+    {
+      "from": "c4A_applies",
+      "to": "harm_any_I_VI",
+      "from_provision": "/c/4/A",
+      "to_provision": "/c/4/A/i",
+      "justification": "structure"
+    },
+    {
+      "from": "c4B_applies",
+      "to": "c4E_applies",
+      "from_provision": "/c/4/B",
+      "to_provision": "/c/4/E",
+      "justification": "structure"
+    },
+    {
+      "from": "c4B_applies",
+      "to": "c4F_applies",
+      "from_provision": "/c/4/B",
+      "to_provision": "/c/4/F",
+      "justification": "structure"
+    },
+    {
+      "from": "c4B_applies",
+      "to": "harm_any_I_VI",
+      "from_provision": "/c/4/B",
+      "to_provision": "/c/4/A/i",
+      "justification": "cross-reference from /c/4/B/i"
+    },
+    {
+      "from": "c4C_applies",
+      "to": "c4E_applies",
+      "from_provision": "/c/4/C",
+      "to_provision": "/c/4/E",
+      "justification": "structure"
+    },
+    {
+      "from": "c4C_applies",
+      "to": "c4F_applies",
+      "from_provision": "/c/4/C",
+      "to_provision": "/c/4/F",
+      "justification": "structure"
+    },
+    {
+      "from": "c4G_applies",
+      "to": "c4A_applies",
+      "from_provision": "/c/4/G/i",
+      "to_provision": "/c/4/A",
+      "justification": "declared: 'any other offense' in (G)(i) is residual to the offenses that subparagraphs (A) through (F) reach; the text states no citation"
+    },
+    {
+      "from": "c4G_applies",
+      "to": "c4B_applies",
+      "from_provision": "/c/4/G/i",
+      "to_provision": "/c/4/B",
+      "justification": "declared: 'any other offense' in (G)(i) is residual to the offenses that subparagraphs (A) through (F) reach; the text states no citation"
+    },
+    {
+      "from": "c4G_applies",
+      "to": "c4C_applies",
+      "from_provision": "/c/4/G/i",
+      "to_provision": "/c/4/C",
+      "justification": "declared: 'any other offense' in (G)(i) is residual to the offenses that subparagraphs (A) through (F) reach; the text states no citation"
+    },
+    {
+      "from": "c4G_applies",
+      "to": "c4D_applies",
+      "from_provision": "/c/4/G/i",
+      "to_provision": "/c/4/D/i",
+      "justification": "declared: 'any other offense' in (G)(i) is residual to the offenses that subparagraphs (A) through (F) reach; the text states no citation"
+    },
+    {
+      "from": "c4G_applies",
+      "to": "c4E_applies",
+      "from_provision": "/c/4/G/i",
+      "to_provision": "/c/4/E",
+      "justification": "declared: 'any other offense' in (G)(i) is residual to the offenses that subparagraphs (A) through (F) reach; the text states no citation"
+    },
+    {
+      "from": "c4G_applies",
+      "to": "c4F_applies",
+      "from_provision": "/c/4/G/i",
+      "to_provision": "/c/4/F",
+      "justification": "declared: 'any other offense' in (G)(i) is residual to the offenses that subparagraphs (A) through (F) reach; the text states no citation"
+    },
+    {
+      "from": "any_clause_applies",
+      "to": "c2A_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/2/A",
+      "justification": "structure"
+    },
+    {
+      "from": "any_clause_applies",
+      "to": "c2B_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/2/B",
+      "justification": "structure"
+    },
+    {
+      "from": "any_clause_applies",
+      "to": "c2C_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/2/C",
+      "justification": "structure"
+    },
+    {
+      "from": "any_clause_applies",
+      "to": "c3A_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/3/A",
+      "justification": "structure"
+    },
+    {
+      "from": "any_clause_applies",
+      "to": "c3B_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/3/B",
+      "justification": "structure"
+    },
+    {
+      "from": "any_clause_applies",
+      "to": "c4A_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/4/A",
+      "justification": "structure"
+    },
+    {
+      "from": "any_clause_applies",
+      "to": "c4B_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/4/B",
+      "justification": "structure"
+    },
+    {
+      "from": "any_clause_applies",
+      "to": "c4C_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/4/C",
+      "justification": "structure"
+    },
+    {
+      "from": "any_clause_applies",
+      "to": "c4D_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/4/D/i",
+      "justification": "structure"
+    },
+    {
+      "from": "any_clause_applies",
+      "to": "c4E_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/4/E",
+      "justification": "structure"
+    },
+    {
+      "from": "any_clause_applies",
+      "to": "c4F_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/4/F",
+      "justification": "structure"
+    },
+    {
+      "from": "any_clause_applies",
+      "to": "c4G_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/4/G/i",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c2A_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/2/A",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c2A_max",
+      "from_provision": "/c",
+      "to_provision": "/c/2/A",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c2B_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/2/B",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c2B_max",
+      "from_provision": "/c",
+      "to_provision": "/c/2/B",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c2C_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/2/C",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c2C_max",
+      "from_provision": "/c",
+      "to_provision": "/c/2/C",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c3A_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/3/A",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c3A_max",
+      "from_provision": "/c",
+      "to_provision": "/c/3/A",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c3B_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/3/B",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c3B_max",
+      "from_provision": "/c",
+      "to_provision": "/c/3/B",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c4A_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/4/A",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c4A_max",
+      "from_provision": "/c",
+      "to_provision": "/c/4/A",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c4B_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/4/B",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c4B_max",
+      "from_provision": "/c",
+      "to_provision": "/c/4/B",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c4C_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/4/C",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c4C_max",
+      "from_provision": "/c",
+      "to_provision": "/c/4/C",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c4D_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/4/D/i",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c4D_max",
+      "from_provision": "/c",
+      "to_provision": "/c/4/D",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c4E_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/4/E",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c4E_max",
+      "from_provision": "/c",
+      "to_provision": "/c/4/E",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c4F_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/4/F",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c4F_max",
+      "from_provision": "/c",
+      "to_provision": "/c/4/F",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c4G_applies",
+      "from_provision": "/c",
+      "to_provision": "/c/4/G/i",
+      "justification": "structure"
+    },
+    {
+      "from": "max_years",
+      "to": "c4G_max",
+      "from_provision": "/c",
+      "to_provision": "/c/4/G",
+      "justification": "structure"
+    },
+    {
+      "from": "civil_factor_I_V",
+      "to": "harm_I",
+      "from_provision": "/g",
+      "to_provision": "/c/4/A/i/I",
+      "justification": "cross-reference from /g"
+    },
+    {
+      "from": "civil_factor_I_V",
+      "to": "harm_II",
+      "from_provision": "/g",
+      "to_provision": "/c/4/A/i/II",
+      "justification": "cross-reference from /g"
+    },
+    {
+      "from": "civil_factor_I_V",
+      "to": "harm_III",
+      "from_provision": "/g",
+      "to_provision": "/c/4/A/i/III",
+      "justification": "cross-reference from /g"
+    },
+    {
+      "from": "civil_factor_I_V",
+      "to": "harm_IV",
+      "from_provision": "/g",
+      "to_provision": "/c/4/A/i/IV",
+      "justification": "cross-reference from /g"
+    },
+    {
+      "from": "civil_factor_I_V",
+      "to": "harm_V",
+      "from_provision": "/g",
+      "to_provision": "/c/4/A/i/V",
+      "justification": "cross-reference from /g"
+    },
+    {
+      "from": "civil_action_available",
+      "to": "civil_factor_I_V",
+      "from_provision": "/g",
+      "to_provision": "/g",
+      "justification": "structure"
+    },
+    {
+      "from": "civil_action_available",
+      "to": "violation",
+      "from_provision": "/g",
+      "to_provision": "/a",
+      "justification": "declared: (g) conditions the action on \"a violation of this section\""
+    },
+    {
+      "from": "civil_economic_damages_only",
+      "to": "civil_action_available",
+      "from_provision": "/g",
+      "to_provision": "/g",
+      "justification": "structure"
+    },
+    {
+      "from": "civil_economic_damages_only",
+      "to": "harm_I",
+      "from_provision": "/g",
+      "to_provision": "/c/4/A/i/I",
+      "justification": "cross-reference from /g"
+    },
+    {
+      "from": "civil_economic_damages_only",
+      "to": "harm_II",
+      "from_provision": "/g",
+      "to_provision": "/c/4/A/i/II",
+      "justification": "cross-reference from /g"
+    },
+    {
+      "from": "civil_economic_damages_only",
+      "to": "harm_III",
+      "from_provision": "/g",
+      "to_provision": "/c/4/A/i/III",
+      "justification": "cross-reference from /g"
+    },
+    {
+      "from": "civil_economic_damages_only",
+      "to": "harm_IV",
+      "from_provision": "/g",
+      "to_provision": "/c/4/A/i/IV",
+      "justification": "cross-reference from /g"
+    },
+    {
+      "from": "civil_economic_damages_only",
+      "to": "harm_V",
+      "from_provision": "/g",
+      "to_provision": "/c/4/A/i/V",
+      "justification": "cross-reference from /g"
+    }
+  ],
+  "references": [
+    {
+      "from": "/a",
+      "target": "/c",
+      "raw": "subsection (c)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c",
+      "target": "/a",
+      "raw": "subsection (a) or (b)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c",
+      "target": "/b",
+      "raw": "subsection (a) or (b)",
+      "status": "out of scope: attempts and conspiracies under (b) are not modeled"
+    },
+    {
+      "from": "/c/1/A",
+      "target": "/a/1",
+      "raw": "subsection (a)(1)",
+      "status": "out of scope: (a)(1) national-security offenses are not modeled"
+    },
+    {
+      "from": "/c/1/B",
+      "target": "/a/1",
+      "raw": "subsection (a)(1)",
+      "status": "out of scope: (a)(1) national-security offenses are not modeled"
+    },
+    {
+      "from": "/c/2/A",
+      "target": "/c/2/B",
+      "raw": "subparagraph (B)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/2/A",
+      "target": "/a/2",
+      "raw": "subsection (a)(2), (a)(3), or (a)(6)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/2/A",
+      "target": "/a/3",
+      "raw": "subsection (a)(2), (a)(3), or (a)(6)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/2/A",
+      "target": "/a/6",
+      "raw": "subsection (a)(2), (a)(3), or (a)(6)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/2/B",
+      "target": "/a/2",
+      "raw": "subsection (a)(2)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/2/C",
+      "target": "/a/2",
+      "raw": "subsection (a)(2), (a)(3) or (a)(6)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/2/C",
+      "target": "/a/3",
+      "raw": "subsection (a)(2), (a)(3) or (a)(6)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/2/C",
+      "target": "/a/6",
+      "raw": "subsection (a)(2), (a)(3) or (a)(6)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/3/A",
+      "target": "/a/4",
+      "raw": "subsection (a)(4) or (a)(7)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/3/A",
+      "target": "/a/7",
+      "raw": "subsection (a)(4) or (a)(7)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/3/B",
+      "target": "/a/4",
+      "raw": "subsection (a)(4), or (a)(7)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/3/B",
+      "target": "/a/7",
+      "raw": "subsection (a)(4), or (a)(7)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/A",
+      "target": "/c/4/E",
+      "raw": "subparagraphs (E) and (F)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/A",
+      "target": "/c/4/F",
+      "raw": "subparagraphs (E) and (F)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/A/i",
+      "target": "/a/5/B",
+      "raw": "subsection (a)(5)(B)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/B",
+      "target": "/c/4/E",
+      "raw": "subparagraphs (E) and (F)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/B",
+      "target": "/c/4/F",
+      "raw": "subparagraphs (E) and (F)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/B/i",
+      "target": "/a/5/A",
+      "raw": "subsection (a)(5)(A)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/B/i",
+      "target": "/c/4/A/i/I",
+      "raw": "subclauses (I) through (VI) of subparagraph (A)(i)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/B/i",
+      "target": "/c/4/A/i/II",
+      "raw": "subclauses (I) through (VI) of subparagraph (A)(i)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/B/i",
+      "target": "/c/4/A/i/III",
+      "raw": "subclauses (I) through (VI) of subparagraph (A)(i)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/B/i",
+      "target": "/c/4/A/i/IV",
+      "raw": "subclauses (I) through (VI) of subparagraph (A)(i)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/B/i",
+      "target": "/c/4/A/i/V",
+      "raw": "subclauses (I) through (VI) of subparagraph (A)(i)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/B/i",
+      "target": "/c/4/A/i/VI",
+      "raw": "subclauses (I) through (VI) of subparagraph (A)(i)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/C",
+      "target": "/c/4/E",
+      "raw": "subparagraphs (E) and (F)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/C",
+      "target": "/c/4/F",
+      "raw": "subparagraphs (E) and (F)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/C/i",
+      "target": "/a/5/A",
+      "raw": "subparagraphs (A) or (B) of subsection (a)(5)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/C/i",
+      "target": "/a/5/B",
+      "raw": "subparagraphs (A) or (B) of subsection (a)(5)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/D/i",
+      "target": "/a/5/C",
+      "raw": "subsection (a)(5)(C)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/E",
+      "target": "/a/5/A",
+      "raw": "subsection (a)(5)(A)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/F",
+      "target": "/a/5/A",
+      "raw": "subsection (a)(5)(A)",
+      "status": "consumed"
+    },
+    {
+      "from": "/c/4/G/i",
+      "target": "/a/5",
+      "raw": "subsection (a)(5)",
+      "status": "consumed"
+    },
+    {
+      "from": "/g",
+      "target": "/c/4/A/i/I",
+      "raw": "subclauses (I), (II), (III), (IV), or (V) of subsection (c)(4)(A)(i)",
+      "status": "consumed"
+    },
+    {
+      "from": "/g",
+      "target": "/c/4/A/i/II",
+      "raw": "subclauses (I), (II), (III), (IV), or (V) of subsection (c)(4)(A)(i)",
+      "status": "consumed"
+    },
+    {
+      "from": "/g",
+      "target": "/c/4/A/i/III",
+      "raw": "subclauses (I), (II), (III), (IV), or (V) of subsection (c)(4)(A)(i)",
+      "status": "consumed"
+    },
+    {
+      "from": "/g",
+      "target": "/c/4/A/i/IV",
+      "raw": "subclauses (I), (II), (III), (IV), or (V) of subsection (c)(4)(A)(i)",
+      "status": "consumed"
+    },
+    {
+      "from": "/g",
+      "target": "/c/4/A/i/V",
+      "raw": "subclauses (I), (II), (III), (IV), or (V) of subsection (c)(4)(A)(i)",
+      "status": "consumed"
+    },
+    {
+      "from": "/g",
+      "target": "/c/4/A/i/I",
+      "raw": "subsection (c)(4)(A)(i)(I)",
+      "status": "consumed"
+    }
+  ],
+  "obligations": [
+    {
+      "id": "penalty-coverage-unsat",
+      "expected": "unsat",
+      "smt2": "smt2/penalty-coverage-unsat.smt2",
+      "provisions": [
+        "/c",
+        "/c/2",
+        "/c/3",
+        "/c/4"
+      ]
+    },
+    {
+      "id": "penalty-overlap-c2b-c2c-sat",
+      "expected": "sat",
+      "smt2": "smt2/penalty-overlap-c2b-c2c-sat.smt2",
+      "provisions": [
+        "/c/2/B",
+        "/c/2/C"
+      ],
+      "witness": {
+        "off_a2": true,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": false,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": true,
+        "commercial_gain": true,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 0,
+        "loss_usd": 0,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 0,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": false
+      },
+      "witness_outputs": {
+        "c2B_applies": true,
+        "c2C_applies": true,
+        "max_years": 10
+      }
+    },
+    {
+      "id": "value-threshold-mismatch-sat",
+      "expected": "sat",
+      "smt2": "smt2/value-threshold-mismatch-sat.smt2",
+      "provisions": [
+        "/c/2/B/iii",
+        "/c/4/A/i/I"
+      ],
+      "witness": {
+        "off_a2": true,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": false,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": false,
+        "commercial_gain": false,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 5000,
+        "loss_usd": 5000,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 0,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": false
+      },
+      "witness_outputs": {
+        "harm_I": true,
+        "c2B_iii_value": false
+      }
+    },
+    {
+      "id": "civil-gate-within-felony-factors-unsat",
+      "expected": "unsat",
+      "smt2": "smt2/civil-gate-within-felony-factors-unsat.smt2",
+      "provisions": [
+        "/g",
+        "/c/4/A/i"
+      ]
+    },
+    {
+      "id": "civil-gate-excludes-factor-vi-sat",
+      "expected": "sat",
+      "smt2": "smt2/civil-gate-excludes-factor-vi-sat.smt2",
+      "provisions": [
+        "/g",
+        "/c/4/A/i/VI",
+        "/c/4/B"
+      ],
+      "witness": {
+        "off_a2": false,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": true,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": false,
+        "commercial_gain": false,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 0,
+        "loss_usd": 0,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 10,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": true
+      },
+      "witness_outputs": {
+        "harm_VI": true,
+        "civil_action_available": false,
+        "max_years": 10
+      }
+    },
+    {
+      "id": "max-term-monotone-unsat",
+      "expected": "unsat",
+      "smt2": "smt2/max-term-monotone-unsat.smt2",
+      "provisions": [
+        "/c/2",
+        "/c/3",
+        "/c/4"
+      ]
+    },
+    {
+      "id": "implementation-equivalence-unsat",
+      "expected": "unsat",
+      "smt2": "smt2/implementation-equivalence-unsat.smt2",
+      "provisions": [
+        "/c/2",
+        "/c/3",
+        "/c/4"
+      ]
+    },
+    {
+      "id": "buggy-implementation-counterexample-sat",
+      "expected": "sat",
+      "smt2": "smt2/buggy-implementation-counterexample-sat.smt2",
+      "provisions": [
+        "/c/2/B/iii"
+      ],
+      "witness": {
+        "off_a2": true,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": false,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": false,
+        "commercial_gain": false,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 5000,
+        "loss_usd": 0,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 0,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": false
+      },
+      "witness_outputs": {
+        "max_years": 1,
+        "impl_buggy_max_years": 5
+      }
+    }
+  ]
+}

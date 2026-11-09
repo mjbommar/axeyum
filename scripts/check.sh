@@ -1541,6 +1541,9 @@ step drat-trim-exit-contract python3 -m unittest scripts.tests.test_drat_trim_ex
 # exit status. `scripts/provision-external-sat-referee.sh` builds the binaries;
 # they are NOT Cargo dependencies.
 step external-sat-referee scripts/check-external-sat-referee.sh
+step uscode-lift-fresh python3 scripts/uscode_lift.py docs/rules-as-code/uscode/sources/USCODE-2023-title18-partI-chap47-sec1030.htm docs/rules-as-code/uscode/lifted/usc-t18-s1030.json --check
+step rules-ir-cfaa-fresh python3 scripts/rules_ir.py docs/rules-as-code/examples/cfaa-1030-v0/rules.json --check
+step uscode-query-cited-by python3 scripts/uscode_query.py docs/rules-as-code/uscode/lifted/usc-t18-s1030.json cited-by c/4/A/i
 step rules-as-code-generate python3 scripts/gen-rules-as-code-dashboard.py
 step rules-as-code-validate python3 scripts/validate-rules-as-code.py
 step rules-as-code-query-summary python3 scripts/query-rules-as-code.py summary
@@ -1558,6 +1561,7 @@ step rules-as-code-query-grant-rows python3 scripts/query-rules-as-code.py rows 
 step rules-as-code-query-monotonicity python3 scripts/query-rules-as-code.py checks --text monotonicity --require-any
 step rules-as-code-query-adjacent python3 scripts/query-rules-as-code.py families --text adjacent --require-any
 step rules-as-code-query-quality-rows python3 scripts/query-rules-as-code.py rows --pack procurement_scoring_v0 --family quality_monotonicity_adjacent --limit 3 --require-any
+step rules-as-code-query-cfaa-checks python3 scripts/query-rules-as-code.py checks --pack cfaa_1030_v0 --proof-status checked --require-any
 step rules-as-code-generated-clean git diff --exit-code docs/rules-as-code/generated
 step smtcomp-resume ./scripts/check-smtcomp-resume.sh
 # PLAN.md and the ADR index are generated views over per-lane sources. They are

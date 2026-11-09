@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "id": "cfaa_1030_v0",
+  "title": "Computer Fraud and Abuse Act Penalties and Civil Action",
+  "domain": "criminal_and_civil_liability",
+  "jurisdiction": "US-federal",
+  "source_citations": [
+    {
+      "label": "18 U.S.C. § 1030(a)",
+      "uri": "source.md#subsection-a"
+    },
+    {
+      "label": "18 U.S.C. § 1030(c)",
+      "uri": "source.md#subsection-c"
+    },
+    {
+      "label": "18 U.S.C. § 1030(e)",
+      "uri": "source.md#subsection-e"
+    },
+    {
+      "label": "18 U.S.C. § 1030(g)",
+      "uri": "source.md#subsection-g"
+    }
+  ],
+  "effective_interval": {
+    "from": "2024-01-03",
+    "to": null
+  },
+  "actors": [
+    "defendant",
+    "United States",
+    "civil plaintiff"
+  ],
+  "inputs": [
+    {
+      "name": "off_a2",
+      "sort": "Bool"
+    },
+    {
+      "name": "off_a3",
+      "sort": "Bool"
+    },
+    {
+      "name": "off_a4",
+      "sort": "Bool"
+    },
+    {
+      "name": "off_a5A",
+      "sort": "Bool"
+    },
+    {
+      "name": "off_a5B",
+      "sort": "Bool"
+    },
+    {
+      "name": "off_a5C",
+      "sort": "Bool"
+    },
+    {
+      "name": "off_a6",
+      "sort": "Bool"
+    },
+    {
+      "name": "off_a7",
+      "sort": "Bool"
+    },
+    {
+      "name": "prior_conviction",
+      "sort": "Bool"
+    },
+    {
+      "name": "commercial_gain",
+      "sort": "Bool"
+    },
+    {
+      "name": "criminal_or_tortious_purpose",
+      "sort": "Bool"
+    },
+    {
+      "name": "info_value_usd",
+      "sort": "Int"
+    },
+    {
+      "name": "loss_usd",
+      "sort": "Int"
+    },
+    {
+      "name": "medical_impairment",
+      "sort": "Bool"
+    },
+    {
+      "name": "physical_injury",
+      "sort": "Bool"
+    },
+    {
+      "name": "public_safety_threat",
+      "sort": "Bool"
+    },
+    {
+      "name": "justice_security_computer",
+      "sort": "Bool"
+    },
+    {
+      "name": "computers_damaged",
+      "sort": "Int"
+    },
+    {
+      "name": "serious_bodily_injury",
+      "sort": "Bool"
+    },
+    {
+      "name": "death",
+      "sort": "Bool"
+    },
+    {
+      "name": "damage_or_loss_suffered",
+      "sort": "Bool"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "max_years",
+      "sort": "Int"
+    },
+    {
+      "name": "civil_action_available",
+      "sort": "Bool"
+    },
+    {
+      "name": "civil_economic_damages_only",
+      "sort": "Bool"
+    }
+  ],
+  "checks": [
+    "penalty-coverage-unsat",
+    "penalty-overlap-c2b-c2c-sat",
+    "value-threshold-mismatch-sat",
+    "civil-gate-within-felony-factors-unsat",
+    "civil-gate-excludes-factor-vi-sat",
+    "max-term-monotone-unsat",
+    "implementation-equivalence-unsat",
+    "buggy-implementation-counterexample-sat"
+  ],
+  "axeyum_fragments": [
+    "Bool",
+    "QF_LIA",
+    "lifted U.S. Code provision graph",
+    "finite replay"
+  ],
+  "proof_expectation": "Every check is a generated SMT-LIB obligation over the provision-keyed rule model. Unsat checks carry certified lazy-arithmetic refutations re-checked by Evidence::check; sat findings carry models replayed against the obligation. The rule compiler verifies anchors, literals, dependencies, and cross-references against the lifted statute before emitting any obligation. The effective interval records the text's currency date (current through 2024-01-03), not an enactment date."
+}

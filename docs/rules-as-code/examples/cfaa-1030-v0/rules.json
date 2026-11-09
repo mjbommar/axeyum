@@ -1,0 +1,886 @@
+{
+  "schema": "axeyum.rules-ir/v1",
+  "id": "cfaa_1030_v0",
+  "title": "Computer Fraud and Abuse Act, 18 U.S.C. § 1030: penalties and civil action",
+  "lifted": "docs/rules-as-code/uscode/lifted/usc-t18-s1030.json",
+  "scope": "Completed single-count offenses under (a)(2)-(a)(7); the punishment clauses of (c)(2)-(c)(4); the civil-action gate and damages limit of (g). Not modeled: (a)(1), attempts and conspiracies under (b), fines, forfeiture under (i)-(j), the (g) limitations period, and every question of what the elements mean (for example, 'without authorization' or 'exceeds authorized access').",
+  "facts": [
+    {
+      "name": "off_a2",
+      "sort": "Bool",
+      "provision": "/a/2",
+      "anchor": "intentionally accesses a computer without authorization or exceeds authorized access, and thereby obtains",
+      "description": "The count charges an offense under (a)(2) (obtaining information)."
+    },
+    {
+      "name": "off_a3",
+      "sort": "Bool",
+      "provision": "/a/3",
+      "anchor": "accesses such a computer of that department or agency",
+      "description": "The count charges an offense under (a)(3) (nonpublic government computer)."
+    },
+    {
+      "name": "off_a4",
+      "sort": "Bool",
+      "provision": "/a/4",
+      "anchor": "knowingly and with intent to defraud, accesses a protected computer without authorization",
+      "description": "The count charges an offense under (a)(4) (computer fraud)."
+    },
+    {
+      "name": "off_a5A",
+      "sort": "Bool",
+      "provision": "/a/5/A",
+      "anchor": "knowingly causes the transmission of a program, information, code, or command",
+      "description": "The count charges an offense under (a)(5)(A) (intentional damage by transmission)."
+    },
+    {
+      "name": "off_a5B",
+      "sort": "Bool",
+      "provision": "/a/5/B",
+      "anchor": "recklessly causes damage",
+      "description": "The count charges an offense under (a)(5)(B) (access recklessly causing damage)."
+    },
+    {
+      "name": "off_a5C",
+      "sort": "Bool",
+      "provision": "/a/5/C",
+      "anchor": "causes damage and loss",
+      "description": "The count charges an offense under (a)(5)(C) (access causing damage and loss)."
+    },
+    {
+      "name": "off_a6",
+      "sort": "Bool",
+      "provision": "/a/6",
+      "anchor": "traffics (as defined in section 1029) in any password",
+      "description": "The count charges an offense under (a)(6) (password trafficking)."
+    },
+    {
+      "name": "off_a7",
+      "sort": "Bool",
+      "provision": "/a/7",
+      "anchor": "with intent to extort from any person any money or other thing of value",
+      "description": "The count charges an offense under (a)(7) (extortion)."
+    },
+    {
+      "name": "prior_conviction",
+      "sort": "Bool",
+      "provision": "/c/2/C",
+      "anchor": "occurs after a conviction for another offense under this section",
+      "description": "The offense occurs after a conviction for another offense under § 1030 (as extended by (e)(10))."
+    },
+    {
+      "name": "commercial_gain",
+      "sort": "Bool",
+      "provision": "/c/2/B/i",
+      "anchor": "commercial advantage or private financial gain",
+      "description": "Committed for commercial advantage or private financial gain."
+    },
+    {
+      "name": "criminal_or_tortious_purpose",
+      "sort": "Bool",
+      "provision": "/c/2/B/ii",
+      "anchor": "in furtherance of any criminal or tortious act",
+      "description": "Committed in furtherance of a criminal or tortious act."
+    },
+    {
+      "name": "info_value_usd",
+      "sort": "Int",
+      "provision": "/c/2/B/iii",
+      "anchor": "the value of the information obtained",
+      "domain": {
+        "min": 0,
+        "max": 1000000000
+      },
+      "description": "Value of the information obtained, in whole dollars."
+    },
+    {
+      "name": "loss_usd",
+      "sort": "Int",
+      "provision": "/c/4/A/i/I",
+      "anchor": "aggregating at least $5,000 in value",
+      "domain": {
+        "min": 0,
+        "max": 1000000000
+      },
+      "description": "Loss to one or more persons during any one-year period, in whole dollars."
+    },
+    {
+      "name": "medical_impairment",
+      "sort": "Bool",
+      "provision": "/c/4/A/i/II",
+      "anchor": "medical examination, diagnosis, treatment, or care",
+      "description": "Modification or impairment of medical examination, diagnosis, treatment, or care."
+    },
+    {
+      "name": "physical_injury",
+      "sort": "Bool",
+      "provision": "/c/4/A/i/III",
+      "anchor": "physical injury to any person",
+      "description": "Physical injury to any person."
+    },
+    {
+      "name": "public_safety_threat",
+      "sort": "Bool",
+      "provision": "/c/4/A/i/IV",
+      "anchor": "a threat to public health or safety",
+      "description": "A threat to public health or safety."
+    },
+    {
+      "name": "justice_security_computer",
+      "sort": "Bool",
+      "provision": "/c/4/A/i/V",
+      "anchor": "in furtherance of the administration of justice, national defense, or national security",
+      "description": "Damage to a government computer used for justice, defense, or security."
+    },
+    {
+      "name": "computers_damaged",
+      "sort": "Int",
+      "provision": "/c/4/A/i/VI",
+      "anchor": "damage affecting 10 or more protected computers during any 1-year period",
+      "domain": {
+        "min": 0,
+        "max": 1000000
+      },
+      "description": "Protected computers damaged during any one-year period."
+    },
+    {
+      "name": "serious_bodily_injury",
+      "sort": "Bool",
+      "provision": "/c/4/E",
+      "anchor": "knowingly or recklessly causes serious bodily injury",
+      "description": "The offender attempts to cause or knowingly or recklessly causes serious bodily injury."
+    },
+    {
+      "name": "death",
+      "sort": "Bool",
+      "provision": "/c/4/F",
+      "anchor": "knowingly or recklessly causes death",
+      "description": "The offender attempts to cause or knowingly or recklessly causes death."
+    },
+    {
+      "name": "damage_or_loss_suffered",
+      "sort": "Bool",
+      "provision": "/g",
+      "anchor": "suffers damage or loss by reason of a violation of this section",
+      "description": "The plaintiff suffered damage or loss by reason of the violation."
+    }
+  ],
+  "constants": [
+    {
+      "name": "LIFE",
+      "sort": "Int",
+      "value": 1000,
+      "description": "Encodes 'any term of years or for life' as a value above every finite maximum in (c)."
+    }
+  ],
+  "constraints": [
+    {
+      "expr": "(or off_a2 off_a3 off_a4 off_a5A off_a5B off_a5C off_a6 off_a7)",
+      "description": "A count charges at least one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a2 off_a3))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a2 off_a4))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a2 off_a5A))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a2 off_a5B))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a2 off_a5C))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a2 off_a6))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a2 off_a7))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a3 off_a4))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a3 off_a5A))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a3 off_a5B))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a3 off_a5C))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a3 off_a6))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a3 off_a7))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a4 off_a5A))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a4 off_a5B))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a4 off_a5C))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a4 off_a6))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a4 off_a7))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a5A off_a5B))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a5A off_a5C))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a5A off_a6))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a5A off_a7))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a5B off_a5C))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a5B off_a6))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a5B off_a7))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a5C off_a6))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a5C off_a7))",
+      "description": "A count charges at most one modeled offense."
+    },
+    {
+      "expr": "(not (and off_a6 off_a7))",
+      "description": "A count charges at most one modeled offense."
+    }
+  ],
+  "predicates": [
+    {
+      "name": "harm_I",
+      "sort": "Bool",
+      "provision": "/c/4/A/i/I",
+      "anchor": "aggregating at least $5,000 in value",
+      "expr": "(>= loss_usd 5000)",
+      "description": "Factor (I): loss aggregating at least $5,000 in a one-year period."
+    },
+    {
+      "name": "harm_II",
+      "sort": "Bool",
+      "provision": "/c/4/A/i/II",
+      "anchor": "medical examination, diagnosis, treatment, or care",
+      "expr": "medical_impairment",
+      "description": "Factor (II): impairment of medical care."
+    },
+    {
+      "name": "harm_III",
+      "sort": "Bool",
+      "provision": "/c/4/A/i/III",
+      "anchor": "physical injury to any person",
+      "expr": "physical_injury",
+      "description": "Factor (III): physical injury."
+    },
+    {
+      "name": "harm_IV",
+      "sort": "Bool",
+      "provision": "/c/4/A/i/IV",
+      "anchor": "a threat to public health or safety",
+      "expr": "public_safety_threat",
+      "description": "Factor (IV): threat to public health or safety."
+    },
+    {
+      "name": "harm_V",
+      "sort": "Bool",
+      "provision": "/c/4/A/i/V",
+      "anchor": "national defense, or national security",
+      "expr": "justice_security_computer",
+      "description": "Factor (V): damage to a justice, defense, or security computer."
+    },
+    {
+      "name": "harm_VI",
+      "sort": "Bool",
+      "provision": "/c/4/A/i/VI",
+      "anchor": "10 or more protected computers",
+      "expr": "(>= computers_damaged 10)",
+      "description": "Factor (VI): damage to 10 or more protected computers in a one-year period."
+    },
+    {
+      "name": "harm_any_I_VI",
+      "sort": "Bool",
+      "provision": "/c/4/A/i",
+      "anchor": "if the offense caused",
+      "expr": "(or harm_I harm_II harm_III harm_IV harm_V harm_VI)",
+      "description": "At least one (c)(4)(A)(i) factor, (I) through (VI)."
+    },
+    {
+      "name": "c2B_iii_value",
+      "sort": "Bool",
+      "provision": "/c/2/B/iii",
+      "anchor": "exceeds $5,000",
+      "expr": "(> info_value_usd 5000)",
+      "description": "Clause (iii): the value of the information obtained exceeds $5,000."
+    },
+    {
+      "name": "c2B_aggravated",
+      "sort": "Bool",
+      "provision": "/c/2/B",
+      "anchor": "if—",
+      "expr": "(or commercial_gain criminal_or_tortious_purpose c2B_iii_value)",
+      "description": "One of clauses (i)-(iii) of (c)(2)(B)."
+    },
+    {
+      "name": "c2A_applies",
+      "sort": "Bool",
+      "provision": "/c/2/A",
+      "anchor": "except as provided in subparagraph (B)",
+      "expr": "(and (or off_a2 off_a3 off_a6) (not prior_conviction) (not c2B_applies))",
+      "description": "(c)(2)(A) reaches a first (a)(2), (a)(3), or (a)(6) offense not covered by (c)(2)(B)."
+    },
+    {
+      "name": "c2B_applies",
+      "sort": "Bool",
+      "provision": "/c/2/B",
+      "anchor": "in the case of an offense under subsection (a)(2)",
+      "expr": "(and off_a2 c2B_aggravated)",
+      "description": "(c)(2)(B) reaches an (a)(2) offense with a clause (i)-(iii) aggravator; it has no first-offense limit."
+    },
+    {
+      "name": "c2C_applies",
+      "sort": "Bool",
+      "provision": "/c/2/C",
+      "anchor": "which occurs after a conviction for another offense under this section",
+      "expr": "(and (or off_a2 off_a3 off_a6) prior_conviction)",
+      "description": "(c)(2)(C) reaches a repeat (a)(2), (a)(3), or (a)(6) offense."
+    },
+    {
+      "name": "c2A_max",
+      "sort": "Int",
+      "provision": "/c/2/A",
+      "anchor": "imprisonment for not more than one year",
+      "expr": "1",
+      "description": "(c)(2)(A) maximum term, in years."
+    },
+    {
+      "name": "c2B_max",
+      "sort": "Int",
+      "provision": "/c/2/B",
+      "anchor": "imprisonment for not more than 5 years",
+      "expr": "5",
+      "description": "(c)(2)(B) maximum term, in years."
+    },
+    {
+      "name": "c2C_max",
+      "sort": "Int",
+      "provision": "/c/2/C",
+      "anchor": "imprisonment for not more than ten years",
+      "expr": "10",
+      "description": "(c)(2)(C) maximum term, in years."
+    },
+    {
+      "name": "c3A_applies",
+      "sort": "Bool",
+      "provision": "/c/3/A",
+      "anchor": "which does not occur after a conviction for another offense under this section",
+      "expr": "(and (or off_a4 off_a7) (not prior_conviction))",
+      "description": "(c)(3)(A) reaches a first (a)(4) or (a)(7) offense."
+    },
+    {
+      "name": "c3B_applies",
+      "sort": "Bool",
+      "provision": "/c/3/B",
+      "anchor": "which occurs after a conviction for another offense under this section",
+      "expr": "(and (or off_a4 off_a7) prior_conviction)",
+      "description": "(c)(3)(B) reaches a repeat (a)(4) or (a)(7) offense."
+    },
+    {
+      "name": "c3A_max",
+      "sort": "Int",
+      "provision": "/c/3/A",
+      "anchor": "imprisonment for not more than five years",
+      "expr": "5",
+      "description": "(c)(3)(A) maximum term, in years."
+    },
+    {
+      "name": "c3B_max",
+      "sort": "Int",
+      "provision": "/c/3/B",
+      "anchor": "imprisonment for not more than ten years",
+      "expr": "10",
+      "description": "(c)(3)(B) maximum term, in years."
+    },
+    {
+      "name": "c4E_applies",
+      "sort": "Bool",
+      "provision": "/c/4/E",
+      "anchor": "from conduct in violation of subsection (a)(5)(A)",
+      "expr": "(and off_a5A serious_bodily_injury)",
+      "description": "(c)(4)(E): serious bodily injury from (a)(5)(A) conduct."
+    },
+    {
+      "name": "c4F_applies",
+      "sort": "Bool",
+      "provision": "/c/4/F",
+      "anchor": "from conduct in violation of subsection (a)(5)(A)",
+      "expr": "(and off_a5A death)",
+      "description": "(c)(4)(F): death from (a)(5)(A) conduct."
+    },
+    {
+      "name": "c4A_applies",
+      "sort": "Bool",
+      "provision": "/c/4/A",
+      "anchor": "except as provided in subparagraphs (E) and (F)",
+      "expr": "(and off_a5B (not prior_conviction) harm_any_I_VI (not c4E_applies) (not c4F_applies))",
+      "description": "(c)(4)(A): first (a)(5)(B) offense causing a (c)(4)(A)(i) harm."
+    },
+    {
+      "name": "c4B_applies",
+      "sort": "Bool",
+      "provision": "/c/4/B",
+      "anchor": "except as provided in subparagraphs (E) and (F)",
+      "expr": "(and off_a5A (not prior_conviction) harm_any_I_VI (not c4E_applies) (not c4F_applies))",
+      "description": "(c)(4)(B): first (a)(5)(A) offense causing a harm in subclauses (I)-(VI) of (A)(i)."
+    },
+    {
+      "name": "c4C_applies",
+      "sort": "Bool",
+      "provision": "/c/4/C",
+      "anchor": "except as provided in subparagraphs (E) and (F)",
+      "expr": "(and (or off_a5A off_a5B) prior_conviction (not c4E_applies) (not c4F_applies))",
+      "description": "(c)(4)(C): repeat (a)(5)(A) or (a)(5)(B) offense; no harm factor is required."
+    },
+    {
+      "name": "c4D_applies",
+      "sort": "Bool",
+      "provision": "/c/4/D/i",
+      "anchor": "under subsection (a)(5)(C) that occurs after a conviction",
+      "expr": "(and off_a5C prior_conviction)",
+      "description": "(c)(4)(D): repeat (a)(5)(C) offense."
+    },
+    {
+      "name": "c4G_applies",
+      "sort": "Bool",
+      "provision": "/c/4/G/i",
+      "anchor": "any other offense under subsection (a)(5)",
+      "expr": "(and (or off_a5A off_a5B off_a5C) (not (or c4A_applies c4B_applies c4C_applies c4D_applies c4E_applies c4F_applies)))",
+      "description": "(c)(4)(G): any other (a)(5) offense.",
+      "justify": {
+        "c4A_applies": "'any other offense' in (G)(i) is residual to the offenses that subparagraphs (A) through (F) reach; the text states no citation",
+        "c4B_applies": "'any other offense' in (G)(i) is residual to the offenses that subparagraphs (A) through (F) reach; the text states no citation",
+        "c4C_applies": "'any other offense' in (G)(i) is residual to the offenses that subparagraphs (A) through (F) reach; the text states no citation",
+        "c4D_applies": "'any other offense' in (G)(i) is residual to the offenses that subparagraphs (A) through (F) reach; the text states no citation",
+        "c4E_applies": "'any other offense' in (G)(i) is residual to the offenses that subparagraphs (A) through (F) reach; the text states no citation",
+        "c4F_applies": "'any other offense' in (G)(i) is residual to the offenses that subparagraphs (A) through (F) reach; the text states no citation"
+      }
+    },
+    {
+      "name": "c4A_max",
+      "sort": "Int",
+      "provision": "/c/4/A",
+      "anchor": "imprisonment for not more than 5 years",
+      "expr": "5",
+      "description": "(c)(4)(A) maximum term, in years."
+    },
+    {
+      "name": "c4B_max",
+      "sort": "Int",
+      "provision": "/c/4/B",
+      "anchor": "imprisonment for not more than 10 years",
+      "expr": "10",
+      "description": "(c)(4)(B) maximum term, in years."
+    },
+    {
+      "name": "c4C_max",
+      "sort": "Int",
+      "provision": "/c/4/C",
+      "anchor": "imprisonment for not more than 20 years",
+      "expr": "20",
+      "description": "(c)(4)(C) maximum term, in years."
+    },
+    {
+      "name": "c4D_max",
+      "sort": "Int",
+      "provision": "/c/4/D",
+      "anchor": "imprisonment for not more than 10 years",
+      "expr": "10",
+      "description": "(c)(4)(D) maximum term, in years."
+    },
+    {
+      "name": "c4E_max",
+      "sort": "Int",
+      "provision": "/c/4/E",
+      "anchor": "imprisonment for not more than 20 years",
+      "expr": "20",
+      "description": "(c)(4)(E) maximum term, in years."
+    },
+    {
+      "name": "c4F_max",
+      "sort": "Int",
+      "provision": "/c/4/F",
+      "anchor": "imprisonment for any term of years or for life",
+      "expr": "LIFE",
+      "description": "(c)(4)(F) maximum term: life."
+    },
+    {
+      "name": "c4G_max",
+      "sort": "Int",
+      "provision": "/c/4/G",
+      "anchor": "imprisonment for not more than 1 year",
+      "expr": "1",
+      "description": "(c)(4)(G) maximum term, in years."
+    },
+    {
+      "name": "any_clause_applies",
+      "sort": "Bool",
+      "provision": "/c",
+      "anchor": "The punishment for an offense under subsection (a) or (b) of this section is",
+      "expr": "(or c2A_applies c2B_applies c2C_applies c3A_applies c3B_applies c4A_applies c4B_applies c4C_applies c4D_applies c4E_applies c4F_applies c4G_applies)",
+      "description": "Some punishment clause of (c)(2)-(c)(4) reaches the count."
+    },
+    {
+      "name": "max_years",
+      "sort": "Int",
+      "provision": "/c",
+      "anchor": "The punishment for an offense under subsection (a) or (b) of this section is",
+      "expr": "(max (ite c2A_applies c2A_max 0) (ite c2B_applies c2B_max 0) (ite c2C_applies c2C_max 0) (ite c3A_applies c3A_max 0) (ite c3B_applies c3B_max 0) (ite c4A_applies c4A_max 0) (ite c4B_applies c4B_max 0) (ite c4C_applies c4C_max 0) (ite c4D_applies c4D_max 0) (ite c4E_applies c4E_max 0) (ite c4F_applies c4F_max 0) (ite c4G_applies c4G_max 0))",
+      "description": "Largest statutory maximum among the applicable clauses (LIFE = 1000 encodes life)."
+    },
+    {
+      "name": "civil_factor_I_V",
+      "sort": "Bool",
+      "provision": "/g",
+      "anchor": "1 of the factors set forth in subclauses (I), (II), (III), (IV), or (V) of subsection (c)(4)(A)(i)",
+      "expr": "(or harm_I harm_II harm_III harm_IV harm_V)",
+      "description": "The (g) gate: one of factors (I)-(V) of (c)(4)(A)(i)."
+    },
+    {
+      "name": "violation",
+      "sort": "Bool",
+      "provision": "/a",
+      "anchor": "shall be punished as provided in subsection (c) of this section",
+      "expr": "(or off_a2 off_a3 off_a4 off_a5A off_a5B off_a5C off_a6 off_a7)",
+      "description": "The facts state an offense under a modeled paragraph of (a)."
+    },
+    {
+      "name": "civil_action_available",
+      "sort": "Bool",
+      "provision": "/g",
+      "anchor": "may be brought only if the conduct involves",
+      "expr": "(and violation damage_or_loss_suffered civil_factor_I_V)",
+      "description": "A civil action under (g) is available.",
+      "justify": {
+        "violation": "(g) conditions the action on \"a violation of this section\""
+      }
+    },
+    {
+      "name": "civil_economic_damages_only",
+      "sort": "Bool",
+      "provision": "/g",
+      "anchor": "are limited to economic damages",
+      "expr": "(and civil_action_available harm_I (not (or harm_II harm_III harm_IV harm_V)))",
+      "description": "Only factor (I) conduct is involved, so damages are limited to economic damages."
+    }
+  ],
+  "implementations": [
+    {
+      "name": "impl_max_years",
+      "sort": "Int",
+      "expr": "(ite off_a2 (ite prior_conviction 10 (ite (or commercial_gain criminal_or_tortious_purpose (> info_value_usd 5000)) 5 1)) (ite (or off_a3 off_a6) (ite prior_conviction 10 1) (ite (or off_a4 off_a7) (ite prior_conviction 10 5) (ite off_a5A (ite death LIFE (ite serious_bodily_injury 20 (ite prior_conviction 20 (ite (or (>= loss_usd 5000) medical_impairment physical_injury public_safety_threat justice_security_computer (>= computers_damaged 10)) 10 1)))) (ite off_a5B (ite prior_conviction 20 (ite (or (>= loss_usd 5000) medical_impairment physical_injury public_safety_threat justice_security_computer (>= computers_damaged 10)) 5 1)) (ite off_a5C (ite prior_conviction 10 1) 0))))))",
+      "description": "An independently written decision table, as a sentencing calculator would encode (c)(2)-(c)(4): one branch per offense, first match wins."
+    },
+    {
+      "name": "impl_buggy_max_years",
+      "sort": "Int",
+      "expr": "(ite off_a2 (ite prior_conviction 10 (ite (or commercial_gain criminal_or_tortious_purpose (>= info_value_usd 5000)) 5 1)) (ite (or off_a3 off_a6) (ite prior_conviction 10 1) (ite (or off_a4 off_a7) (ite prior_conviction 10 5) (ite off_a5A (ite death LIFE (ite serious_bodily_injury 20 (ite prior_conviction 20 (ite (or (>= loss_usd 5000) medical_impairment physical_injury public_safety_threat justice_security_computer (>= computers_damaged 10)) 10 1)))) (ite off_a5B (ite prior_conviction 20 (ite (or (>= loss_usd 5000) medical_impairment physical_injury public_safety_threat justice_security_computer (>= computers_damaged 10)) 5 1)) (ite off_a5C (ite prior_conviction 10 1) 0))))))",
+      "description": "The same table with one plausible transcription error: (c)(2)(B)(iii) read as 'at least $5,000', the comparator (c)(4)(A)(i)(I) uses."
+    }
+  ],
+  "out_of_scope_refs": [
+    {
+      "from": "/c",
+      "target": "/b",
+      "reason": "attempts and conspiracies under (b) are not modeled"
+    },
+    {
+      "from": "/c/1/A",
+      "target": "/a/1",
+      "reason": "(a)(1) national-security offenses are not modeled"
+    },
+    {
+      "from": "/c/1/B",
+      "target": "/a/1",
+      "reason": "(a)(1) national-security offenses are not modeled"
+    }
+  ],
+  "obligations": [
+    {
+      "id": "penalty-coverage-unsat",
+      "expected": "unsat",
+      "question": "Is there a single-offense count under (a)(2)-(a)(7) that no punishment clause of (c)(2)-(c)(4) reaches?",
+      "provisions": [
+        "/c",
+        "/c/2",
+        "/c/3",
+        "/c/4"
+      ],
+      "assert": "(not any_clause_applies)"
+    },
+    {
+      "id": "penalty-overlap-c2b-c2c-sat",
+      "expected": "sat",
+      "question": "Can (c)(2)(B) (5 years) and (c)(2)(C) (10 years) both reach the same (a)(2) count? (c)(2)(A) excepts (c)(2)(B), but (c)(2)(B) has no first-offense limit, so a repeat offense with an aggravator satisfies both.",
+      "provisions": [
+        "/c/2/B",
+        "/c/2/C"
+      ],
+      "assert": "(and c2B_applies c2C_applies)",
+      "witness": {
+        "off_a2": true,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": false,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": true,
+        "commercial_gain": true,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 0,
+        "loss_usd": 0,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 0,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": false
+      },
+      "report": [
+        "c2B_applies",
+        "c2C_applies",
+        "max_years"
+      ]
+    },
+    {
+      "id": "value-threshold-mismatch-sat",
+      "expected": "sat",
+      "question": "Is there a dollar amount that meets the (c)(4)(A)(i)(I) loss threshold ('aggregating at least $5,000') but not the (c)(2)(B)(iii) value threshold ('exceeds $5,000')?",
+      "provisions": [
+        "/c/2/B/iii",
+        "/c/4/A/i/I"
+      ],
+      "assert": "(and (= info_value_usd loss_usd) harm_I (not c2B_iii_value))",
+      "witness": {
+        "off_a2": true,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": false,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": false,
+        "commercial_gain": false,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 5000,
+        "loss_usd": 5000,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 0,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": false
+      },
+      "report": [
+        "harm_I",
+        "c2B_iii_value"
+      ]
+    },
+    {
+      "id": "civil-gate-within-felony-factors-unsat",
+      "expected": "unsat",
+      "question": "Can conduct satisfy the (g) civil-action gate without satisfying any (c)(4)(A)(i) factor?",
+      "provisions": [
+        "/g",
+        "/c/4/A/i"
+      ],
+      "assert": "(and civil_factor_I_V (not harm_any_I_VI))"
+    },
+    {
+      "id": "civil-gate-excludes-factor-vi-sat",
+      "expected": "sat",
+      "question": "Can an (a)(5)(A) offense satisfy a (c)(4)(A)(i) factor, and so carry the 10-year maximum of (c)(4)(B), while the (g) civil-action gate stays closed? (g) lists subclauses (I)-(V) only.",
+      "provisions": [
+        "/g",
+        "/c/4/A/i/VI",
+        "/c/4/B"
+      ],
+      "assert": "(and off_a5A damage_or_loss_suffered harm_any_I_VI (not civil_action_available))",
+      "witness": {
+        "off_a2": false,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": true,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": false,
+        "commercial_gain": false,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 0,
+        "loss_usd": 0,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 10,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": true
+      },
+      "report": [
+        "harm_VI",
+        "civil_action_available",
+        "max_years"
+      ]
+    },
+    {
+      "id": "max-term-monotone-unsat",
+      "expected": "unsat",
+      "question": "For the same offense, can adding an aggravating fact (a prior conviction, a clause (i)-(iii) aggravator, a larger value, loss, or computer count, or a harm, injury, or death) lower the statutory maximum?",
+      "provisions": [
+        "/c/2",
+        "/c/3",
+        "/c/4"
+      ],
+      "assert": "(and (= lo_off_a2 hi_off_a2) (= lo_off_a3 hi_off_a3) (= lo_off_a4 hi_off_a4) (= lo_off_a5A hi_off_a5A) (= lo_off_a5B hi_off_a5B) (= lo_off_a5C hi_off_a5C) (= lo_off_a6 hi_off_a6) (= lo_off_a7 hi_off_a7) (=> lo_prior_conviction hi_prior_conviction) (=> lo_commercial_gain hi_commercial_gain) (=> lo_criminal_or_tortious_purpose hi_criminal_or_tortious_purpose) (=> lo_medical_impairment hi_medical_impairment) (=> lo_physical_injury hi_physical_injury) (=> lo_public_safety_threat hi_public_safety_threat) (=> lo_justice_security_computer hi_justice_security_computer) (=> lo_serious_bodily_injury hi_serious_bodily_injury) (=> lo_death hi_death) (<= lo_info_value_usd hi_info_value_usd) (<= lo_loss_usd hi_loss_usd) (<= lo_computers_damaged hi_computers_damaged) (< hi_max_years lo_max_years))",
+      "copies": [
+        "lo_",
+        "hi_"
+      ]
+    },
+    {
+      "id": "implementation-equivalence-unsat",
+      "expected": "unsat",
+      "question": "Does an independently written decision table ever disagree with the provision-keyed model on the statutory maximum?",
+      "provisions": [
+        "/c/2",
+        "/c/3",
+        "/c/4"
+      ],
+      "assert": "(distinct max_years impl_max_years)"
+    },
+    {
+      "id": "buggy-implementation-counterexample-sat",
+      "expected": "sat",
+      "question": "Does the decision table with '>= $5,000' in place of '> $5,000' for (c)(2)(B)(iii) ever disagree with the model?",
+      "provisions": [
+        "/c/2/B/iii"
+      ],
+      "assert": "(distinct max_years impl_buggy_max_years)",
+      "witness": {
+        "off_a2": true,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": false,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": false,
+        "commercial_gain": false,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 5000,
+        "loss_usd": 0,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 0,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": false
+      },
+      "report": [
+        "max_years",
+        "impl_buggy_max_years"
+      ]
+    }
+  ],
+  "source_extract": [
+    {
+      "label": "18 U.S.C. § 1030(a)",
+      "anchor": "subsection-a",
+      "provisions": [
+        "/a"
+      ],
+      "note": "The offenses. Paragraph (a)(1) and the elements' meaning are outside the model; the model selects one offense per count."
+    },
+    {
+      "label": "18 U.S.C. § 1030(c)",
+      "anchor": "subsection-c",
+      "provisions": [
+        "/c"
+      ],
+      "note": "The punishment clauses. Fines are outside the model; only the maximum term of imprisonment is computed."
+    },
+    {
+      "label": "18 U.S.C. § 1030(e)(8), (e)(10), (e)(11)",
+      "anchor": "subsection-e",
+      "provisions": [
+        "/e/8",
+        "/e/10",
+        "/e/11"
+      ],
+      "note": "The definitions of damage, conviction, and loss that the modeled clauses use."
+    },
+    {
+      "label": "18 U.S.C. § 1030(g)",
+      "anchor": "subsection-g",
+      "provisions": [
+        "/g"
+      ],
+      "note": "The civil action."
+    }
+  ]
+}

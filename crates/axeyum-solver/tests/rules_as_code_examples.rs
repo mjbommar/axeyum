@@ -92,6 +92,31 @@ const WORKFLOW_REACHABILITY_IMPLEMENTATION_EQUIVALENCE: &str = include_str!(
     "../../../docs/rules-as-code/examples/workflow-reachability-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2"
 );
 
+const CFAA_PENALTY_COVERAGE_UNSAT: &str = include_str!(
+    "../../../docs/rules-as-code/examples/cfaa-1030-v0/smt2/penalty-coverage-unsat.smt2"
+);
+const CFAA_PENALTY_OVERLAP_C2B_C2C_SAT: &str = include_str!(
+    "../../../docs/rules-as-code/examples/cfaa-1030-v0/smt2/penalty-overlap-c2b-c2c-sat.smt2"
+);
+const CFAA_VALUE_THRESHOLD_MISMATCH_SAT: &str = include_str!(
+    "../../../docs/rules-as-code/examples/cfaa-1030-v0/smt2/value-threshold-mismatch-sat.smt2"
+);
+const CFAA_CIVIL_GATE_WITHIN_FELONY_FACTORS_UNSAT: &str = include_str!(
+    "../../../docs/rules-as-code/examples/cfaa-1030-v0/smt2/civil-gate-within-felony-factors-unsat.smt2"
+);
+const CFAA_CIVIL_GATE_EXCLUDES_FACTOR_VI_SAT: &str = include_str!(
+    "../../../docs/rules-as-code/examples/cfaa-1030-v0/smt2/civil-gate-excludes-factor-vi-sat.smt2"
+);
+const CFAA_MAX_TERM_MONOTONE_UNSAT: &str = include_str!(
+    "../../../docs/rules-as-code/examples/cfaa-1030-v0/smt2/max-term-monotone-unsat.smt2"
+);
+const CFAA_IMPLEMENTATION_EQUIVALENCE_UNSAT: &str = include_str!(
+    "../../../docs/rules-as-code/examples/cfaa-1030-v0/smt2/implementation-equivalence-unsat.smt2"
+);
+const CFAA_BUGGY_IMPLEMENTATION_COUNTEREXAMPLE_SAT: &str = include_str!(
+    "../../../docs/rules-as-code/examples/cfaa-1030-v0/smt2/buggy-implementation-counterexample-sat.smt2"
+);
+
 #[test]
 fn benefit_eligibility_consistency_emits_checked_evidence() {
     assert_rule_unsat_evidence(
@@ -305,6 +330,94 @@ fn workflow_reachability_implementation_equivalence_emits_checked_evidence() {
     assert_rule_unsat_evidence(
         "workflow-reachability-v0 implementation equivalence",
         WORKFLOW_REACHABILITY_IMPLEMENTATION_EQUIVALENCE,
+    );
+}
+
+#[test]
+fn cfaa_1030_penalty_coverage_unsat_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "cfaa-1030-v0 penalty-coverage-unsat",
+        CFAA_PENALTY_COVERAGE_UNSAT,
+    );
+}
+
+#[test]
+fn cfaa_1030_penalty_overlap_c2b_c2c_sat_replays_model() {
+    assert_rule_sat_model(
+        "cfaa-1030-v0 penalty-overlap-c2b-c2c-sat",
+        CFAA_PENALTY_OVERLAP_C2B_C2C_SAT,
+    );
+}
+
+#[test]
+fn cfaa_1030_value_threshold_mismatch_sat_replays_model() {
+    assert_rule_sat_model(
+        "cfaa-1030-v0 value-threshold-mismatch-sat",
+        CFAA_VALUE_THRESHOLD_MISMATCH_SAT,
+    );
+}
+
+#[test]
+fn cfaa_1030_civil_gate_within_felony_factors_unsat_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "cfaa-1030-v0 civil-gate-within-felony-factors-unsat",
+        CFAA_CIVIL_GATE_WITHIN_FELONY_FACTORS_UNSAT,
+    );
+}
+
+#[test]
+fn cfaa_1030_civil_gate_excludes_factor_vi_sat_replays_model() {
+    assert_rule_sat_model(
+        "cfaa-1030-v0 civil-gate-excludes-factor-vi-sat",
+        CFAA_CIVIL_GATE_EXCLUDES_FACTOR_VI_SAT,
+    );
+}
+
+#[test]
+fn cfaa_1030_max_term_monotone_unsat_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "cfaa-1030-v0 max-term-monotone-unsat",
+        CFAA_MAX_TERM_MONOTONE_UNSAT,
+    );
+}
+
+#[test]
+fn cfaa_1030_implementation_equivalence_unsat_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "cfaa-1030-v0 implementation-equivalence-unsat",
+        CFAA_IMPLEMENTATION_EQUIVALENCE_UNSAT,
+    );
+}
+
+#[test]
+fn cfaa_1030_buggy_implementation_counterexample_sat_replays_model() {
+    assert_rule_sat_model(
+        "cfaa-1030-v0 buggy-implementation-counterexample-sat",
+        CFAA_BUGGY_IMPLEMENTATION_COUNTEREXAMPLE_SAT,
+    );
+}
+
+/// A `sat` rule finding (an overlap, a gap, a counterexample) is accepted only
+/// when the produced model replays against the parsed obligation.
+fn assert_rule_sat_model(label: &str, smt2: &str) {
+    let mut script = parse_script(smt2)
+        .unwrap_or_else(|error| panic!("{label}: rule SMT-LIB artifact parses: {error}"));
+    let assertions = script.assertions.clone();
+    let verdict = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(verdict, CheckResult::Sat(_)),
+        "{label}: rule finding must be sat, got {verdict:?}"
+    );
+    let report = produce_evidence(&mut script.arena, &assertions, &SolverConfig::default())
+        .unwrap_or_else(|error| panic!("{label}: evidence production failed: {error}"));
+    assert!(
+        matches!(report.evidence, Evidence::Sat(_)),
+        "{label}: expected a model, got {:?}",
+        report.evidence
+    );
+    assert!(
+        report.evidence.check(&script.arena, &assertions).unwrap(),
+        "{label}: model must replay against the obligation"
     );
 }
 

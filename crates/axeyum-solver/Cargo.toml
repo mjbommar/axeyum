@@ -178,3 +178,7 @@ required-features = ["full"]
 [[example]]
 name = "warm_session_age"
 required-features = ["full"]
+
+[[example]]
+name = "rules_check"
+required-features = ["full"]

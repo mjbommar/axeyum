@@ -39,7 +39,7 @@ for formalized rule obligations.
 
 ## Current Status
 
-The first seven rule packs have landed:
+Eight rule packs have landed; the eighth is built from real statute text:
 
 - [Benefit Eligibility V0](examples/benefit-eligibility-v0/README.md)
 - [Authorization Policy V0](examples/authorization-policy-v0/README.md)
@@ -48,6 +48,9 @@ The first seven rule packs have landed:
 - [Grant Allocation V0](examples/grant-allocation-v0/README.md)
 - [Category Equivalence V0](examples/category-equivalence-v0/README.md)
 - [Workflow Reachability V0](examples/workflow-reachability-v0/README.md)
+- [Computer Fraud and Abuse Act V0](examples/cfaa-1030-v0/README.md): 18 U.S.C.
+  § 1030(c) and (g), compiled from the lifted section; eight checked
+  obligations (four certified `unsat`, four replayed `sat` findings).
 
 The first metadata schema lives at
 [rules-core.schema.json](../../artifacts/ontology/rules-core.schema.json).
@@ -366,6 +369,44 @@ This pack exercises finite graph reachability, transition-system replay,
 terminal-state invariants, and checked Bool/QF_LIA evidence for state-machine
 rules.
 
+## Eighth Example Pack: Computer Fraud and Abuse Act (Real Statute)
+
+Status: landed as
+[Computer Fraud and Abuse Act V0](examples/cfaa-1030-v0/README.md), the first
+pack compiled from real statute text through the
+[U.S. Code lift](uscode/README.md).
+
+Pipeline additions:
+
+- `scripts/uscode_lift.py` lifts a GovInfo section rendering into a provision
+  graph (outline, resolved cross-references, definitions and uses, quantities);
+- `scripts/rules_ir.py` compiles a provision-keyed rule model against the lift,
+  gating on anchors, literals and comparators, dependency justification, and
+  reference coverage, then evaluates fact patterns and emits obligations;
+- `sat_model_solver_regression` is a new checked validation: a `sat` finding is
+  accepted only with a replayed model and a recorded witness;
+- Int-valued case splits are emitted as defining clauses so obligations stay in
+  the fragment where Axeyum certifies `unsat` (`unsat-arith-dpll`).
+
+Checks: penalty coverage, (c)(2)(B)/(C) overlap, threshold-comparator mismatch,
+civil gate within the felony factors, factor (VI) excluded from the civil gate,
+monotonicity of the maximum, implementation equivalence, and a decision-table
+transcription bug. All eight are checked.
+
+Next slices on this track:
+
+1. Lift the OLRC USLM XML for Title 18 so the outline comes from markup instead
+   of enumerator inference, and diff it against the GovInfo lift of § 1030.
+2. Model § 1030(b) attempts and conspiracies and the attempt clauses of (c),
+   which the lift already resolves.
+3. Model the (g) limitations period ("within 2 years of the date of the act
+   complained of or the date of the discovery of the damage") as date
+   arithmetic, with the "or" reading stated as a modeling choice.
+4. Lift a second section that cross-references § 1030 (for example 18 U.S.C.
+   § 1029, which (a)(6) cites) and check a rule that spans both.
+5. Connect the ALEA statute datasets that already encode real provisions
+   (26 U.S.C. § 152(c), § 6651; Fed. R. Civ. P. 6) as further packs.
+
 ## Validation Checks
 
 Near-term documentation checks:
@@ -429,5 +470,11 @@ The lab graduates from notes to a real sibling project when:
 - at least one pack compares a logical model to executable code;
 - proof/evidence status is tracked per check;
 - the lab has users outside Axeyum core development.
+
+Status against these criteria (2026-11-09): eight packs, all with executable
+checks; witnesses replay with source citations; implementation equivalence is
+checked in all eight packs; proof status is tracked per check. The criterion not yet
+met is users outside Axeyum core development. The ALEA training-data work that
+generates statute exercises from USC/eCFR text is the first candidate consumer.
 
 Until then, keep it as small Markdown examples plus focused tests.

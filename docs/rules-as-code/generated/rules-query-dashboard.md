@@ -12,11 +12,11 @@ workflow-reachability rows over a finite state graph.
 
 ## Summary
 
-- Rule packs: 7
-- Bounded sample rows: 1037
-- Generated query rows: 1942
-- Check results: sat:9, unsat:27
-- Proof statuses: checked:27, replayed:9
+- Rule packs: 8
+- Bounded sample rows: 222221
+- Generated query rows: 2582
+- Check results: sat:13, unsat:31
+- Proof statuses: checked:35, replayed:9
 
 ## Pack Query Surface
 
@@ -25,6 +25,7 @@ workflow-reachability rows over a finite state graph.
 | [Example Authorization Policy With Tenant Isolation](../examples/authorization-policy-v0/README.md) | 96 | 144 | [queries/authorization-policy-v0.json](queries/authorization-policy-v0.json) | bounded role/action/version rows: 96<br>adjacent version-delta comparisons: 48<br>version-delta replay witnesses: 2<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:1 | Generate tenant/action/version coverage and equivalence queries across the bounded request domain. |
 | [Example Benefit Eligibility With Exceptions](../examples/benefit-eligibility-v0/README.md) | 576 | 1104 | [queries/benefit-eligibility-v0.json](queries/benefit-eligibility-v0.json) | complete eligibility coverage rows: 576<br>income monotonicity adjacent scans: 528<br>threshold/temporal replay witnesses: 4<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:2 | Generate coverage and equivalence fixtures across the full bounded applicant domain. |
 | [Example Category Equivalence Policy](../examples/category-equivalence-v0/README.md) | 6 | 8 | [queries/category-equivalence-v0.json](queries/category-equivalence-v0.json) | bounded category/program rows: 6<br>equivalence-pair congruence rows: 2<br>category replay witnesses: 4<br>checked QF_UF/Alethe fixtures: 2 | checked:2, replayed:1 | Generate category-normalization and equivalence-pair query rows across the bounded policy domain. |
+| [Computer Fraud and Abuse Act Penalties and Civil Action](../examples/cfaa-1030-v0/README.md) | 221184 | 640 | [queries/cfaa-1030-v0.json](queries/cfaa-1030-v0.json) | region-complete sweep rows (three readings agree): 221184<br>replayed witnesses: 8<br>checked unsat obligations: 4<br>checked sat findings: 4 | checked:8 | Lift the next § 1030 provisions ((b) attempts and conspiracies, (g) limitations period) and other Title 18 sections that cross-reference § 1030. |
 | [Example Grant Allocation With Rational Shares](../examples/grant-allocation-v0/README.md) | 125 | 140 | [queries/grant-allocation-v0.json](queries/grant-allocation-v0.json) | bounded rational allocation rows: 125<br>balanced-budget allocation rows: 15<br>allocation replay witnesses: 5<br>checked QF_LRA/Farkas fixtures: 5 | checked:5, replayed:1 | Generate rational allocation coverage and balanced-budget query rows across the bounded share domain. |
 | [Example Procurement Scoring With Deadline And Exclusions](../examples/procurement-scoring-v0/README.md) | 144 | 252 | [queries/procurement-scoring-v0.json](queries/procurement-scoring-v0.json) | bounded procurement award rows: 144<br>quality-score adjacent scans: 108<br>bonus-threshold replay witnesses: 2<br>checked Bool/QF_LIA fixtures: 5 | checked:5, replayed:1 | Generate debarment, deadline, bid-cap, bonus-threshold, and score-monotonicity fixtures across the bounded procurement domain. |
 | [Example Tax Benefit Arithmetic With Phase-Out](../examples/tax-benefit-arithmetic-v0/README.md) | 66 | 126 | [queries/tax-benefit-arithmetic-v0.json](queries/tax-benefit-arithmetic-v0.json) | bounded benefit replay rows: 66<br>income phase-out adjacent scans: 60<br>threshold/temporal replay witnesses: 4<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:2 | Generate threshold, cap, and phase-out fixtures across the bounded income/date/household domain. |

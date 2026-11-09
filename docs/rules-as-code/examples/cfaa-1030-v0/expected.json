@@ -1,0 +1,463 @@
+{
+  "schema_version": 1,
+  "pack_id": "cfaa_1030_v0",
+  "parameters": {
+    "rules": "docs/rules-as-code/examples/cfaa-1030-v0/rules.json",
+    "lifted": "docs/rules-as-code/uscode/lifted/usc-t18-s1030.json",
+    "life_encoding": 1000
+  },
+  "sample_domain": {
+    "offenses": [
+      "off_a2",
+      "off_a3",
+      "off_a4",
+      "off_a5A",
+      "off_a5B",
+      "off_a5C",
+      "off_a6",
+      "off_a7"
+    ],
+    "info_value_usd": [
+      4999,
+      5000,
+      5001
+    ],
+    "loss_usd": [
+      4999,
+      5000,
+      5001
+    ],
+    "computers_damaged": [
+      9,
+      10,
+      11
+    ],
+    "booleans": [
+      "prior_conviction",
+      "commercial_gain",
+      "criminal_or_tortious_purpose",
+      "medical_impairment",
+      "physical_injury",
+      "public_safety_threat",
+      "justice_security_computer",
+      "serious_bodily_injury",
+      "death",
+      "damage_or_loss_suffered"
+    ]
+  },
+  "witnesses": [
+    {
+      "id": "penalty_overlap_c2b_c2c_witness",
+      "facts": {
+        "off_a2": true,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": false,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": true,
+        "commercial_gain": true,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 0,
+        "loss_usd": 0,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 0,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": false
+      },
+      "expected_outputs": {
+        "c2B_applies": true,
+        "c2C_applies": true,
+        "max_years": 10
+      },
+      "source_citations": [
+        "18 U.S.C. § 1030(c)"
+      ],
+      "explanation": "Can (c)(2)(B) (5 years) and (c)(2)(C) (10 years) both reach the same (a)(2) count? (c)(2)(A) excepts (c)(2)(B), but (c)(2)(B) has no first-offense limit, so a repeat offense with an aggravator satisfies both."
+    },
+    {
+      "id": "value_threshold_mismatch_witness",
+      "facts": {
+        "off_a2": true,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": false,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": false,
+        "commercial_gain": false,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 5000,
+        "loss_usd": 5000,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 0,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": false
+      },
+      "expected_outputs": {
+        "harm_I": true,
+        "c2B_iii_value": false
+      },
+      "source_citations": [
+        "18 U.S.C. § 1030(c)"
+      ],
+      "explanation": "Is there a dollar amount that meets the (c)(4)(A)(i)(I) loss threshold ('aggregating at least $5,000') but not the (c)(2)(B)(iii) value threshold ('exceeds $5,000')?"
+    },
+    {
+      "id": "civil_gate_excludes_factor_vi_witness",
+      "facts": {
+        "off_a2": false,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": true,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": false,
+        "commercial_gain": false,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 0,
+        "loss_usd": 0,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 10,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": true
+      },
+      "expected_outputs": {
+        "harm_VI": true,
+        "civil_action_available": false,
+        "max_years": 10
+      },
+      "source_citations": [
+        "18 U.S.C. § 1030(c)",
+        "18 U.S.C. § 1030(g)"
+      ],
+      "explanation": "Can an (a)(5)(A) offense satisfy a (c)(4)(A)(i) factor, and so carry the 10-year maximum of (c)(4)(B), while the (g) civil-action gate stays closed? (g) lists subclauses (I)-(V) only."
+    },
+    {
+      "id": "buggy_implementation_counterexample_witness",
+      "facts": {
+        "off_a2": true,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": false,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": false,
+        "commercial_gain": false,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 5000,
+        "loss_usd": 0,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 0,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": false
+      },
+      "expected_outputs": {
+        "max_years": 1,
+        "impl_buggy_max_years": 5
+      },
+      "source_citations": [
+        "18 U.S.C. § 1030(c)"
+      ],
+      "explanation": "Does the decision table with '>= $5,000' in place of '> $5,000' for (c)(2)(B)(iii) ever disagree with the model?"
+    },
+    {
+      "id": "first_a2_no_aggravator",
+      "facts": {
+        "off_a2": true,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": false,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": false,
+        "commercial_gain": false,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 5000,
+        "loss_usd": 0,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 0,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": false
+      },
+      "expected_outputs": {
+        "max_years": 1,
+        "civil_action_available": false,
+        "civil_economic_damages_only": false
+      },
+      "source_citations": [
+        "18 U.S.C. § 1030(a)",
+        "18 U.S.C. § 1030(c)"
+      ],
+      "explanation": "A first (a)(2) offense whose information is worth exactly $5,000 falls under (c)(2)(A): one year."
+    },
+    {
+      "id": "first_a5A_ten_computers",
+      "facts": {
+        "off_a2": false,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": true,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": false,
+        "commercial_gain": false,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 0,
+        "loss_usd": 0,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 10,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": true
+      },
+      "expected_outputs": {
+        "max_years": 10,
+        "civil_action_available": false,
+        "civil_economic_damages_only": false
+      },
+      "source_citations": [
+        "18 U.S.C. § 1030(a)",
+        "18 U.S.C. § 1030(c)",
+        "18 U.S.C. § 1030(g)"
+      ],
+      "explanation": "A first (a)(5)(A) offense damaging ten protected computers carries ten years under (c)(4)(B); no civil action lies, because (g) omits factor (VI)."
+    },
+    {
+      "id": "first_a5C_large_loss",
+      "facts": {
+        "off_a2": false,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": false,
+        "off_a5B": false,
+        "off_a5C": true,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": false,
+        "commercial_gain": false,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 0,
+        "loss_usd": 1000000,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 0,
+        "serious_bodily_injury": false,
+        "death": false,
+        "damage_or_loss_suffered": true
+      },
+      "expected_outputs": {
+        "max_years": 1,
+        "civil_action_available": true,
+        "civil_economic_damages_only": true
+      },
+      "source_citations": [
+        "18 U.S.C. § 1030(a)",
+        "18 U.S.C. § 1030(c)",
+        "18 U.S.C. § 1030(g)"
+      ],
+      "explanation": "A first (a)(5)(C) offense is a one-year misdemeanor under (c)(4)(G) whatever the loss; the civil action lies, limited to economic damages."
+    },
+    {
+      "id": "a5A_death",
+      "facts": {
+        "off_a2": false,
+        "off_a3": false,
+        "off_a4": false,
+        "off_a5A": true,
+        "off_a5B": false,
+        "off_a5C": false,
+        "off_a6": false,
+        "off_a7": false,
+        "prior_conviction": true,
+        "commercial_gain": false,
+        "criminal_or_tortious_purpose": false,
+        "info_value_usd": 0,
+        "loss_usd": 0,
+        "medical_impairment": false,
+        "physical_injury": false,
+        "public_safety_threat": false,
+        "justice_security_computer": false,
+        "computers_damaged": 0,
+        "serious_bodily_injury": false,
+        "death": true,
+        "damage_or_loss_suffered": false
+      },
+      "expected_outputs": {
+        "max_years": 1000,
+        "civil_action_available": false,
+        "civil_economic_damages_only": false
+      },
+      "source_citations": [
+        "18 U.S.C. § 1030(a)",
+        "18 U.S.C. § 1030(c)"
+      ],
+      "explanation": "Death from (a)(5)(A) conduct triggers (c)(4)(F), any term of years or life, which displaces (c)(4)(C)."
+    }
+  ],
+  "checks": [
+    {
+      "id": "penalty-coverage-unsat",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": [
+        "18 U.S.C. § 1030(c)"
+      ],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/cfaa-1030-v0/smt2/penalty-coverage-unsat.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples cfaa_1030_penalty_coverage_unsat_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence (unsat-arith-dpll) checked by Evidence::check"
+      }
+    },
+    {
+      "id": "penalty-overlap-c2b-c2c-sat",
+      "expected_result": "sat",
+      "validation": "sat_model_solver_regression",
+      "proof_status": "checked",
+      "source_citations": [
+        "18 U.S.C. § 1030(c)"
+      ],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/cfaa-1030-v0/smt2/penalty-overlap-c2b-c2c-sat.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples cfaa_1030_penalty_overlap_c2b_c2c_sat_replays_model",
+        "certificate": "produce_evidence emits certified evidence (Evidence::Sat model) replayed by Evidence::check"
+      },
+      "witnesses": [
+        "penalty_overlap_c2b_c2c_witness"
+      ]
+    },
+    {
+      "id": "value-threshold-mismatch-sat",
+      "expected_result": "sat",
+      "validation": "sat_model_solver_regression",
+      "proof_status": "checked",
+      "source_citations": [
+        "18 U.S.C. § 1030(c)"
+      ],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/cfaa-1030-v0/smt2/value-threshold-mismatch-sat.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples cfaa_1030_value_threshold_mismatch_sat_replays_model",
+        "certificate": "produce_evidence emits certified evidence (Evidence::Sat model) replayed by Evidence::check"
+      },
+      "witnesses": [
+        "value_threshold_mismatch_witness"
+      ]
+    },
+    {
+      "id": "civil-gate-within-felony-factors-unsat",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": [
+        "18 U.S.C. § 1030(c)",
+        "18 U.S.C. § 1030(g)"
+      ],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/cfaa-1030-v0/smt2/civil-gate-within-felony-factors-unsat.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples cfaa_1030_civil_gate_within_felony_factors_unsat_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence (unsat-arith-dpll) checked by Evidence::check"
+      }
+    },
+    {
+      "id": "civil-gate-excludes-factor-vi-sat",
+      "expected_result": "sat",
+      "validation": "sat_model_solver_regression",
+      "proof_status": "checked",
+      "source_citations": [
+        "18 U.S.C. § 1030(c)",
+        "18 U.S.C. § 1030(g)"
+      ],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/cfaa-1030-v0/smt2/civil-gate-excludes-factor-vi-sat.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples cfaa_1030_civil_gate_excludes_factor_vi_sat_replays_model",
+        "certificate": "produce_evidence emits certified evidence (Evidence::Sat model) replayed by Evidence::check"
+      },
+      "witnesses": [
+        "civil_gate_excludes_factor_vi_witness"
+      ]
+    },
+    {
+      "id": "max-term-monotone-unsat",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": [
+        "18 U.S.C. § 1030(c)"
+      ],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/cfaa-1030-v0/smt2/max-term-monotone-unsat.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples cfaa_1030_max_term_monotone_unsat_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence (unsat-arith-dpll) checked by Evidence::check"
+      }
+    },
+    {
+      "id": "implementation-equivalence-unsat",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": [
+        "18 U.S.C. § 1030(c)"
+      ],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/cfaa-1030-v0/smt2/implementation-equivalence-unsat.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples cfaa_1030_implementation_equivalence_unsat_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence (unsat-arith-dpll) checked by Evidence::check"
+      }
+    },
+    {
+      "id": "buggy-implementation-counterexample-sat",
+      "expected_result": "sat",
+      "validation": "sat_model_solver_regression",
+      "proof_status": "checked",
+      "source_citations": [
+        "18 U.S.C. § 1030(c)"
+      ],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/cfaa-1030-v0/smt2/buggy-implementation-counterexample-sat.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples cfaa_1030_buggy_implementation_counterexample_sat_replays_model",
+        "certificate": "produce_evidence emits certified evidence (Evidence::Sat model) replayed by Evidence::check"
+      },
+      "witnesses": [
+        "buggy_implementation_counterexample_witness"
+      ]
+    }
+  ]
+}

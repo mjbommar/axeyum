@@ -1,0 +1,1965 @@
+{
+  "schema": "axeyum.uscode.lifted/v1",
+  "generated_by": "python3 scripts/uscode_lift.py",
+  "source": {
+    "publisher": "U.S. Government Publishing Office (GovInfo)",
+    "edition": "United States Code, 2023 Edition",
+    "current_through": "2024-01-03",
+    "file": "USCODE-2023-title18-partI-chap47-sec1030.htm",
+    "sha256": "4ae5e8f28403b826a6c540d4f204e8f8581cc434769b5fe23021a108760004a7"
+  },
+  "section": {
+    "id": "/us/usc/t18/s1030",
+    "citation": "18 U.S.C. § 1030",
+    "heading": "Fraud and related activity in connection with computers",
+    "top_level": [
+      "/us/usc/t18/s1030/a",
+      "/us/usc/t18/s1030/b",
+      "/us/usc/t18/s1030/c",
+      "/us/usc/t18/s1030/d",
+      "/us/usc/t18/s1030/e",
+      "/us/usc/t18/s1030/f",
+      "/us/usc/t18/s1030/g",
+      "/us/usc/t18/s1030/h",
+      "/us/usc/t18/s1030/i",
+      "/us/usc/t18/s1030/j"
+    ]
+  },
+  "provisions": [
+    {
+      "id": "/us/usc/t18/s1030/a",
+      "parent": "/us/usc/t18/s1030",
+      "level": "subsection",
+      "enumerator": "a",
+      "citation": "18 U.S.C. § 1030(a)",
+      "text": "Whoever—",
+      "footnotes": [],
+      "continuation": "shall be punished as provided in subsection (c) of this section.",
+      "children": [
+        "/us/usc/t18/s1030/a/1",
+        "/us/usc/t18/s1030/a/2",
+        "/us/usc/t18/s1030/a/3",
+        "/us/usc/t18/s1030/a/4",
+        "/us/usc/t18/s1030/a/5",
+        "/us/usc/t18/s1030/a/6",
+        "/us/usc/t18/s1030/a/7"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/1",
+      "parent": "/us/usc/t18/s1030/a",
+      "level": "paragraph",
+      "enumerator": "1",
+      "citation": "18 U.S.C. § 1030(a)(1)",
+      "text": "having knowingly accessed a computer without authorization or exceeding authorized access, and by means of such conduct having obtained information that has been determined by the United States Government pursuant to an Executive order or statute to require protection against unauthorized disclosure for reasons of national defense or foreign relations, or any restricted data, as defined in paragraph y. of section 11 of the Atomic Energy Act of 1954, with reason to believe that such information so obtained could be used to the injury of the United States, or to the advantage of any foreign nation willfully communicates, delivers, transmits, or causes to be communicated, delivered, or transmitted, or attempts to communicate, deliver, transmit or cause to be communicated, delivered, or transmitted the same to any person not entitled to receive it, or willfully retains the same and fails to deliver it to the officer or employee of the United States entitled to receive it;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/2",
+      "parent": "/us/usc/t18/s1030/a",
+      "level": "paragraph",
+      "enumerator": "2",
+      "citation": "18 U.S.C. § 1030(a)(2)",
+      "text": "intentionally accesses a computer without authorization or exceeds authorized access, and thereby obtains—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/a/2/A",
+        "/us/usc/t18/s1030/a/2/B",
+        "/us/usc/t18/s1030/a/2/C"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/2/A",
+      "parent": "/us/usc/t18/s1030/a/2",
+      "level": "subparagraph",
+      "enumerator": "A",
+      "citation": "18 U.S.C. § 1030(a)(2)(A)",
+      "text": "information contained in a financial record of a financial institution, or of a card issuer as defined in section 1602(n) of title 15, or contained in a file of a consumer reporting agency on a consumer, as such terms are defined in the Fair Credit Reporting Act (15 U.S.C. 1681 et seq.);",
+      "footnotes": [
+        "See References in Text note below."
+      ],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/2/B",
+      "parent": "/us/usc/t18/s1030/a/2",
+      "level": "subparagraph",
+      "enumerator": "B",
+      "citation": "18 U.S.C. § 1030(a)(2)(B)",
+      "text": "information from any department or agency of the United States; or",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/2/C",
+      "parent": "/us/usc/t18/s1030/a/2",
+      "level": "subparagraph",
+      "enumerator": "C",
+      "citation": "18 U.S.C. § 1030(a)(2)(C)",
+      "text": "information from any protected computer;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/3",
+      "parent": "/us/usc/t18/s1030/a",
+      "level": "paragraph",
+      "enumerator": "3",
+      "citation": "18 U.S.C. § 1030(a)(3)",
+      "text": "intentionally, without authorization to access any nonpublic computer of a department or agency of the United States, accesses such a computer of that department or agency that is exclusively for the use of the Government of the United States or, in the case of a computer not exclusively for such use, is used by or for the Government of the United States and such conduct affects that use by or for the Government of the United States;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/4",
+      "parent": "/us/usc/t18/s1030/a",
+      "level": "paragraph",
+      "enumerator": "4",
+      "citation": "18 U.S.C. § 1030(a)(4)",
+      "text": "knowingly and with intent to defraud, accesses a protected computer without authorization, or exceeds authorized access, and by means of such conduct furthers the intended fraud and obtains anything of value, unless the object of the fraud and the thing obtained consists only of the use of the computer and the value of such use is not more than $5,000 in any 1-year period;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/5",
+      "parent": "/us/usc/t18/s1030/a",
+      "level": "paragraph",
+      "enumerator": "5",
+      "citation": "18 U.S.C. § 1030(a)(5)",
+      "text": "",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/a/5/A",
+        "/us/usc/t18/s1030/a/5/B",
+        "/us/usc/t18/s1030/a/5/C"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/5/A",
+      "parent": "/us/usc/t18/s1030/a/5",
+      "level": "subparagraph",
+      "enumerator": "A",
+      "citation": "18 U.S.C. § 1030(a)(5)(A)",
+      "text": "knowingly causes the transmission of a program, information, code, or command, and as a result of such conduct, intentionally causes damage without authorization, to a protected computer;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/5/B",
+      "parent": "/us/usc/t18/s1030/a/5",
+      "level": "subparagraph",
+      "enumerator": "B",
+      "citation": "18 U.S.C. § 1030(a)(5)(B)",
+      "text": "intentionally accesses a protected computer without authorization, and as a result of such conduct, recklessly causes damage; or",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/5/C",
+      "parent": "/us/usc/t18/s1030/a/5",
+      "level": "subparagraph",
+      "enumerator": "C",
+      "citation": "18 U.S.C. § 1030(a)(5)(C)",
+      "text": "intentionally accesses a protected computer without authorization, and as a result of such conduct, causes damage and loss.",
+      "footnotes": [
+        "So in original. The period probably should be a semicolon."
+      ],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/6",
+      "parent": "/us/usc/t18/s1030/a",
+      "level": "paragraph",
+      "enumerator": "6",
+      "citation": "18 U.S.C. § 1030(a)(6)",
+      "text": "knowingly and with intent to defraud traffics (as defined in section 1029) in any password or similar information through which a computer may be accessed without authorization, if—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/a/6/A",
+        "/us/usc/t18/s1030/a/6/B"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/6/A",
+      "parent": "/us/usc/t18/s1030/a/6",
+      "level": "subparagraph",
+      "enumerator": "A",
+      "citation": "18 U.S.C. § 1030(a)(6)(A)",
+      "text": "such trafficking affects interstate or foreign commerce; or",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/6/B",
+      "parent": "/us/usc/t18/s1030/a/6",
+      "level": "subparagraph",
+      "enumerator": "B",
+      "citation": "18 U.S.C. § 1030(a)(6)(B)",
+      "text": "such computer is used by or for the Government of the United States;",
+      "footnotes": [
+        "So in original. Probably should be followed by \"or\"."
+      ],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/7",
+      "parent": "/us/usc/t18/s1030/a",
+      "level": "paragraph",
+      "enumerator": "7",
+      "citation": "18 U.S.C. § 1030(a)(7)",
+      "text": "with intent to extort from any person any money or other thing of value, transmits in interstate or foreign commerce any communication containing any—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/a/7/A",
+        "/us/usc/t18/s1030/a/7/B",
+        "/us/usc/t18/s1030/a/7/C"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/7/A",
+      "parent": "/us/usc/t18/s1030/a/7",
+      "level": "subparagraph",
+      "enumerator": "A",
+      "citation": "18 U.S.C. § 1030(a)(7)(A)",
+      "text": "threat to cause damage to a protected computer;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/7/B",
+      "parent": "/us/usc/t18/s1030/a/7",
+      "level": "subparagraph",
+      "enumerator": "B",
+      "citation": "18 U.S.C. § 1030(a)(7)(B)",
+      "text": "threat to obtain information from a protected computer without authorization or in excess of authorization or to impair the confidentiality of information obtained from a protected computer without authorization or by exceeding authorized access; or",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/a/7/C",
+      "parent": "/us/usc/t18/s1030/a/7",
+      "level": "subparagraph",
+      "enumerator": "C",
+      "citation": "18 U.S.C. § 1030(a)(7)(C)",
+      "text": "demand or request for money or other thing of value in relation to damage to a protected computer, where such damage was caused to facilitate the extortion;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/b",
+      "parent": "/us/usc/t18/s1030",
+      "level": "subsection",
+      "enumerator": "b",
+      "citation": "18 U.S.C. § 1030(b)",
+      "text": "Whoever conspires to commit or attempts to commit an offense under subsection (a) of this section shall be punished as provided in subsection (c) of this section.",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c",
+      "parent": "/us/usc/t18/s1030",
+      "level": "subsection",
+      "enumerator": "c",
+      "citation": "18 U.S.C. § 1030(c)",
+      "text": "The punishment for an offense under subsection (a) or (b) of this section is—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/c/1",
+        "/us/usc/t18/s1030/c/2",
+        "/us/usc/t18/s1030/c/3",
+        "/us/usc/t18/s1030/c/4"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/1",
+      "parent": "/us/usc/t18/s1030/c",
+      "level": "paragraph",
+      "enumerator": "1",
+      "citation": "18 U.S.C. § 1030(c)(1)",
+      "text": "",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/c/1/A",
+        "/us/usc/t18/s1030/c/1/B"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/1/A",
+      "parent": "/us/usc/t18/s1030/c/1",
+      "level": "subparagraph",
+      "enumerator": "A",
+      "citation": "18 U.S.C. § 1030(c)(1)(A)",
+      "text": "a fine under this title or imprisonment for not more than ten years, or both, in the case of an offense under subsection (a)(1) of this section which does not occur after a conviction for another offense under this section, or an attempt to commit an offense punishable under this subparagraph; and",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/1/B",
+      "parent": "/us/usc/t18/s1030/c/1",
+      "level": "subparagraph",
+      "enumerator": "B",
+      "citation": "18 U.S.C. § 1030(c)(1)(B)",
+      "text": "a fine under this title or imprisonment for not more than twenty years, or both, in the case of an offense under subsection (a)(1) of this section which occurs after a conviction for another offense under this section, or an attempt to commit an offense punishable under this subparagraph;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/2",
+      "parent": "/us/usc/t18/s1030/c",
+      "level": "paragraph",
+      "enumerator": "2",
+      "citation": "18 U.S.C. § 1030(c)(2)",
+      "text": "",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/c/2/A",
+        "/us/usc/t18/s1030/c/2/B",
+        "/us/usc/t18/s1030/c/2/C"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/2/A",
+      "parent": "/us/usc/t18/s1030/c/2",
+      "level": "subparagraph",
+      "enumerator": "A",
+      "citation": "18 U.S.C. § 1030(c)(2)(A)",
+      "text": "except as provided in subparagraph (B), a fine under this title or imprisonment for not more than one year, or both, in the case of an offense under subsection (a)(2), (a)(3), or (a)(6) of this section which does not occur after a conviction for another offense under this section, or an attempt to commit an offense punishable under this subparagraph;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/2/B",
+      "parent": "/us/usc/t18/s1030/c/2",
+      "level": "subparagraph",
+      "enumerator": "B",
+      "citation": "18 U.S.C. § 1030(c)(2)(B)",
+      "text": "a fine under this title or imprisonment for not more than 5 years, or both, in the case of an offense under subsection (a)(2), or an attempt to commit an offense punishable under this subparagraph, if—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/c/2/B/i",
+        "/us/usc/t18/s1030/c/2/B/ii",
+        "/us/usc/t18/s1030/c/2/B/iii"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/2/B/i",
+      "parent": "/us/usc/t18/s1030/c/2/B",
+      "level": "clause",
+      "enumerator": "i",
+      "citation": "18 U.S.C. § 1030(c)(2)(B)(i)",
+      "text": "the offense was committed for purposes of commercial advantage or private financial gain;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/2/B/ii",
+      "parent": "/us/usc/t18/s1030/c/2/B",
+      "level": "clause",
+      "enumerator": "ii",
+      "citation": "18 U.S.C. § 1030(c)(2)(B)(ii)",
+      "text": "the offense was committed in furtherance of any criminal or tortious act in violation of the Constitution or laws of the United States or of any State; or",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/2/B/iii",
+      "parent": "/us/usc/t18/s1030/c/2/B",
+      "level": "clause",
+      "enumerator": "iii",
+      "citation": "18 U.S.C. § 1030(c)(2)(B)(iii)",
+      "text": "the value of the information obtained exceeds $5,000; and",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/2/C",
+      "parent": "/us/usc/t18/s1030/c/2",
+      "level": "subparagraph",
+      "enumerator": "C",
+      "citation": "18 U.S.C. § 1030(c)(2)(C)",
+      "text": "a fine under this title or imprisonment for not more than ten years, or both, in the case of an offense under subsection (a)(2), (a)(3) or (a)(6) of this section which occurs after a conviction for another offense under this section, or an attempt to commit an offense punishable under this subparagraph;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/3",
+      "parent": "/us/usc/t18/s1030/c",
+      "level": "paragraph",
+      "enumerator": "3",
+      "citation": "18 U.S.C. § 1030(c)(3)",
+      "text": "",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/c/3/A",
+        "/us/usc/t18/s1030/c/3/B"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/3/A",
+      "parent": "/us/usc/t18/s1030/c/3",
+      "level": "subparagraph",
+      "enumerator": "A",
+      "citation": "18 U.S.C. § 1030(c)(3)(A)",
+      "text": "a fine under this title or imprisonment for not more than five years, or both, in the case of an offense under subsection (a)(4) or (a)(7) of this section which does not occur after a conviction for another offense under this section, or an attempt to commit an offense punishable under this subparagraph; and",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/3/B",
+      "parent": "/us/usc/t18/s1030/c/3",
+      "level": "subparagraph",
+      "enumerator": "B",
+      "citation": "18 U.S.C. § 1030(c)(3)(B)",
+      "text": "a fine under this title or imprisonment for not more than ten years, or both, in the case of an offense under subsection (a)(4), or (a)(7) of this section which occurs after a conviction for another offense under this section, or an attempt to commit an offense punishable under this subparagraph;",
+      "footnotes": [
+        "So in original. The comma probably should not appear."
+      ],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4",
+      "parent": "/us/usc/t18/s1030/c",
+      "level": "paragraph",
+      "enumerator": "4",
+      "citation": "18 U.S.C. § 1030(c)(4)",
+      "text": "",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/c/4/A",
+        "/us/usc/t18/s1030/c/4/B",
+        "/us/usc/t18/s1030/c/4/C",
+        "/us/usc/t18/s1030/c/4/D",
+        "/us/usc/t18/s1030/c/4/E",
+        "/us/usc/t18/s1030/c/4/F",
+        "/us/usc/t18/s1030/c/4/G"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/A",
+      "parent": "/us/usc/t18/s1030/c/4",
+      "level": "subparagraph",
+      "enumerator": "A",
+      "citation": "18 U.S.C. § 1030(c)(4)(A)",
+      "text": "except as provided in subparagraphs (E) and (F), a fine under this title, imprisonment for not more than 5 years, or both, in the case of—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/c/4/A/i",
+        "/us/usc/t18/s1030/c/4/A/ii"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/A/i",
+      "parent": "/us/usc/t18/s1030/c/4/A",
+      "level": "clause",
+      "enumerator": "i",
+      "citation": "18 U.S.C. § 1030(c)(4)(A)(i)",
+      "text": "an offense under subsection (a)(5)(B), which does not occur after a conviction for another offense under this section, if the offense caused (or, in the case of an attempted offense, would, if completed, have caused)—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/c/4/A/i/I",
+        "/us/usc/t18/s1030/c/4/A/i/II",
+        "/us/usc/t18/s1030/c/4/A/i/III",
+        "/us/usc/t18/s1030/c/4/A/i/IV",
+        "/us/usc/t18/s1030/c/4/A/i/V",
+        "/us/usc/t18/s1030/c/4/A/i/VI"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/A/i/I",
+      "parent": "/us/usc/t18/s1030/c/4/A/i",
+      "level": "subclause",
+      "enumerator": "I",
+      "citation": "18 U.S.C. § 1030(c)(4)(A)(i)(I)",
+      "text": "loss to 1 or more persons during any 1-year period (and, for purposes of an investigation, prosecution, or other proceeding brought by the United States only, loss resulting from a related course of conduct affecting 1 or more other protected computers) aggregating at least $5,000 in value;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/A/i/II",
+      "parent": "/us/usc/t18/s1030/c/4/A/i",
+      "level": "subclause",
+      "enumerator": "II",
+      "citation": "18 U.S.C. § 1030(c)(4)(A)(i)(II)",
+      "text": "the modification or impairment, or potential modification or impairment, of the medical examination, diagnosis, treatment, or care of 1 or more individuals;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/A/i/III",
+      "parent": "/us/usc/t18/s1030/c/4/A/i",
+      "level": "subclause",
+      "enumerator": "III",
+      "citation": "18 U.S.C. § 1030(c)(4)(A)(i)(III)",
+      "text": "physical injury to any person;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/A/i/IV",
+      "parent": "/us/usc/t18/s1030/c/4/A/i",
+      "level": "subclause",
+      "enumerator": "IV",
+      "citation": "18 U.S.C. § 1030(c)(4)(A)(i)(IV)",
+      "text": "a threat to public health or safety;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/A/i/V",
+      "parent": "/us/usc/t18/s1030/c/4/A/i",
+      "level": "subclause",
+      "enumerator": "V",
+      "citation": "18 U.S.C. § 1030(c)(4)(A)(i)(V)",
+      "text": "damage affecting a computer used by or for an entity of the United States Government in furtherance of the administration of justice, national defense, or national security; or",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/A/i/VI",
+      "parent": "/us/usc/t18/s1030/c/4/A/i",
+      "level": "subclause",
+      "enumerator": "VI",
+      "citation": "18 U.S.C. § 1030(c)(4)(A)(i)(VI)",
+      "text": "damage affecting 10 or more protected computers during any 1-year period; or",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/A/ii",
+      "parent": "/us/usc/t18/s1030/c/4/A",
+      "level": "clause",
+      "enumerator": "ii",
+      "citation": "18 U.S.C. § 1030(c)(4)(A)(ii)",
+      "text": "an attempt to commit an offense punishable under this subparagraph;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/B",
+      "parent": "/us/usc/t18/s1030/c/4",
+      "level": "subparagraph",
+      "enumerator": "B",
+      "citation": "18 U.S.C. § 1030(c)(4)(B)",
+      "text": "except as provided in subparagraphs (E) and (F), a fine under this title, imprisonment for not more than 10 years, or both, in the case of—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/c/4/B/i",
+        "/us/usc/t18/s1030/c/4/B/ii"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/B/i",
+      "parent": "/us/usc/t18/s1030/c/4/B",
+      "level": "clause",
+      "enumerator": "i",
+      "citation": "18 U.S.C. § 1030(c)(4)(B)(i)",
+      "text": "an offense under subsection (a)(5)(A), which does not occur after a conviction for another offense under this section, if the offense caused (or, in the case of an attempted offense, would, if completed, have caused) a harm provided in subclauses (I) through (VI) of subparagraph (A)(i); or",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/B/ii",
+      "parent": "/us/usc/t18/s1030/c/4/B",
+      "level": "clause",
+      "enumerator": "ii",
+      "citation": "18 U.S.C. § 1030(c)(4)(B)(ii)",
+      "text": "an attempt to commit an offense punishable under this subparagraph;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/C",
+      "parent": "/us/usc/t18/s1030/c/4",
+      "level": "subparagraph",
+      "enumerator": "C",
+      "citation": "18 U.S.C. § 1030(c)(4)(C)",
+      "text": "except as provided in subparagraphs (E) and (F), a fine under this title, imprisonment for not more than 20 years, or both, in the case of—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/c/4/C/i",
+        "/us/usc/t18/s1030/c/4/C/ii"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/C/i",
+      "parent": "/us/usc/t18/s1030/c/4/C",
+      "level": "clause",
+      "enumerator": "i",
+      "citation": "18 U.S.C. § 1030(c)(4)(C)(i)",
+      "text": "an offense or an attempt to commit an offense under subparagraphs (A) or (B) of subsection (a)(5) that occurs after a conviction for another offense under this section; or",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/C/ii",
+      "parent": "/us/usc/t18/s1030/c/4/C",
+      "level": "clause",
+      "enumerator": "ii",
+      "citation": "18 U.S.C. § 1030(c)(4)(C)(ii)",
+      "text": "an attempt to commit an offense punishable under this subparagraph;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/D",
+      "parent": "/us/usc/t18/s1030/c/4",
+      "level": "subparagraph",
+      "enumerator": "D",
+      "citation": "18 U.S.C. § 1030(c)(4)(D)",
+      "text": "a fine under this title, imprisonment for not more than 10 years, or both, in the case of—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/c/4/D/i",
+        "/us/usc/t18/s1030/c/4/D/ii"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/D/i",
+      "parent": "/us/usc/t18/s1030/c/4/D",
+      "level": "clause",
+      "enumerator": "i",
+      "citation": "18 U.S.C. § 1030(c)(4)(D)(i)",
+      "text": "an offense or an attempt to commit an offense under subsection (a)(5)(C) that occurs after a conviction for another offense under this section; or",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/D/ii",
+      "parent": "/us/usc/t18/s1030/c/4/D",
+      "level": "clause",
+      "enumerator": "ii",
+      "citation": "18 U.S.C. § 1030(c)(4)(D)(ii)",
+      "text": "an attempt to commit an offense punishable under this subparagraph;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/E",
+      "parent": "/us/usc/t18/s1030/c/4",
+      "level": "subparagraph",
+      "enumerator": "E",
+      "citation": "18 U.S.C. § 1030(c)(4)(E)",
+      "text": "if the offender attempts to cause or knowingly or recklessly causes serious bodily injury from conduct in violation of subsection (a)(5)(A), a fine under this title, imprisonment for not more than 20 years, or both;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/F",
+      "parent": "/us/usc/t18/s1030/c/4",
+      "level": "subparagraph",
+      "enumerator": "F",
+      "citation": "18 U.S.C. § 1030(c)(4)(F)",
+      "text": "if the offender attempts to cause or knowingly or recklessly causes death from conduct in violation of subsection (a)(5)(A), a fine under this title, imprisonment for any term of years or for life, or both; or",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/G",
+      "parent": "/us/usc/t18/s1030/c/4",
+      "level": "subparagraph",
+      "enumerator": "G",
+      "citation": "18 U.S.C. § 1030(c)(4)(G)",
+      "text": "a fine under this title, imprisonment for not more than 1 year, or both, for—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/c/4/G/i",
+        "/us/usc/t18/s1030/c/4/G/ii"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/G/i",
+      "parent": "/us/usc/t18/s1030/c/4/G",
+      "level": "clause",
+      "enumerator": "i",
+      "citation": "18 U.S.C. § 1030(c)(4)(G)(i)",
+      "text": "any other offense under subsection (a)(5); or",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/c/4/G/ii",
+      "parent": "/us/usc/t18/s1030/c/4/G",
+      "level": "clause",
+      "enumerator": "ii",
+      "citation": "18 U.S.C. § 1030(c)(4)(G)(ii)",
+      "text": "an attempt to commit an offense punishable under this subparagraph.",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/d",
+      "parent": "/us/usc/t18/s1030",
+      "level": "subsection",
+      "enumerator": "d",
+      "citation": "18 U.S.C. § 1030(d)",
+      "text": "",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/d/1",
+        "/us/usc/t18/s1030/d/2",
+        "/us/usc/t18/s1030/d/3"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/d/1",
+      "parent": "/us/usc/t18/s1030/d",
+      "level": "paragraph",
+      "enumerator": "1",
+      "citation": "18 U.S.C. § 1030(d)(1)",
+      "text": "The United States Secret Service shall, in addition to any other agency having such authority, have the authority to investigate offenses under this section.",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/d/2",
+      "parent": "/us/usc/t18/s1030/d",
+      "level": "paragraph",
+      "enumerator": "2",
+      "citation": "18 U.S.C. § 1030(d)(2)",
+      "text": "The Federal Bureau of Investigation shall have primary authority to investigate offenses under subsection (a)(1) for any cases involving espionage, foreign counterintelligence, information protected against unauthorized disclosure for reasons of national defense or foreign relations, or Restricted Data (as that term is defined in section 11y of the Atomic Energy Act of 1954 (42 U.S.C. 2014(y)), except for offenses affecting the duties of the United States Secret Service pursuant to section 3056(a) of this title.",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/d/3",
+      "parent": "/us/usc/t18/s1030/d",
+      "level": "paragraph",
+      "enumerator": "3",
+      "citation": "18 U.S.C. § 1030(d)(3)",
+      "text": "Such authority shall be exercised in accordance with an agreement which shall be entered into by the Secretary of the Treasury and the Attorney General.",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e",
+      "parent": "/us/usc/t18/s1030",
+      "level": "subsection",
+      "enumerator": "e",
+      "citation": "18 U.S.C. § 1030(e)",
+      "text": "As used in this section—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/e/1",
+        "/us/usc/t18/s1030/e/2",
+        "/us/usc/t18/s1030/e/3",
+        "/us/usc/t18/s1030/e/4",
+        "/us/usc/t18/s1030/e/5",
+        "/us/usc/t18/s1030/e/6",
+        "/us/usc/t18/s1030/e/7",
+        "/us/usc/t18/s1030/e/8",
+        "/us/usc/t18/s1030/e/9",
+        "/us/usc/t18/s1030/e/10",
+        "/us/usc/t18/s1030/e/11",
+        "/us/usc/t18/s1030/e/12",
+        "/us/usc/t18/s1030/e/13",
+        "/us/usc/t18/s1030/e/14"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/1",
+      "parent": "/us/usc/t18/s1030/e",
+      "level": "paragraph",
+      "enumerator": "1",
+      "citation": "18 U.S.C. § 1030(e)(1)",
+      "text": "the term \"computer\" means an electronic, magnetic, optical, electrochemical, or other high speed data processing device performing logical, arithmetic, or storage functions, and includes any data storage facility or communications facility directly related to or operating in conjunction with such device, but such term does not include an automated typewriter or typesetter, a portable hand held calculator, or other similar device;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/2",
+      "parent": "/us/usc/t18/s1030/e",
+      "level": "paragraph",
+      "enumerator": "2",
+      "citation": "18 U.S.C. § 1030(e)(2)",
+      "text": "the term \"protected computer\" means a computer—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/e/2/A",
+        "/us/usc/t18/s1030/e/2/B",
+        "/us/usc/t18/s1030/e/2/C"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/2/A",
+      "parent": "/us/usc/t18/s1030/e/2",
+      "level": "subparagraph",
+      "enumerator": "A",
+      "citation": "18 U.S.C. § 1030(e)(2)(A)",
+      "text": "exclusively for the use of a financial institution or the United States Government, or, in the case of a computer not exclusively for such use, used by or for a financial institution or the United States Government and the conduct constituting the offense affects that use by or for the financial institution or the Government;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/2/B",
+      "parent": "/us/usc/t18/s1030/e/2",
+      "level": "subparagraph",
+      "enumerator": "B",
+      "citation": "18 U.S.C. § 1030(e)(2)(B)",
+      "text": "which is used in or affecting interstate or foreign commerce or communication, including a computer located outside the United States that is used in a manner that affects interstate or foreign commerce or communication of the United States; or",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/2/C",
+      "parent": "/us/usc/t18/s1030/e/2",
+      "level": "subparagraph",
+      "enumerator": "C",
+      "citation": "18 U.S.C. § 1030(e)(2)(C)",
+      "text": "that—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/e/2/C/i",
+        "/us/usc/t18/s1030/e/2/C/ii"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/2/C/i",
+      "parent": "/us/usc/t18/s1030/e/2/C",
+      "level": "clause",
+      "enumerator": "i",
+      "citation": "18 U.S.C. § 1030(e)(2)(C)(i)",
+      "text": "is part of a voting system; and",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/2/C/ii",
+      "parent": "/us/usc/t18/s1030/e/2/C",
+      "level": "clause",
+      "enumerator": "ii",
+      "citation": "18 U.S.C. § 1030(e)(2)(C)(ii)",
+      "text": "",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/e/2/C/ii/I",
+        "/us/usc/t18/s1030/e/2/C/ii/II"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/2/C/ii/I",
+      "parent": "/us/usc/t18/s1030/e/2/C/ii",
+      "level": "subclause",
+      "enumerator": "I",
+      "citation": "18 U.S.C. § 1030(e)(2)(C)(ii)(I)",
+      "text": "is used for the management, support, or administration of a Federal election; or",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/2/C/ii/II",
+      "parent": "/us/usc/t18/s1030/e/2/C/ii",
+      "level": "subclause",
+      "enumerator": "II",
+      "citation": "18 U.S.C. § 1030(e)(2)(C)(ii)(II)",
+      "text": "has moved in or otherwise affects interstate or foreign commerce;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/3",
+      "parent": "/us/usc/t18/s1030/e",
+      "level": "paragraph",
+      "enumerator": "3",
+      "citation": "18 U.S.C. § 1030(e)(3)",
+      "text": "the term \"State\" includes the District of Columbia, the Commonwealth of Puerto Rico, and any other commonwealth, possession or territory of the United States;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/4",
+      "parent": "/us/usc/t18/s1030/e",
+      "level": "paragraph",
+      "enumerator": "4",
+      "citation": "18 U.S.C. § 1030(e)(4)",
+      "text": "the term \"financial institution\" means—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/e/4/A",
+        "/us/usc/t18/s1030/e/4/B",
+        "/us/usc/t18/s1030/e/4/C",
+        "/us/usc/t18/s1030/e/4/D",
+        "/us/usc/t18/s1030/e/4/E",
+        "/us/usc/t18/s1030/e/4/F",
+        "/us/usc/t18/s1030/e/4/G",
+        "/us/usc/t18/s1030/e/4/H",
+        "/us/usc/t18/s1030/e/4/I"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/4/A",
+      "parent": "/us/usc/t18/s1030/e/4",
+      "level": "subparagraph",
+      "enumerator": "A",
+      "citation": "18 U.S.C. § 1030(e)(4)(A)",
+      "text": "an institution, with deposits insured by the Federal Deposit Insurance Corporation;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/4/B",
+      "parent": "/us/usc/t18/s1030/e/4",
+      "level": "subparagraph",
+      "enumerator": "B",
+      "citation": "18 U.S.C. § 1030(e)(4)(B)",
+      "text": "the Federal Reserve or a member of the Federal Reserve including any Federal Reserve Bank;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/4/C",
+      "parent": "/us/usc/t18/s1030/e/4",
+      "level": "subparagraph",
+      "enumerator": "C",
+      "citation": "18 U.S.C. § 1030(e)(4)(C)",
+      "text": "a credit union with accounts insured by the National Credit Union Administration;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/4/D",
+      "parent": "/us/usc/t18/s1030/e/4",
+      "level": "subparagraph",
+      "enumerator": "D",
+      "citation": "18 U.S.C. § 1030(e)(4)(D)",
+      "text": "a member of the Federal home loan bank system and any home loan bank;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/4/E",
+      "parent": "/us/usc/t18/s1030/e/4",
+      "level": "subparagraph",
+      "enumerator": "E",
+      "citation": "18 U.S.C. § 1030(e)(4)(E)",
+      "text": "any institution of the Farm Credit System under the Farm Credit Act of 1971;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/4/F",
+      "parent": "/us/usc/t18/s1030/e/4",
+      "level": "subparagraph",
+      "enumerator": "F",
+      "citation": "18 U.S.C. § 1030(e)(4)(F)",
+      "text": "a broker-dealer registered with the Securities and Exchange Commission pursuant to section 15 of the Securities Exchange Act of 1934;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/4/G",
+      "parent": "/us/usc/t18/s1030/e/4",
+      "level": "subparagraph",
+      "enumerator": "G",
+      "citation": "18 U.S.C. § 1030(e)(4)(G)",
+      "text": "the Securities Investor Protection Corporation;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/4/H",
+      "parent": "/us/usc/t18/s1030/e/4",
+      "level": "subparagraph",
+      "enumerator": "H",
+      "citation": "18 U.S.C. § 1030(e)(4)(H)",
+      "text": "a branch or agency of a foreign bank (as such terms are defined in paragraphs (1) and (3) of section 1(b) of the International Banking Act of 1978); and",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/4/I",
+      "parent": "/us/usc/t18/s1030/e/4",
+      "level": "subparagraph",
+      "enumerator": "I",
+      "citation": "18 U.S.C. § 1030(e)(4)(I)",
+      "text": "an organization operating under section 25 or section 25(a) of the Federal Reserve Act;",
+      "footnotes": [
+        "See References in Text note below."
+      ],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/5",
+      "parent": "/us/usc/t18/s1030/e",
+      "level": "paragraph",
+      "enumerator": "5",
+      "citation": "18 U.S.C. § 1030(e)(5)",
+      "text": "the term \"financial record\" means information derived from any record held by a financial institution pertaining to a customer's relationship with the financial institution;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/6",
+      "parent": "/us/usc/t18/s1030/e",
+      "level": "paragraph",
+      "enumerator": "6",
+      "citation": "18 U.S.C. § 1030(e)(6)",
+      "text": "the term \"exceeds authorized access\" means to access a computer with authorization and to use such access to obtain or alter information in the computer that the accesser is not entitled so to obtain or alter;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/7",
+      "parent": "/us/usc/t18/s1030/e",
+      "level": "paragraph",
+      "enumerator": "7",
+      "citation": "18 U.S.C. § 1030(e)(7)",
+      "text": "the term \"department of the United States\" means the legislative or judicial branch of the Government or one of the executive departments enumerated in section 101 of title 5;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/8",
+      "parent": "/us/usc/t18/s1030/e",
+      "level": "paragraph",
+      "enumerator": "8",
+      "citation": "18 U.S.C. § 1030(e)(8)",
+      "text": "the term \"damage\" means any impairment to the integrity or availability of data, a program, a system, or information;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/9",
+      "parent": "/us/usc/t18/s1030/e",
+      "level": "paragraph",
+      "enumerator": "9",
+      "citation": "18 U.S.C. § 1030(e)(9)",
+      "text": "the term \"government entity\" includes the Government of the United States, any State or political subdivision of the United States, any foreign country, and any state, province, municipality, or other political subdivision of a foreign country;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/10",
+      "parent": "/us/usc/t18/s1030/e",
+      "level": "paragraph",
+      "enumerator": "10",
+      "citation": "18 U.S.C. § 1030(e)(10)",
+      "text": "the term \"conviction\" shall include a conviction under the law of any State for a crime punishable by imprisonment for more than 1 year, an element of which is unauthorized access, or exceeding authorized access, to a computer;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/11",
+      "parent": "/us/usc/t18/s1030/e",
+      "level": "paragraph",
+      "enumerator": "11",
+      "citation": "18 U.S.C. § 1030(e)(11)",
+      "text": "the term \"loss\" means any reasonable cost to any victim, including the cost of responding to an offense, conducting a damage assessment, and restoring the data, program, system, or information to its condition prior to the offense, and any revenue lost, cost incurred, or other consequential damages incurred because of interruption of service;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/12",
+      "parent": "/us/usc/t18/s1030/e",
+      "level": "paragraph",
+      "enumerator": "12",
+      "citation": "18 U.S.C. § 1030(e)(12)",
+      "text": "the term \"person\" means any individual, firm, corporation, educational institution, financial institution, governmental entity, or legal or other entity;",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/13",
+      "parent": "/us/usc/t18/s1030/e",
+      "level": "paragraph",
+      "enumerator": "13",
+      "citation": "18 U.S.C. § 1030(e)(13)",
+      "text": "the term \"Federal election\" means any election (as defined in section 301(1) of the Federal Election Campaign Act of 1971 (52 U.S.C. 30101(1))) for Federal office (as defined in section 301(3) of the Federal Election Campaign Act of 1971 (52 U.S.C. 30101(3))); and",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/e/14",
+      "parent": "/us/usc/t18/s1030/e",
+      "level": "paragraph",
+      "enumerator": "14",
+      "citation": "18 U.S.C. § 1030(e)(14)",
+      "text": "the term \"voting system\" has the meaning given the term in section 301(b) of the Help America Vote Act of 2002 (52 U.S.C. 21081(b)).",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/f",
+      "parent": "/us/usc/t18/s1030",
+      "level": "subsection",
+      "enumerator": "f",
+      "citation": "18 U.S.C. § 1030(f)",
+      "text": "This section does not prohibit any lawfully authorized investigative, protective, or intelligence activity of a law enforcement agency of the United States, a State, or a political subdivision of a State, or of an intelligence agency of the United States.",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/g",
+      "parent": "/us/usc/t18/s1030",
+      "level": "subsection",
+      "enumerator": "g",
+      "citation": "18 U.S.C. § 1030(g)",
+      "text": "Any person who suffers damage or loss by reason of a violation of this section may maintain a civil action against the violator to obtain compensatory damages and injunctive relief or other equitable relief. A civil action for a violation of this section may be brought only if the conduct involves 1 of the factors set forth in subclauses (I), (II), (III), (IV), or (V) of subsection (c)(4)(A)(i). Damages for a violation involving only conduct described in subsection (c)(4)(A)(i)(I) are limited to economic damages. No action may be brought under this subsection unless such action is begun within 2 years of the date of the act complained of or the date of the discovery of the damage. No action may be brought under this subsection for the negligent design or manufacture of computer hardware, computer software, or firmware.",
+      "footnotes": [
+        "So in original. Probably should be \"subclause\"."
+      ],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/h",
+      "parent": "/us/usc/t18/s1030",
+      "level": "subsection",
+      "enumerator": "h",
+      "citation": "18 U.S.C. § 1030(h)",
+      "text": "The Attorney General and the Secretary of the Treasury shall report to the Congress annually, during the first 3 years following the date of the enactment of this subsection, concerning investigations and prosecutions under subsection (a)(5).",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/i",
+      "parent": "/us/usc/t18/s1030",
+      "level": "subsection",
+      "enumerator": "i",
+      "citation": "18 U.S.C. § 1030(i)",
+      "text": "",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/i/1",
+        "/us/usc/t18/s1030/i/2"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/i/1",
+      "parent": "/us/usc/t18/s1030/i",
+      "level": "paragraph",
+      "enumerator": "1",
+      "citation": "18 U.S.C. § 1030(i)(1)",
+      "text": "The court, in imposing sentence on any person convicted of a violation of this section, or convicted of conspiracy to violate this section, shall order, in addition to any other sentence imposed and irrespective of any provision of State law, that such person forfeit to the United States—",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/i/1/A",
+        "/us/usc/t18/s1030/i/1/B"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/i/1/A",
+      "parent": "/us/usc/t18/s1030/i/1",
+      "level": "subparagraph",
+      "enumerator": "A",
+      "citation": "18 U.S.C. § 1030(i)(1)(A)",
+      "text": "such person's interest in any personal property that was used or intended to be used to commit or to facilitate the commission of such violation; and",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/i/1/B",
+      "parent": "/us/usc/t18/s1030/i/1",
+      "level": "subparagraph",
+      "enumerator": "B",
+      "citation": "18 U.S.C. § 1030(i)(1)(B)",
+      "text": "any property, real or personal, constituting or derived from, any proceeds that such person obtained, directly or indirectly, as a result of such violation.",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/i/2",
+      "parent": "/us/usc/t18/s1030/i",
+      "level": "paragraph",
+      "enumerator": "2",
+      "citation": "18 U.S.C. § 1030(i)(2)",
+      "text": "The criminal forfeiture of property under this subsection, any seizure and disposition thereof, and any judicial proceeding in relation thereto, shall be governed by the provisions of section 413 of the Comprehensive Drug Abuse Prevention and Control Act of 1970 (21 U.S.C. 853), except subsection (d) of that section.",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/j",
+      "parent": "/us/usc/t18/s1030",
+      "level": "subsection",
+      "enumerator": "j",
+      "citation": "18 U.S.C. § 1030(j)",
+      "text": "For purposes of subsection (i), the following shall be subject to forfeiture to the United States and no property right shall exist in them:",
+      "footnotes": [],
+      "children": [
+        "/us/usc/t18/s1030/j/1",
+        "/us/usc/t18/s1030/j/2"
+      ]
+    },
+    {
+      "id": "/us/usc/t18/s1030/j/1",
+      "parent": "/us/usc/t18/s1030/j",
+      "level": "paragraph",
+      "enumerator": "1",
+      "citation": "18 U.S.C. § 1030(j)(1)",
+      "text": "Any personal property used or intended to be used to commit or to facilitate the commission of any violation of this section, or a conspiracy to violate this section.",
+      "footnotes": [],
+      "children": []
+    },
+    {
+      "id": "/us/usc/t18/s1030/j/2",
+      "parent": "/us/usc/t18/s1030/j",
+      "level": "paragraph",
+      "enumerator": "2",
+      "citation": "18 U.S.C. § 1030(j)(2)",
+      "text": "Any property, real or personal, which constitutes or is derived from proceeds traceable to any violation of this section, or a conspiracy to violate this section",
+      "footnotes": [
+        "So in original. Probably should be followed by a period."
+      ],
+      "children": []
+    }
+  ],
+  "cross_references": [
+    {
+      "from": "/us/usc/t18/s1030/a",
+      "raw": "subsection (c)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/c"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/a/1",
+      "raw": "section 11 of the Atomic Energy Act of 1954",
+      "scope": "external",
+      "citation": "Atomic Energy Act of 1954 § 11",
+      "targets": [],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/a/2/A",
+      "raw": "section 1602(n) of title 15",
+      "scope": "external",
+      "citation": "15 U.S.C. § 1602(n)",
+      "targets": [],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/a/6",
+      "raw": "section 1029",
+      "scope": "external",
+      "citation": "18 U.S.C. § 1029",
+      "targets": [],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/b",
+      "raw": "subsection (a)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/b",
+      "raw": "subsection (c)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/c"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c",
+      "raw": "subsection (a) or (b)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a",
+        "/us/usc/t18/s1030/b"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/1/A",
+      "raw": "subsection (a)(1)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/1"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/1/B",
+      "raw": "subsection (a)(1)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/1"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/2/A",
+      "raw": "subparagraph (B)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/c/2/B"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/2/A",
+      "raw": "subsection (a)(2), (a)(3), or (a)(6)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/2",
+        "/us/usc/t18/s1030/a/3",
+        "/us/usc/t18/s1030/a/6"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/2/B",
+      "raw": "subsection (a)(2)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/2"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/2/C",
+      "raw": "subsection (a)(2), (a)(3) or (a)(6)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/2",
+        "/us/usc/t18/s1030/a/3",
+        "/us/usc/t18/s1030/a/6"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/3/A",
+      "raw": "subsection (a)(4) or (a)(7)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/4",
+        "/us/usc/t18/s1030/a/7"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/3/B",
+      "raw": "subsection (a)(4), or (a)(7)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/4",
+        "/us/usc/t18/s1030/a/7"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/4/A",
+      "raw": "subparagraphs (E) and (F)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/c/4/E",
+        "/us/usc/t18/s1030/c/4/F"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/4/A/i",
+      "raw": "subsection (a)(5)(B)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/5/B"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/4/B",
+      "raw": "subparagraphs (E) and (F)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/c/4/E",
+        "/us/usc/t18/s1030/c/4/F"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/4/B/i",
+      "raw": "subsection (a)(5)(A)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/5/A"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/4/B/i",
+      "raw": "subclauses (I) through (VI) of subparagraph (A)(i)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/c/4/A/i/I",
+        "/us/usc/t18/s1030/c/4/A/i/II",
+        "/us/usc/t18/s1030/c/4/A/i/III",
+        "/us/usc/t18/s1030/c/4/A/i/IV",
+        "/us/usc/t18/s1030/c/4/A/i/V",
+        "/us/usc/t18/s1030/c/4/A/i/VI"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/4/C",
+      "raw": "subparagraphs (E) and (F)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/c/4/E",
+        "/us/usc/t18/s1030/c/4/F"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/4/C/i",
+      "raw": "subparagraphs (A) or (B) of subsection (a)(5)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/5/A",
+        "/us/usc/t18/s1030/a/5/B"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/4/D/i",
+      "raw": "subsection (a)(5)(C)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/5/C"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/4/E",
+      "raw": "subsection (a)(5)(A)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/5/A"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/4/F",
+      "raw": "subsection (a)(5)(A)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/5/A"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/c/4/G/i",
+      "raw": "subsection (a)(5)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/5"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/d/2",
+      "raw": "subsection (a)(1)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/1"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/d/2",
+      "raw": "section 11y of the Atomic Energy Act of 1954",
+      "scope": "external",
+      "citation": "Atomic Energy Act of 1954 § 11y",
+      "targets": [],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/d/2",
+      "raw": "section 3056(a)",
+      "scope": "external",
+      "citation": "18 U.S.C. § 3056(a)",
+      "targets": [],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/e/4/F",
+      "raw": "section 15 of the Securities Exchange Act of 1934",
+      "scope": "external",
+      "citation": "Securities Exchange Act of 1934 § 15",
+      "targets": [],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/e/4/H",
+      "raw": "section 1(b) of the International Banking Act of 1978",
+      "scope": "external",
+      "citation": "International Banking Act of 1978 § 1(b)",
+      "targets": [],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/e/4/I",
+      "raw": "section 25",
+      "scope": "external",
+      "citation": "Federal Reserve Act § 25",
+      "targets": [],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/e/4/I",
+      "raw": "section 25(a) of the Federal Reserve Act",
+      "scope": "external",
+      "citation": "Federal Reserve Act § 25(a)",
+      "targets": [],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/e/7",
+      "raw": "section 101 of title 5",
+      "scope": "external",
+      "citation": "5 U.S.C. § 101",
+      "targets": [],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/e/13",
+      "raw": "section 301(1) of the Federal Election Campaign Act of 1971",
+      "scope": "external",
+      "citation": "Federal Election Campaign Act of 1971 § 301(1)",
+      "targets": [],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/e/13",
+      "raw": "section 301(3) of the Federal Election Campaign Act of 1971",
+      "scope": "external",
+      "citation": "Federal Election Campaign Act of 1971 § 301(3)",
+      "targets": [],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/e/14",
+      "raw": "section 301(b) of the Help America Vote Act of 2002",
+      "scope": "external",
+      "citation": "Help America Vote Act of 2002 § 301(b)",
+      "targets": [],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/g",
+      "raw": "subclauses (I), (II), (III), (IV), or (V) of subsection (c)(4)(A)(i)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/c/4/A/i/I",
+        "/us/usc/t18/s1030/c/4/A/i/II",
+        "/us/usc/t18/s1030/c/4/A/i/III",
+        "/us/usc/t18/s1030/c/4/A/i/IV",
+        "/us/usc/t18/s1030/c/4/A/i/V"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/g",
+      "raw": "subsection (c)(4)(A)(i)(I)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/c/4/A/i/I"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/h",
+      "raw": "subsection (a)(5)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/a/5"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/i/2",
+      "raw": "subsection (d)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/d"
+      ],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/i/2",
+      "raw": "section 413 of the Comprehensive Drug Abuse Prevention and Control Act of 1970",
+      "scope": "external",
+      "citation": "Comprehensive Drug Abuse Prevention and Control Act of 1970 § 413",
+      "targets": [],
+      "unresolved": []
+    },
+    {
+      "from": "/us/usc/t18/s1030/j",
+      "raw": "subsection (i)",
+      "scope": "internal",
+      "targets": [
+        "/us/usc/t18/s1030/i"
+      ],
+      "unresolved": []
+    }
+  ],
+  "definitions": [
+    {
+      "term": "computer",
+      "verb": "means",
+      "provision": "/us/usc/t18/s1030/e/1"
+    },
+    {
+      "term": "protected computer",
+      "verb": "means",
+      "provision": "/us/usc/t18/s1030/e/2"
+    },
+    {
+      "term": "State",
+      "verb": "includes",
+      "provision": "/us/usc/t18/s1030/e/3"
+    },
+    {
+      "term": "financial institution",
+      "verb": "means",
+      "provision": "/us/usc/t18/s1030/e/4"
+    },
+    {
+      "term": "financial record",
+      "verb": "means",
+      "provision": "/us/usc/t18/s1030/e/5"
+    },
+    {
+      "term": "exceeds authorized access",
+      "verb": "means",
+      "provision": "/us/usc/t18/s1030/e/6"
+    },
+    {
+      "term": "department of the United States",
+      "verb": "means",
+      "provision": "/us/usc/t18/s1030/e/7"
+    },
+    {
+      "term": "damage",
+      "verb": "means",
+      "provision": "/us/usc/t18/s1030/e/8"
+    },
+    {
+      "term": "government entity",
+      "verb": "includes",
+      "provision": "/us/usc/t18/s1030/e/9"
+    },
+    {
+      "term": "conviction",
+      "verb": "shall include",
+      "provision": "/us/usc/t18/s1030/e/10"
+    },
+    {
+      "term": "loss",
+      "verb": "means",
+      "provision": "/us/usc/t18/s1030/e/11"
+    },
+    {
+      "term": "person",
+      "verb": "means",
+      "provision": "/us/usc/t18/s1030/e/12"
+    },
+    {
+      "term": "Federal election",
+      "verb": "means",
+      "provision": "/us/usc/t18/s1030/e/13"
+    }
+  ],
+  "term_uses": [
+    {
+      "term": "department of the United States",
+      "provisions": []
+    },
+    {
+      "term": "exceeds authorized access",
+      "provisions": [
+        "/us/usc/t18/s1030/a/2",
+        "/us/usc/t18/s1030/a/4"
+      ]
+    },
+    {
+      "term": "financial institution",
+      "provisions": [
+        "/us/usc/t18/s1030/a/2/A",
+        "/us/usc/t18/s1030/e/2/A"
+      ]
+    },
+    {
+      "term": "protected computer",
+      "provisions": [
+        "/us/usc/t18/s1030/a/2/C",
+        "/us/usc/t18/s1030/a/4",
+        "/us/usc/t18/s1030/a/5/A",
+        "/us/usc/t18/s1030/a/5/B",
+        "/us/usc/t18/s1030/a/5/C",
+        "/us/usc/t18/s1030/a/7/A",
+        "/us/usc/t18/s1030/a/7/B",
+        "/us/usc/t18/s1030/a/7/C",
+        "/us/usc/t18/s1030/c/4/A/i/I",
+        "/us/usc/t18/s1030/c/4/A/i/VI"
+      ]
+    },
+    {
+      "term": "government entity",
+      "provisions": []
+    },
+    {
+      "term": "Federal election",
+      "provisions": [
+        "/us/usc/t18/s1030/e/2/C/ii/I"
+      ]
+    },
+    {
+      "term": "financial record",
+      "provisions": [
+        "/us/usc/t18/s1030/a/2/A"
+      ]
+    },
+    {
+      "term": "conviction",
+      "provisions": [
+        "/us/usc/t18/s1030/c/1/A",
+        "/us/usc/t18/s1030/c/1/B",
+        "/us/usc/t18/s1030/c/2/A",
+        "/us/usc/t18/s1030/c/2/C",
+        "/us/usc/t18/s1030/c/3/A",
+        "/us/usc/t18/s1030/c/3/B",
+        "/us/usc/t18/s1030/c/4/A/i",
+        "/us/usc/t18/s1030/c/4/B/i",
+        "/us/usc/t18/s1030/c/4/C/i",
+        "/us/usc/t18/s1030/c/4/D/i"
+      ]
+    },
+    {
+      "term": "computer",
+      "provisions": [
+        "/us/usc/t18/s1030/a/1",
+        "/us/usc/t18/s1030/a/2",
+        "/us/usc/t18/s1030/a/3",
+        "/us/usc/t18/s1030/a/4",
+        "/us/usc/t18/s1030/a/6",
+        "/us/usc/t18/s1030/a/6/B",
+        "/us/usc/t18/s1030/c/4/A/i/V",
+        "/us/usc/t18/s1030/e/2/A",
+        "/us/usc/t18/s1030/e/2/B",
+        "/us/usc/t18/s1030/g"
+      ]
+    },
+    {
+      "term": "damage",
+      "provisions": [
+        "/us/usc/t18/s1030/a/5/A",
+        "/us/usc/t18/s1030/a/5/B",
+        "/us/usc/t18/s1030/a/5/C",
+        "/us/usc/t18/s1030/a/7/A",
+        "/us/usc/t18/s1030/a/7/C",
+        "/us/usc/t18/s1030/c/4/A/i/V",
+        "/us/usc/t18/s1030/c/4/A/i/VI",
+        "/us/usc/t18/s1030/g"
+      ]
+    },
+    {
+      "term": "person",
+      "provisions": [
+        "/us/usc/t18/s1030/a/1",
+        "/us/usc/t18/s1030/a/7",
+        "/us/usc/t18/s1030/c/4/A/i/I",
+        "/us/usc/t18/s1030/c/4/A/i/III",
+        "/us/usc/t18/s1030/g",
+        "/us/usc/t18/s1030/i/1",
+        "/us/usc/t18/s1030/i/1/A",
+        "/us/usc/t18/s1030/i/1/B"
+      ]
+    },
+    {
+      "term": "State",
+      "provisions": [
+        "/us/usc/t18/s1030/c/2/B/ii",
+        "/us/usc/t18/s1030/f",
+        "/us/usc/t18/s1030/i/1"
+      ]
+    },
+    {
+      "term": "loss",
+      "provisions": [
+        "/us/usc/t18/s1030/a/5/C",
+        "/us/usc/t18/s1030/c/4/A/i/I",
+        "/us/usc/t18/s1030/g"
+      ]
+    }
+  ],
+  "quantities": [
+    {
+      "provision": "/us/usc/t18/s1030/a/4",
+      "kind": "money_usd",
+      "comparator": "<=",
+      "value": 5000,
+      "raw": "not more than $5,000"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/1/A",
+      "kind": "imprisonment_max",
+      "comparator": "<=",
+      "value": 10,
+      "unit": "years",
+      "raw": "imprisonment for not more than ten years"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/1/B",
+      "kind": "imprisonment_max",
+      "comparator": "<=",
+      "value": 20,
+      "unit": "years",
+      "raw": "imprisonment for not more than twenty years"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/2/A",
+      "kind": "imprisonment_max",
+      "comparator": "<=",
+      "value": 1,
+      "unit": "years",
+      "raw": "imprisonment for not more than one year"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/2/B",
+      "kind": "imprisonment_max",
+      "comparator": "<=",
+      "value": 5,
+      "unit": "years",
+      "raw": "imprisonment for not more than 5 years"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/2/B/iii",
+      "kind": "money_usd",
+      "comparator": ">",
+      "value": 5000,
+      "raw": "exceeds $5,000"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/2/C",
+      "kind": "imprisonment_max",
+      "comparator": "<=",
+      "value": 10,
+      "unit": "years",
+      "raw": "imprisonment for not more than ten years"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/3/A",
+      "kind": "imprisonment_max",
+      "comparator": "<=",
+      "value": 5,
+      "unit": "years",
+      "raw": "imprisonment for not more than five years"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/3/B",
+      "kind": "imprisonment_max",
+      "comparator": "<=",
+      "value": 10,
+      "unit": "years",
+      "raw": "imprisonment for not more than ten years"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/4/A",
+      "kind": "imprisonment_max",
+      "comparator": "<=",
+      "value": 5,
+      "unit": "years",
+      "raw": "imprisonment for not more than 5 years"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/4/A/i/I",
+      "kind": "money_usd",
+      "comparator": ">=",
+      "value": 5000,
+      "raw": "aggregating at least $5,000"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/4/A/i/I",
+      "kind": "count",
+      "comparator": ">=",
+      "value": 1,
+      "unit": "other protected computers",
+      "raw": "1 or more other protected computers"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/4/A/i/VI",
+      "kind": "count",
+      "comparator": ">=",
+      "value": 10,
+      "unit": "protected computers",
+      "raw": "10 or more protected computers"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/4/B",
+      "kind": "imprisonment_max",
+      "comparator": "<=",
+      "value": 10,
+      "unit": "years",
+      "raw": "imprisonment for not more than 10 years"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/4/C",
+      "kind": "imprisonment_max",
+      "comparator": "<=",
+      "value": 20,
+      "unit": "years",
+      "raw": "imprisonment for not more than 20 years"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/4/D",
+      "kind": "imprisonment_max",
+      "comparator": "<=",
+      "value": 10,
+      "unit": "years",
+      "raw": "imprisonment for not more than 10 years"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/4/E",
+      "kind": "imprisonment_max",
+      "comparator": "<=",
+      "value": 20,
+      "unit": "years",
+      "raw": "imprisonment for not more than 20 years"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/4/F",
+      "kind": "imprisonment_max",
+      "comparator": "<=",
+      "value": null,
+      "unit": "life",
+      "raw": "imprisonment for any term of years or for life"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/c/4/G",
+      "kind": "imprisonment_max",
+      "comparator": "<=",
+      "value": 1,
+      "unit": "years",
+      "raw": "imprisonment for not more than 1 year"
+    },
+    {
+      "provision": "/us/usc/t18/s1030/g",
+      "kind": "period",
+      "comparator": "<=",
+      "value": 2,
+      "unit": "year",
+      "raw": "within 2 years"
+    }
+  ],
+  "summary": {
+    "provisions": 104,
+    "by_level": {
+      "subsection": 10,
+      "paragraph": 32,
+      "subparagraph": 39,
+      "clause": 15,
+      "subclause": 8
+    },
+    "internal_references": 29,
+    "external_references": 14,
+    "resolved_targets": 49,
+    "definitions": 13,
+    "quantities": 20,
+    "editorial_footnotes": 7
+  }
+}

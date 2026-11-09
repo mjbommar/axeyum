@@ -53,6 +53,8 @@
   - [Authorization Policy V0](rules-as-code/examples/authorization-policy-v0/README.md)
   - [Tax Benefit Arithmetic V0](rules-as-code/examples/tax-benefit-arithmetic-v0/README.md)
   - [Procurement Scoring V0](rules-as-code/examples/procurement-scoring-v0/README.md)
+  - [Lifting the U.S. Code](rules-as-code/uscode/README.md)
+  - [Computer Fraud and Abuse Act V0](rules-as-code/examples/cfaa-1030-v0/README.md)
 
 # Learn
 

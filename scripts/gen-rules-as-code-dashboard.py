@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from collections import Counter
 from fractions import Fraction
 from pathlib import Path
@@ -808,6 +809,133 @@ def workflow_query_families(expected: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+CFAA_OFFENSES = ["off_a2", "off_a3", "off_a4", "off_a5A", "off_a5B", "off_a5C", "off_a6", "off_a7"]
+CFAA_CLAUSES = {
+    "(c)(2)(A)": "c2A_applies",
+    "(c)(2)(B)": "c2B_applies",
+    "(c)(2)(C)": "c2C_applies",
+    "(c)(3)(A)": "c3A_applies",
+    "(c)(3)(B)": "c3B_applies",
+    "(c)(4)(A)": "c4A_applies",
+    "(c)(4)(B)": "c4B_applies",
+    "(c)(4)(C)": "c4C_applies",
+    "(c)(4)(D)": "c4D_applies",
+    "(c)(4)(E)": "c4E_applies",
+    "(c)(4)(F)": "c4F_applies",
+    "(c)(4)(G)": "c4G_applies",
+}
+
+
+def cfaa_rules() -> Any:
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import rules_ir  # noqa: PLC0415 - sibling script module
+
+    return rules_ir.Rules(EXAMPLES_ROOT / "cfaa-1030-v0" / "rules.json")
+
+
+def cfaa_base_facts(rules: Any) -> dict[str, Any]:
+    return {name: (0 if fact["sort"] == "Int" else False) for name, fact in rules.facts.items()}
+
+
+def cfaa_penalty_rows(rules: Any) -> list[dict[str, Any]]:
+    rows = []
+    for offense in CFAA_OFFENSES:
+        for prior in (False, True):
+            for info in (4999, 5000, 5001):
+                for loss in (4999, 5000):
+                    for computers in (9, 10):
+                        for injury in ("none", "serious_bodily_injury", "death"):
+                            facts = cfaa_base_facts(rules)
+                            facts[offense] = True
+                            facts["prior_conviction"] = prior
+                            facts["info_value_usd"] = info
+                            facts["loss_usd"] = loss
+                            facts["computers_damaged"] = computers
+                            if injury != "none":
+                                facts[injury] = True
+                            env = rules.evaluate(facts)
+                            rows.append(
+                                {
+                                    "id": f"{offense}-{'prior' if prior else 'first'}-v{info}-l{loss}-c{computers}-{injury}",
+                                    "facts": facts,
+                                    "clauses": sorted(
+                                        clause
+                                        for clause, predicate in CFAA_CLAUSES.items()
+                                        if env[predicate]
+                                    ),
+                                    "max_years": env["max_years"],
+                                }
+                            )
+    return rows
+
+
+def cfaa_civil_rows(rules: Any) -> list[dict[str, Any]]:
+    factors = [
+        ("I", "loss_usd", 5000),
+        ("II", "medical_impairment", True),
+        ("III", "physical_injury", True),
+        ("IV", "public_safety_threat", True),
+        ("V", "justice_security_computer", True),
+        ("VI", "computers_damaged", 10),
+    ]
+    rows = []
+    for bits in range(1 << len(factors)):
+        facts = cfaa_base_facts(rules)
+        facts["off_a5A"] = True
+        facts["damage_or_loss_suffered"] = True
+        present = []
+        for position, (label, name, value) in enumerate(factors):
+            if bits >> position & 1:
+                facts[name] = value
+                present.append(label)
+        env = rules.evaluate(facts)
+        rows.append(
+            {
+                "id": "factors-" + ("-".join(present) if present else "none"),
+                "factors": present,
+                "facts": facts,
+                "felony_factor": env["harm_any_I_VI"],
+                "civil_action_available": env["civil_action_available"],
+                "economic_damages_only": env["civil_economic_damages_only"],
+            }
+        )
+    return rows
+
+
+def cfaa_metrics(expected: dict[str, Any]) -> tuple[int, list[tuple[str, int]], str]:
+    sample = expected["sample_domain"]
+    rows = (
+        len(sample["offenses"])
+        * (1 << len(sample["booleans"]))
+        * len(sample["info_value_usd"])
+        * len(sample["loss_usd"])
+        * len(sample["computers_damaged"])
+    )
+    families = [
+        ("region-complete sweep rows (three readings agree)", rows),
+        ("replayed witnesses", len(expected["witnesses"])),
+        ("checked unsat obligations", sum(1 for c in expected["checks"] if c["expected_result"] == "unsat")),
+        ("checked sat findings", sum(1 for c in expected["checks"] if c["expected_result"] == "sat")),
+    ]
+    return rows, families, "Lift the next § 1030 provisions ((b) attempts and conspiracies, (g) limitations period) and other Title 18 sections that cross-reference § 1030."
+
+
+def cfaa_query_families(expected: dict[str, Any]) -> list[dict[str, Any]]:
+    rules = cfaa_rules()
+    return [
+        {
+            "id": "penalty_table_rows",
+            "description": "Applicable (c) clauses and the statutory maximum for each offense, prior-conviction status, threshold region, and injury outcome.",
+            "rows": cfaa_penalty_rows(rules),
+        },
+        {
+            "id": "civil_gate_rows",
+            "description": "The (g) civil-action gate and economic-damages limit for every subset of the (c)(4)(A)(i) factors.",
+            "rows": cfaa_civil_rows(rules),
+        },
+    ]
+
+
 METRIC_DISPATCH = {
     "benefit_eligibility_v0": benefit_metrics,
     "authorization_policy_v0": authorization_metrics,
@@ -816,6 +944,7 @@ METRIC_DISPATCH = {
     "grant_allocation_v0": grant_allocation_metrics,
     "category_equivalence_v0": category_equivalence_metrics,
     "workflow_reachability_v0": workflow_metrics,
+    "cfaa_1030_v0": cfaa_metrics,
 }
 
 QUERY_DISPATCH = {
@@ -826,6 +955,7 @@ QUERY_DISPATCH = {
     "grant_allocation_v0": grant_allocation_query_families,
     "category_equivalence_v0": category_equivalence_query_families,
     "workflow_reachability_v0": workflow_query_families,
+    "cfaa_1030_v0": cfaa_query_families,
 }
 
 
